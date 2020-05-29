@@ -1,0 +1,38 @@
+[package]
+name = "gooseberry"
+version = "0.1.0"
+authors = ["Ninjani"]
+edition = "2018"
+
+
+[dependencies]
+hypothesis = {version = "0.2.0", default-features = false}
+mdbook = "0.3.7"
+
+structopt = "0.3.14"
+
+sled = "0.32.0-rc1"
+
+# Configuration management
+confy = "0.4.0"
+directories-next = "1.0.1"
+
+# Error handling
+eyre = "0.4.2"
+color-eyre = "0.3.2"
+thiserror = "1.0.19"
+
+# Serializing
+serde = "1.0.110"
+serde_json = "1.0.53"
+serde_derive = "1.0.110"
+bincode = "1.2.1"
+
+# Parsing and manipulating dates
+chrono = { version = "0.4.11", features = ["serde"] }
+chrono-english = "0.1.4"
+
+# Fuzzy search
+skim = "0.8.1"
+
+dialoguer = "0.6.2"
