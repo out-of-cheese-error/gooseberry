@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::Apologize;
 use crate::{utils, NAME};
-use hypothesis::Hypothesis;
+use hypothesis::{GroupID, Hypothesis};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
@@ -20,6 +20,8 @@ pub struct GooseberryConfig {
     pub(crate) hypothesis_username: Option<String>,
     /// Hypothesis personal API key
     pub(crate) hypothesis_key: Option<String>,
+    /// Hypothesis group with knowledge base annotations
+    pub(crate) hypothesis_group: Option<GroupID>,
 }
 
 /// Main project directory, cross-platform
@@ -42,6 +44,7 @@ impl Default for GooseberryConfig {
             kb_dir,
             hypothesis_username: None,
             hypothesis_key: None,
+            hypothesis_group: None,
         };
         config.make_dirs().unwrap();
         config
@@ -155,7 +158,29 @@ impl GooseberryConfig {
             config.set_credentials()?;
         }
 
+        if config.hypothesis_group.is_none() {
+            config.set_group()?;
+        }
         Ok(config)
+    }
+
+    fn set_group(&mut self) -> color_eyre::Result<()> {
+        let group_name = utils::user_input(
+            "Enter a group name to annotate with",
+            Some(NAME),
+            true,
+            false,
+        )?;
+        config.hypothesis_group = Some(
+            Hypothesis::new(
+                config.hypothesis_username.as_deref().unwrap(),
+                config.hypothesis_key.as_deref().unwrap(),
+            )?
+            .create_group(&group_name, Some("Gooseberry knowledge base annotations"))?
+            .id,
+        );
+        config.store()?;
+        Ok(())
     }
 
     fn authorize(name: &str, key: &str) -> color_eyre::Result<bool> {
@@ -170,13 +195,13 @@ impl GooseberryConfig {
         let (mut name, mut key) = (String::new(), String::new());
         loop {
             name = utils::user_input(
-                "Enter your Hypothesis username",
+                "Hypothesis username",
                 if name.is_empty() { None } else { Some(&name) },
                 true,
                 false,
             )?;
             key = utils::user_input(
-                "Enter your Hypothesis developer API key",
+                "Hypothesis developer API key",
                 if key.is_empty() { None } else { Some(&key) },
                 true,
                 false,
