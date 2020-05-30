@@ -24,57 +24,100 @@ impl Gooseberry {
     }
 
     /// Merge function for appending items to an existing key, uses semicolons
-    pub(crate) fn set_merge(&self) -> color_eyre::Result<()> {
+    pub(crate) fn set_merge(&mut self) -> color_eyre::Result<()> {
         self.tags_tree()?.set_merge_operator(merge_index);
         Ok(())
     }
 
     /// (re)sets date of last sync to way in the past
-    pub fn reset_sync_date(&self) -> color_eyre::Result<()> {
+    pub fn reset_sync_time(&mut self) -> color_eyre::Result<()> {
         self.db
-            .insert("last_sync_date", MIN_DATE.to_string().as_bytes())?;
+            .insert("last_sync_time", MIN_DATE.to_string().as_bytes())?;
         Ok(())
     }
 
     /// Update last sync date after sync
-    fn set_sync_date(&self, date: DateTime<Utc>) -> color_eyre::Result<()> {
+    pub(crate) fn set_sync_time(&mut self, date: DateTime<Utc>) -> color_eyre::Result<()> {
         self.db
-            .insert("last_sync_date", date.to_string().as_bytes())?;
+            .insert("last_sync_time", date.to_string().as_bytes())?;
         Ok(())
     }
 
+    pub(crate) fn get_sync_time(&self) -> color_eyre::Result<DateTime<Utc>> {
+        match self.db.get("last_sync_time")? {
+            Some(date_bytes) => Ok(std::str::from_utf8(&date_bytes)?.parse()?),
+            None => Ok(MIN_DATE.and_hms(0, 0, 0)),
+        }
+    }
+
     /// Tree storing annotation id: annotation
-    fn annotations_tree(&self) -> color_eyre::Result<sled::Tree> {
+    pub(crate) fn annotations_tree(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("annotations")?)
     }
 
     /// Tree storing tag: ( annotation IDs ...)
-    fn tags_tree(&self) -> color_eyre::Result<sled::Tree> {
+    pub(crate) fn tags_tree(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("tags")?)
     }
 
-    /// Add an annotation index to each of the tags it's associated with
-    pub fn add_to_tags(&self, tags: &[String], annotation_key: &[u8]) -> color_eyre::Result<()> {
-        for tag in tags {
-            let tag_key = tag.as_bytes();
-            self.tags_tree()?
-                .merge(tag_key.to_vec(), annotation_key.to_vec())?;
-        }
+    /// Add an annotation index to a tag it's associated with
+    pub fn add_to_tag(&mut self, tag: &str, annotation_key: &[u8]) -> color_eyre::Result<()> {
+        let tag_key = tag.as_bytes();
+        self.tags_tree()?
+            .merge(tag_key.to_vec(), annotation_key.to_vec())?;
         Ok(())
+    }
+
+    pub fn insert_annotation(
+        annotation_key: &[u8],
+        annotation: &Annotation,
+        batch: &mut sled::Batch,
+    ) {
+        let annotation_bytes = bincode::serialize(annotation)?;
+        batch.insert(annotation_key, annotation_bytes)?;
     }
 
     /// Add an annotation to the annotations tree
-    fn add_annotation(&self, annotation: &Annotation) -> color_eyre::Result<()> {
-        let annotation_bytes = bincode::serialize(annotation)?;
+    fn add_annotation(
+        &mut self,
+        annotation: &Annotation,
+        batch: &mut sled::Batch,
+    ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
-        self.add_to_tags(&annotation.tags, annotation_key)?;
-        self.annotations_tree()?
-            .insert(annotation_key, annotation_bytes)?;
+        for tag in &annotation.tags {
+            self.add_to_tag(tag, annotation_key)?;
+        }
+        Self::insert_annotation(annotation_key, annotation, batch)?;
         Ok(())
     }
 
+    /// add or update annotations from the Hypothesis API
+    pub(crate) fn sync_annotations(
+        &mut self,
+        annotations: &[Annotation],
+    ) -> color_eyre::Result<(usize, usize)> {
+        let mut added = 0;
+        let mut updated = 0;
+        let mut batch = sled::Batch::default();
+        for annotation in annotations {
+            if self
+                .annotations_tree()?
+                .contains_key(annotation.id.as_bytes())?
+            {
+                self.delete_annotation(&annotation.id)?;
+                self.add_annotation(annotation, &mut batch)?;
+                updated += 1;
+            } else {
+                self.add_annotation(annotation, &mut batch)?;
+                added += 1;
+            }
+        }
+        self.annotations_tree()?.apply_batch(batch)?;
+        Ok((added, updated))
+    }
+
     /// Delete an annotation index from the tag tree
-    fn delete_from_tag(
+    pub fn delete_from_tag(
         &mut self,
         tag_key: &[u8],
         annotation_id: &AnnotationID,
@@ -155,12 +198,12 @@ impl Gooseberry {
     }
     /// Retrieve annotations within a certain date range
     /// If `include_updated` is true, looks at the Updated date rather than the Created date
-    pub fn list_annotations_in_date_range(
+    pub fn get_annotations_in_date_range(
         &self,
         from_date: DateTime<Utc>,
         to_date: DateTime<Utc>,
         include_updated: bool,
-    ) -> color_eyre::Result<Vec<Annotation>> {
+    ) -> color_eyre::Result<impl Iterator<Item = Annotation>> {
         Ok(self
             .annotations_tree()?
             .iter()
@@ -173,7 +216,6 @@ impl Gooseberry {
                 } else {
                     from_date <= annotation.created && annotation.created < to_date
                 }
-            })
-            .collect())
+            }))
     }
 }

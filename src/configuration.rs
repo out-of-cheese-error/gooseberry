@@ -171,15 +171,15 @@ impl GooseberryConfig {
             true,
             false,
         )?;
-        config.hypothesis_group = Some(
+        self.hypothesis_group = Some(
             Hypothesis::new(
-                config.hypothesis_username.as_deref().unwrap(),
-                config.hypothesis_key.as_deref().unwrap(),
+                self.hypothesis_username.as_deref().unwrap(),
+                self.hypothesis_key.as_deref().unwrap(),
             )?
             .create_group(&group_name, Some("Gooseberry knowledge base annotations"))?
             .id,
         );
-        config.store()?;
+        self.store()?;
         Ok(())
     }
 
@@ -240,8 +240,24 @@ impl GooseberryConfig {
         Ok(())
     }
 
+    /// Change the group ID of the group used by gooseberry
+    pub fn change_group(&mut self, id: GroupID) -> color_eyre::Result<()> {
+        if Hypothesis::new(
+            self.hypothesis_username.as_deref().unwrap(),
+            self.hypothesis_key.as_deref().unwrap(),
+        )?
+        .fetch_group(&id, Vec::new())
+        .is_err()
+        {
+            Err(Apologize::GroupNotFound { id }.into())
+        } else {
+            self.hypothesis_group = Some(id);
+            self.store()?;
+        }
+    }
+
     /// Write possibly modified config
-    pub(crate) fn store(&self) -> color_eyre::Result<()> {
+    pub fn store(&self) -> color_eyre::Result<()> {
         // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
         let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         match config_file {

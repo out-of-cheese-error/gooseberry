@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
 use crate::configuration::GooseberryConfig;
+use crate::utils;
 use crate::NAME;
+use chrono::{DateTime, Utc};
+use hypothesis::GroupID;
 use std::io;
 use structopt::clap::AppSettings;
 use structopt::clap::Shell;
@@ -18,7 +21,16 @@ pub enum GooseberryCLI {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
     /// Tag annotations according to topic.
-    Tag,
+    Tag {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Use this flag to remove the given tag from the filtered annotations instead of adding it
+        #[structopt(long)]
+        delete: bool,
+        /// The tag to add to / remove from the filtered annotations
+        /// Leave empty to open a search buffer to see and fuzzy search filtered annotations before deciding on a tag for them
+        tag: Option<String>,
+    },
     /// Create and update your knowledge-base markdown files
     Make,
     /// Generate shell completions
@@ -33,6 +45,21 @@ pub enum GooseberryCLI {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
     },
+}
+
+#[derive(StructOpt, Debug)]
+pub struct Filters {
+    /// Filter annotations created after this date and time
+    /// Can be colloquial, e.g. "last Friday 8pm"
+    #[structopt(long, parse(try_from_str = utils::parse_datetime))]
+    pub from: Option<DateTime<Utc>>,
+    /// Filter annotations with this pattern in their URL
+    /// Doesn't have to be the full URL, e.g. "wikipedia"
+    #[structopt(long)]
+    pub url: Option<String>,
+    /// Filter annotations with this pattern in their `quote`, `tags`, `text`, or `url`
+    #[structopt(long)]
+    pub any: Option<String>,
 }
 
 impl GooseberryCLI {
@@ -53,6 +80,8 @@ pub enum ConfigCommand {
     Where,
     /// Change Hypothesis credentials
     Authorize,
+    /// Change the group ID of the group used for hypothesis annotations
+    Group { id: GroupID },
 }
 
 impl ConfigCommand {
@@ -67,6 +96,10 @@ impl ConfigCommand {
             ConfigCommand::Authorize => {
                 let mut config = GooseberryConfig::load()?;
                 config.request_credentials()?;
+            }
+            ConfigCommand::Group { id } => {
+                let mut config = GooseberryConfig::load()?;
+                config.change_group(id.to_owned())?;
             }
         }
         Ok(())

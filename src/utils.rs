@@ -1,4 +1,4 @@
-use chrono::{Date, Utc};
+use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
 use hypothesis::AnnotationID;
@@ -12,12 +12,12 @@ pub fn u8_to_str(input: &[u8]) -> color_eyre::Result<String> {
     Ok(str::from_utf8(input)?.to_owned())
 }
 
-/// Makes a date from a string, can be colloquial like "next Friday"
-pub fn parse_date(date_string: &str) -> color_eyre::Result<Date<Utc>> {
+/// Makes DateTime from a string, can be colloquial like "last Friday 8pm"
+pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>> {
     if date_string.to_ascii_lowercase() == "today" {
-        Ok(Utc::now().date())
+        Ok(Utc::now())
     } else {
-        Ok(parse_date_string(date_string, Utc::now(), Dialect::Uk)?.date())
+        Ok(parse_date_string(datetime_string, Utc::now(), Dialect::Uk)?)
     }
 }
 
