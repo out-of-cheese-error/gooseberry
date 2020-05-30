@@ -4,7 +4,7 @@ use hypothesis::annotations::{Annotation, AnnotationMaker};
 
 impl Gooseberry {
     /// Add a tag to an existing annotation
-    pub(crate) fn add_tag_to_annotation(
+    pub fn add_tag_to_annotation(
         &self,
         annotation: Annotation,
         new_tag: &str,
@@ -35,7 +35,7 @@ impl Gooseberry {
     }
 
     /// Delete a tag from an existing annotation
-    pub(crate) fn delete_tag_from_annotation(
+    pub fn delete_tag_from_annotation(
         &self,
         annotation: Annotation,
         annotation_batch: &mut sled::Batch,

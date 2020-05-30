@@ -25,7 +25,7 @@ impl Gooseberry {
     }
 
     /// Merge function for appending items to an existing key, uses semicolons
-    pub(crate) fn set_merge(&self) -> color_eyre::Result<()> {
+    pub fn set_merge(&self) -> color_eyre::Result<()> {
         self.tag_to_annotations()?.set_merge_operator(merge_index);
         self.annotation_to_tags()?.set_merge_operator(merge_index);
         Ok(())
@@ -38,12 +38,12 @@ impl Gooseberry {
     }
 
     /// Update last sync date after sync
-    pub(crate) fn set_sync_time(&self, date: &str) -> color_eyre::Result<()> {
+    pub fn set_sync_time(&self, date: &str) -> color_eyre::Result<()> {
         self.db.insert("last_sync_time", date.as_bytes())?;
         Ok(())
     }
 
-    pub(crate) fn get_sync_time(&self) -> color_eyre::Result<String> {
+    pub fn get_sync_time(&self) -> color_eyre::Result<String> {
         match self.db.get("last_sync_time")? {
             Some(date_bytes) => Ok(std::str::from_utf8(&date_bytes)?.to_owned()),
             None => Ok(utils::MIN_DATE.to_owned()),
@@ -51,12 +51,12 @@ impl Gooseberry {
     }
 
     /// Tree storing annotation id: (tags ...)
-    pub(crate) fn annotation_to_tags(&self) -> color_eyre::Result<sled::Tree> {
+    pub fn annotation_to_tags(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("annotation_to_tags")?)
     }
 
     /// Tree storing tag: ( annotation IDs ...)
-    pub(crate) fn tag_to_annotations(&self) -> color_eyre::Result<sled::Tree> {
+    pub fn tag_to_annotations(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("tag_to_annotations")?)
     }
 
@@ -97,7 +97,7 @@ impl Gooseberry {
     }
 
     /// add or update annotations from the Hypothesis API
-    pub(crate) fn sync_annotations(
+    pub fn sync_annotations(
         &self,
         annotations: &[Annotation],
     ) -> color_eyre::Result<(usize, usize)> {

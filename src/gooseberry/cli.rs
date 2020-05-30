@@ -101,7 +101,7 @@ impl Into<SearchQuery> for Filters {
 }
 
 impl GooseberryCLI {
-    pub(crate) fn complete(shell: Shell) {
+    pub fn complete(shell: Shell) {
         GooseberryCLI::clap().gen_completions_to(NAME, shell, &mut io::stdout());
     }
 }
@@ -123,7 +123,7 @@ pub enum ConfigCommand {
 }
 
 impl ConfigCommand {
-    pub(crate) fn run(&self) -> color_eyre::Result<()> {
+    pub fn run(&self) -> color_eyre::Result<()> {
         match self {
             ConfigCommand::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
