@@ -921,6 +921,7 @@ dependencies = [
  "chrono-english",
  "color-eyre",
  "confy",
+ "console",
  "dialoguer",
  "directories-next",
  "eyre",

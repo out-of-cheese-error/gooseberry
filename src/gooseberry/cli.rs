@@ -27,9 +27,11 @@ pub enum GooseberryCLI {
         /// Use this flag to remove the given tag from the filtered annotations instead of adding it
         #[structopt(long)]
         delete: bool,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long)]
+        search: bool,
         /// The tag to add to / remove from the filtered annotations
-        /// Leave empty to open a search buffer to see and fuzzy search filtered annotations before deciding on a tag for them
-        tag: Option<String>,
+        tag: String,
     },
     /// Create and update your knowledge-base markdown files
     Make,
@@ -44,6 +46,10 @@ pub enum GooseberryCLI {
     Config {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
+    },
+    Clear {
+        #[structopt(long)]
+        force: bool,
     },
 }
 

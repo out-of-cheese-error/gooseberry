@@ -1,9 +1,12 @@
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, GooseberryCLI};
-use chrono::DateTime;
-use hypothesis::annotations::{Annotation, SearchQuery};
+use chrono::{DateTime, SecondsFormat};
+use color_eyre::Help;
+use dialoguer::Confirm;
+use hypothesis::annotations::{Order, SearchQuery};
 use hypothesis::Hypothesis;
+use std::fs;
 
 pub mod cli;
 pub mod database;
@@ -65,18 +68,25 @@ impl Gooseberry {
             GooseberryCLI::Tag {
                 filters,
                 delete,
+                search,
                 tag,
-            } => Ok(()),
+            } => self.tag(filters, *delete, *search, tag),
             GooseberryCLI::Make => Ok(()),
+            GooseberryCLI::Clear { force } => self.clear(*force),
             _ => Ok(()), // Already handled
         }
     }
 
     fn sync(&mut self) -> color_eyre::Result<()> {
         let (mut added, mut updated) = (0, 0);
+        let search_after = self
+            .get_sync_time()?
+            .to_rfc3339_opts(SecondsFormat::Millis, true);
+        println!("{}", search_after);
         let mut query = SearchQuery {
             limit: 200,
-            search_after: self.get_sync_time()?.to_rfc3339(),
+            order: Order::Asc,
+            search_after,
             user: self.api.user.to_owned(),
             group: self.config.hypothesis_group.as_deref().unwrap().to_owned(),
             ..Default::default()
@@ -95,5 +105,29 @@ impl Gooseberry {
             added, updated
         );
         Ok(())
+    }
+
+    /// Removes all `sled` trees
+    fn clear(&self, force: bool) -> color_eyre::Result<()> {
+        if force
+            || Confirm::new()
+                .with_prompt("Clear all data?")
+                .default(false)
+                .interact()?
+        {
+            for path in fs::read_dir(&self.config.db_dir)? {
+                let path = path?.path();
+                if path.is_dir() {
+                    fs::remove_dir_all(path)?;
+                } else {
+                    fs::remove_file(path)?;
+                }
+            }
+            self.reset_sync_time()?;
+            Ok(())
+        } else {
+            let error: color_eyre::Result<()> = Err(Apologize::DoingNothing.into());
+            error.suggestion("Press Y next time!")
+        }
     }
 }

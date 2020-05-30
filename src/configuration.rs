@@ -253,6 +253,7 @@ impl GooseberryConfig {
         } else {
             self.hypothesis_group = Some(id);
             self.store()?;
+            Ok(())
         }
     }
 
