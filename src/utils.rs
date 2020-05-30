@@ -4,6 +4,8 @@ use dialoguer::{theme, Input};
 use hypothesis::AnnotationID;
 use std::str;
 
+pub const MIN_DATE: &str = "1900-01-01T00:00:00.000Z";
+
 /// ASCII code of semicolon
 pub const SEMICOLON: u8 = 59;
 
@@ -30,8 +32,8 @@ pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<AnnotationID>> {
         .collect())
 }
 
-/// List of usize into semicolon-joined byte array
-pub fn join_ids(index_list: &[AnnotationID]) -> color_eyre::Result<Vec<u8>> {
+/// List of String into semicolon-joined byte array
+pub fn join_ids(index_list: &[String]) -> color_eyre::Result<Vec<u8>> {
     Ok(index_list
         .join(str::from_utf8(&[SEMICOLON])?)
         .as_bytes()

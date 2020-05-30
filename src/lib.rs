@@ -1,5 +1,4 @@
 #![allow(clippy::ptr_arg)]
-#![allow(dead_code)]
 
 pub mod configuration;
 pub mod errors;

@@ -4,6 +4,7 @@ use crate::configuration::GooseberryConfig;
 use crate::utils;
 use crate::NAME;
 use chrono::{DateTime, Utc};
+use hypothesis::annotations::{Order, SearchQuery, Sort};
 use hypothesis::GroupID;
 use std::io;
 use structopt::clap::AppSettings;
@@ -33,6 +34,16 @@ pub enum GooseberryCLI {
         /// The tag to add to / remove from the filtered annotations
         tag: String,
     },
+    /// Delete annotations in bulk, using filters and fuzzy search
+    Delete {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long)]
+        search: bool,
+        #[structopt(short, long)]
+        force: bool,
+    },
     /// Create and update your knowledge-base markdown files
     Make,
     /// Generate shell completions
@@ -48,7 +59,7 @@ pub enum GooseberryCLI {
         cmd: ConfigCommand,
     },
     Clear {
-        #[structopt(long)]
+        #[structopt(short, long)]
         force: bool,
     },
 }
@@ -61,11 +72,32 @@ pub struct Filters {
     pub from: Option<DateTime<Utc>>,
     /// Filter annotations with this pattern in their URL
     /// Doesn't have to be the full URL, e.g. "wikipedia"
-    #[structopt(long)]
-    pub url: Option<String>,
+    #[structopt(default_value, long)]
+    pub uri: String,
     /// Filter annotations with this pattern in their `quote`, `tags`, `text`, or `url`
+    #[structopt(default_value, long)]
+    pub any: String,
+    /// Filter annotations with these tags
     #[structopt(long)]
-    pub any: Option<String>,
+    pub tags: Vec<String>,
+}
+
+impl Into<SearchQuery> for Filters {
+    fn into(self) -> SearchQuery {
+        SearchQuery {
+            limit: 200,
+            search_after: match self.from {
+                None => utils::MIN_DATE.to_owned(),
+                Some(date) => date.to_rfc3339(),
+            },
+            uri_parts: self.uri,
+            any: self.any,
+            tags: self.tags,
+            order: Order::Asc,
+            sort: Sort::Created,
+            ..Default::default()
+        }
+    }
 }
 
 impl GooseberryCLI {
