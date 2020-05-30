@@ -66,7 +66,7 @@ impl From<&Annotation> for SearchAnnotation {
             .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags = style(format!("{}", annotation.tags.join(":"))).red();
+        let tags = style(annotation.tags.join(":")).red();
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();
