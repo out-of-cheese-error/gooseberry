@@ -3,11 +3,11 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use skim::prelude::{unbounded, SkimOptionsBuilder};
-use skim::{AnsiString, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
+use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
-use console::{strip_ansi_codes, Style};
+use console::{strip_ansi_codes, style};
 use hypothesis::annotations::{Annotation, Selector};
 use hypothesis::AnnotationID;
 
@@ -30,6 +30,13 @@ impl<'a> SkimItem for SearchAnnotation {
         Cow::Borrowed(&self.plain)
     }
 
+    fn preview(&self) -> ItemPreview {
+        ItemPreview::Text(
+            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all, CTRL-C to abort"
+                .into(),
+        )
+    }
+
     fn output(&self) -> Cow<str> {
         Cow::Borrowed(&self.id)
     }
@@ -37,9 +44,7 @@ impl<'a> SkimItem for SearchAnnotation {
 
 impl From<&Annotation> for SearchAnnotation {
     fn from(annotation: &Annotation) -> Self {
-        let gray = Style::new().dim();
-        let blue_italic = Style::new().blue().italic();
-
+        // Find highlighted text from `TextQuoteSelector`s
         let quotes: String = annotation
             .target
             .iter()
@@ -58,18 +63,12 @@ impl From<&Annotation> for SearchAnnotation {
                     Some((&target.source, quotes))
                 }
             })
-            .map(|(source, quotes)| {
-                format!(
-                    "{} - {}",
-                    blue_italic.apply_to(quotes.join(" ")),
-                    gray.apply_to(source)
-                )
-            })
+            .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags = format!(":{}:", gray.apply_to(annotation.tags.join(":")));
-        let url = format!("{}", gray.italic().underlined().apply_to(&annotation.uri));
-        let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, url);
+        let tags = style(format!("{}", annotation.tags.join(":"))).red();
+        let uri = style(&annotation.uri).cyan().italic().underlined();
+        let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();
         SearchAnnotation {
             highlight,
@@ -86,6 +85,13 @@ impl Gooseberry {
     ) -> color_eyre::Result<impl Iterator<Item = AnnotationID>> {
         let options = SkimOptionsBuilder::default()
             .height(Some("100%"))
+            .preview(Some(""))
+            .preview_window(Some("down:10%"))
+            .bind(vec![
+                "ctrl-a:select-all",
+                "left:scroll-left",
+                "right:scroll-right",
+            ])
             .multi(true)
             .reverse(true)
             .build()

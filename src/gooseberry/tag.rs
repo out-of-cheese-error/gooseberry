@@ -14,13 +14,16 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let date = filters.from.unwrap_or_else(|| MIN_DATE.and_hms(0, 0, 0));
         let mut annotations: Vec<_> = self
-            .get_annotations_in_date_range(date, MAX_DATE.and_hms(23, 59, 59), false)?
+            .get_annotations_in_date_range(date, MAX_DATE.and_hms(23, 59, 59), false)? // filter by date
             .into_iter()
             .filter(|a| match &filters.url {
+                // check if `uri` pattern is present in uri
                 Some(pattern) => a.uri.contains(pattern),
+                // `uri` option not given
                 None => true,
             })
             .filter(|a| match &filters.any {
+                // check if `any` pattern is present in text, uri, tags, or highlighted quotes
                 Some(pattern) => {
                     a.text.contains(pattern)
                         || a.uri.contains(pattern)
@@ -34,10 +37,22 @@ impl Gooseberry {
                             })
                         })
                 }
+                // `any` option not given
                 None => true,
             })
+            .filter(|a| {
+                if delete {
+                    // don't consider annotations without the tag
+                    a.tags.contains(&tag.to_string())
+                } else {
+                    // don't consider annotations which already have the tag
+                    !a.tags.contains(&tag.to_string())
+                }
+            })
             .collect();
+
         if search {
+            // Run a search window for fuzzy search capability.
             let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
             annotations = annotations
                 .into_iter()
@@ -48,9 +63,9 @@ impl Gooseberry {
         if delete {
             let mut tag_batch = sled::Batch::default();
             let mut annotation_batch = sled::Batch::default();
-            for mut annotation in annotations {
+            for annotation in annotations {
                 self.delete_tag_from_annotation(
-                    &mut annotation,
+                    annotation,
                     &mut annotation_batch,
                     tag,
                     &mut tag_batch,
@@ -60,8 +75,8 @@ impl Gooseberry {
             self.tags_tree()?.apply_batch(tag_batch)?;
         } else {
             let mut annotation_batch = sled::Batch::default();
-            for mut annotation in annotations {
-                self.add_tag_to_annotation(&mut annotation, &mut annotation_batch, tag)?;
+            for annotation in annotations {
+                self.add_tag_to_annotation(annotation, &mut annotation_batch, tag)?;
             }
             self.annotations_tree()?.apply_batch(annotation_batch)?;
         }
@@ -72,65 +87,64 @@ impl Gooseberry {
     /// Add a tag to an existing annotation
     fn add_tag_to_annotation(
         &self,
-        annotation: &mut Annotation,
+        annotation: Annotation,
         annotation_batch: &mut sled::Batch,
         new_tag: &str,
-    ) -> color_eyre::Result<()> {
+    ) -> color_eyre::Result<bool> {
+        let mut annotation = annotation;
         if annotation.tags.contains(&new_tag.to_string()) {
-            return Ok(());
+            // tag already present
+            return Ok(false);
         }
         annotation.tags.push(new_tag.to_owned());
         let annotation_key = annotation.id.as_bytes();
-        Self::insert_annotation(annotation_key, annotation, annotation_batch)?;
+        Self::insert_annotation(annotation_key, &annotation, annotation_batch)?;
         self.add_to_tag(new_tag, annotation_key)?;
         self.api.update_annotation(
             &annotation.id,
             &AnnotationMaker {
-                tags: annotation.tags.clone(),
+                tags: annotation.tags,
                 ..Default::default()
             },
         )?;
-        Ok(())
+        Ok(true)
     }
 
     /// Delete a tag from an existing annotation
     fn delete_tag_from_annotation(
         &self,
-        annotation: &mut Annotation,
+        annotation: Annotation,
         annotation_batch: &mut sled::Batch,
         remove_tag: &str,
         tag_batch: &mut sled::Batch,
-    ) -> color_eyre::Result<()> {
-        let new_tags = annotation
-            .tags
-            .iter()
-            .filter(|t| t != &remove_tag)
-            .cloned()
-            .collect();
-        if new_tags == annotation.tags {
-            return Ok(());
+    ) -> color_eyre::Result<bool> {
+        let mut annotation = annotation;
+        if !annotation.tags.contains(&remove_tag.to_owned()) {
+            // tag not present
+            return Ok(false);
         }
-        annotation.tags = new_tags;
-        Self::insert_annotation(annotation.id.as_bytes(), annotation, annotation_batch)?;
+        annotation.tags.retain(|x| x != remove_tag);
+        Self::insert_annotation(annotation.id.as_bytes(), &annotation, annotation_batch)?;
         self.delete_from_tag(remove_tag.as_bytes(), &annotation.id, tag_batch)?;
         self.api.update_annotation(
             &annotation.id,
             &AnnotationMaker {
-                tags: annotation.tags.clone(),
+                tags: annotation.tags,
                 ..Default::default()
             },
         )?;
-        Ok(())
+        Ok(true)
     }
 
     /// Replace an annotation's tags
     fn change_tags_in_annotation(
         &mut self,
-        annotation: &mut Annotation,
+        annotation: Annotation,
         annotation_batch: &mut sled::Batch,
         changed_tags: &[String],
         tag_batch: &mut sled::Batch,
-    ) -> color_eyre::Result<()> {
+    ) -> color_eyre::Result<bool> {
+        let mut annotation = annotation;
         let add_tags: Vec<_> = changed_tags
             .iter()
             .filter(|t| !annotation.tags.contains(t))
@@ -143,7 +157,7 @@ impl Gooseberry {
             .collect();
         if add_tags.is_empty() && delete_tags.is_empty() {
             // No change
-            return Ok(());
+            return Ok(false);
         }
         annotation.tags = changed_tags.to_owned();
         let annotation_key = annotation.id.as_bytes();
@@ -153,14 +167,14 @@ impl Gooseberry {
         for remove_tag in delete_tags {
             self.delete_from_tag(remove_tag.as_bytes(), &annotation.id, tag_batch)?;
         }
-        Self::insert_annotation(annotation_key, annotation, annotation_batch)?;
+        Self::insert_annotation(annotation_key, &annotation, annotation_batch)?;
         self.api.update_annotation(
             &annotation.id,
             &AnnotationMaker {
-                tags: annotation.tags.clone(),
+                tags: annotation.tags,
                 ..Default::default()
             },
         )?;
-        Ok(())
+        Ok(true)
     }
 }
