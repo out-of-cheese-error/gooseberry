@@ -7,9 +7,6 @@ use url::Url;
 
 use hypothesis::AnnotationID;
 
-pub const MIN_DATE: &str = "1900-01-01T00:00:00.000Z";
-pub const EMPTY_TAG: &str = "gooseberry_empty";
-
 /// ASCII code of semicolon
 pub const SEMICOLON: u8 = 59;
 

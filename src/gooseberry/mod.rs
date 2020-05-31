@@ -4,7 +4,7 @@ use std::fs;
 use color_eyre::Help;
 use dialoguer::Confirm;
 
-use hypothesis::annotations::{Annotation, Order, SearchQuery};
+use hypothesis::annotations::{Annotation, AnnotationMaker, Order, SearchQuery};
 use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
@@ -75,8 +75,9 @@ impl Gooseberry {
             GooseberryCLI::Delete {
                 filters,
                 search,
+                hypothesis,
                 force,
-            } => self.delete(filters, search, force).await,
+            } => self.delete(filters, search, hypothesis, force).await,
             GooseberryCLI::Make => self.make().await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
@@ -92,13 +93,13 @@ impl Gooseberry {
             group: self.config.hypothesis_group.clone().unwrap(),
             ..Default::default()
         };
-        let (added, updated) =
+        let (added, updated, ignored) =
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
-        println!(
-            "Added {} new annotations\nUpdated {} annotations",
-            added, updated
-        );
+        println!("Added {} new notes\nUpdated {} notes", added, updated);
+        if ignored > 0 {
+            println!("Ignored {} notes", ignored);
+        }
         Ok(())
     }
 
@@ -151,7 +152,13 @@ impl Gooseberry {
         Ok(())
     }
 
-    async fn delete(&self, filters: Filters, search: bool, force: bool) -> color_eyre::Result<()> {
+    async fn delete(
+        &self,
+        filters: Filters,
+        search: bool,
+        hypothesis: bool,
+        force: bool,
+    ) -> color_eyre::Result<()> {
         let mut annotations = self.filter_annotations(filters).await?;
         if search {
             // Run a search window for fuzzy search capability.
@@ -164,13 +171,51 @@ impl Gooseberry {
         if !annotations.is_empty()
             && (force
                 || Confirm::new()
-                    .with_prompt(&format!("Delete {} annotations?", annotations.len()))
+                    .with_prompt(&format!(
+                        "Delete {} notes from gooseberry?",
+                        annotations.len()
+                    ))
                     .default(false)
                     .interact()?)
         {
-            let ids = annotations.into_iter().map(|a| a.id).collect::<Vec<_>>();
-            self.api.delete_annotations(&ids).await?;
+            let ids = annotations
+                .iter()
+                .map(|a| a.id.to_owned())
+                .collect::<Vec<_>>();
             self.delete_annotations(&ids)?;
+            if hypothesis
+                && (force
+                    || Confirm::new()
+                        .with_prompt("Also delete from Hypothesis?")
+                        .default(false)
+                        .interact()?)
+            {
+                self.api.delete_annotations(&ids).await?;
+                println!(
+                    "{} notes deleted from gooseberry and Hypothesis",
+                    annotations.len()
+                );
+            } else {
+                self.api
+                    .update_annotations(
+                        &ids,
+                        &annotations
+                            .into_iter()
+                            .map(|a| {
+                                let mut tags = a.tags;
+                                tags.push(crate::IGNORE_TAG.to_owned());
+                                AnnotationMaker {
+                                    tags: Some(tags),
+                                    ..Default::default()
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .await?;
+                println!("{} notes deleted from gooseberry.\n\
+                 These still exist in Hypothesis but will be ignored in future `gooseberry sync` calls \
+                 unless the \"gooseberry_ignore\" tag is removed.", annotations.len());
+            }
         }
         Ok(())
     }

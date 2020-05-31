@@ -2,7 +2,7 @@ use hypothesis::annotations::{Annotation, AnnotationMaker};
 
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::utils::EMPTY_TAG;
+use crate::EMPTY_TAG;
 
 impl Gooseberry {
     /// Add a tag to list of annotations

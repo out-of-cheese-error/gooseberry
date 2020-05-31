@@ -7,7 +7,7 @@ use hypothesis::AnnotationID;
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::utils::{EMPTY_TAG, MIN_DATE};
+use crate::{EMPTY_TAG, MIN_DATE};
 
 /// If key exists, add value to existing values - join with a semicolon
 fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
@@ -48,7 +48,7 @@ impl Gooseberry {
     pub fn get_sync_time(&self) -> color_eyre::Result<String> {
         match self.db.get("last_sync_time")? {
             Some(date_bytes) => Ok(std::str::from_utf8(&date_bytes)?.to_owned()),
-            None => Ok(utils::MIN_DATE.to_owned()),
+            None => Ok(crate::MIN_DATE.to_owned()),
         }
     }
 
@@ -103,11 +103,16 @@ impl Gooseberry {
     pub fn sync_annotations(
         &self,
         annotations: &[Annotation],
-    ) -> color_eyre::Result<(usize, usize)> {
+    ) -> color_eyre::Result<(usize, usize, usize)> {
         let mut added = 0;
         let mut updated = 0;
+        let mut ignored = 0;
         let mut annotation_batch = sled::Batch::default();
         for annotation in annotations {
+            if annotation.tags.contains(&crate::IGNORE_TAG.to_string()) {
+                ignored += 1;
+                continue;
+            }
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
                 self.delete_annotation(&annotation.id)?;
@@ -119,7 +124,7 @@ impl Gooseberry {
             }
         }
         self.annotation_to_tags()?.apply_batch(annotation_batch)?;
-        Ok((added, updated))
+        Ok((added, updated, ignored))
     }
 
     /// Delete an annotation index from the tag tree
@@ -129,16 +134,15 @@ impl Gooseberry {
         annotation_id: &AnnotationID,
         batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
-        let tag = utils::u8_to_str(tag_key)?;
-        let new_indices: Vec<_> = utils::split_ids(
-            &self
-                .tag_to_annotations()?
-                .get(tag_key)?
-                .ok_or(Apologize::TagNotFound { tag })?,
-        )?
-        .into_iter()
-        .filter(|index_i| index_i != annotation_id)
-        .collect();
+        let new_indices: Vec<_> =
+            utils::split_ids(&self.tag_to_annotations()?.get(tag_key)?.ok_or(
+                Apologize::TagNotFound {
+                    tag: utils::u8_to_str(tag_key)?,
+                },
+            )?)?
+            .into_iter()
+            .filter(|index_i| index_i != annotation_id)
+            .collect();
         if new_indices.is_empty() {
             batch.remove(tag_key);
         } else {
@@ -178,6 +182,9 @@ impl Gooseberry {
             let tags = self.get_annotation_tags(id)?;
             annotation_batch.remove(id.as_bytes());
             for tag in &tags {
+                if tag.is_empty() {
+                    continue;
+                }
                 self.delete_from_tag(tag.as_bytes(), id, &mut tag_batch)?;
             }
             tags_list.push(tags);

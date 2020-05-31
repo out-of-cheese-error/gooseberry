@@ -1,15 +1,17 @@
+use std::io;
 use std::path::PathBuf;
+
+use chrono::{DateTime, Utc};
+use structopt::clap::AppSettings;
+use structopt::clap::Shell;
+use structopt::StructOpt;
+
+use hypothesis::annotations::{Order, SearchQuery, Sort};
+use hypothesis::GroupID;
 
 use crate::configuration::GooseberryConfig;
 use crate::utils;
 use crate::NAME;
-use chrono::{DateTime, Utc};
-use hypothesis::annotations::{Order, SearchQuery, Sort};
-use hypothesis::GroupID;
-use std::io;
-use structopt::clap::AppSettings;
-use structopt::clap::Shell;
-use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -34,13 +36,20 @@ pub enum GooseberryCLI {
         /// The tag to add to / remove from the filtered annotations
         tag: String,
     },
-    /// Delete annotations in bulk, using filters and fuzzy search
+    /// Delete annotations in bulk, using filters and fuzzy search,
+    /// either just from gooseberry or from both gooseberry and Hypothesis
     Delete {
         #[structopt(flatten)]
         filters: Filters,
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
+        /// Also delete from Hypothesis.
+        /// Without this flag, the "gooseberry_ignore" flag is added to the selected annotations to ensure that they are not synced by gooseberry in the future.
+        /// If the flag is given then the annotations are also deleted from Hypothesis.
+        #[structopt(short, long)]
+        hypothesis: bool,
+        /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
     },
@@ -59,6 +68,7 @@ pub enum GooseberryCLI {
         cmd: ConfigCommand,
     },
     Clear {
+        /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
     },
@@ -87,7 +97,7 @@ impl Into<SearchQuery> for Filters {
         SearchQuery {
             limit: 200,
             search_after: match self.from {
-                None => utils::MIN_DATE.to_owned(),
+                None => crate::MIN_DATE.to_owned(),
                 Some(date) => date.to_rfc3339(),
             },
             uri_parts: self.uri,

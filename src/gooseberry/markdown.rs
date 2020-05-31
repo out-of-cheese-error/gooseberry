@@ -11,7 +11,7 @@ use hypothesis::annotations::{Annotation, Selector};
 
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::utils::EMPTY_TAG;
+use crate::EMPTY_TAG;
 
 impl Gooseberry {
     pub async fn make(&self) -> color_eyre::Result<()> {
