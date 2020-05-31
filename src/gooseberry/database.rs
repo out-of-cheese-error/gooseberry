@@ -189,9 +189,6 @@ impl Gooseberry {
             let tags = self.get_annotation_tags(id)?;
             annotation_batch.remove(id.as_bytes());
             for tag in &tags {
-                if tag.is_empty() {
-                    continue;
-                }
                 self.delete_from_tag(tag.as_bytes(), id, &mut tag_batch)?;
             }
             tags_list.push(tags);
@@ -213,11 +210,16 @@ impl Gooseberry {
     /// Retrieve tags associated with an annotation
     pub fn get_annotation_tags(&self, id: &AnnotationID) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
-        Ok(utils::split_ids(
+        let tags = utils::split_ids(
             &self
                 .annotation_to_tags()?
                 .get(annotation_key)?
                 .ok_or(Apologize::AnnotationNotFound { id: id.to_owned() })?,
-        )?)
+        )?;
+        if tags.len() == 1 && tags[0].is_empty() {
+            Ok(Vec::new())
+        } else {
+            Ok(tags)
+        }
     }
 }
