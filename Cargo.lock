@@ -1140,7 +1140,7 @@ dependencies = [
 
 [[package]]
 name = "hypothesis"
-version = "0.2.0"
+iversion = "0.3.0"
 dependencies = [
  "chrono",
  "color-eyre",

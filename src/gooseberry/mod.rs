@@ -1,16 +1,19 @@
-use crate::configuration::GooseberryConfig;
-use crate::errors::Apologize;
-use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
-use color_eyre::Help;
-use dialoguer::Confirm;
-use hypothesis::annotations::{Annotation, Order, SearchQuery};
-use hypothesis::Hypothesis;
 use std::collections::HashSet;
 use std::fs;
 
+use color_eyre::Help;
+use dialoguer::Confirm;
+
+use hypothesis::annotations::{Annotation, Order, SearchQuery};
+use hypothesis::Hypothesis;
+
+use crate::configuration::GooseberryConfig;
+use crate::errors::Apologize;
+use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
+
 pub mod cli;
 pub mod database;
-// pub mod markdown;
+pub mod markdown;
 pub mod search;
 pub mod tag;
 
@@ -74,7 +77,7 @@ impl Gooseberry {
                 search,
                 force,
             } => self.delete(filters, search, force).await,
-            GooseberryCLI::Make => Ok(()),
+            GooseberryCLI::Make => self.make().await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
         }
@@ -124,16 +127,10 @@ impl Gooseberry {
             .filter(|a| {
                 if delete {
                     // only consider annotations with the tag
-                    a.tags
-                        .as_deref()
-                        .unwrap_or_default()
-                        .contains(&tag.to_string())
+                    a.tags.contains(&tag.to_string())
                 } else {
                     // don't consider annotations which already have the tag
-                    !a.tags
-                        .as_deref()
-                        .unwrap_or_default()
-                        .contains(&tag.to_string())
+                    !a.tags.contains(&tag.to_string())
                 }
             })
             .collect();

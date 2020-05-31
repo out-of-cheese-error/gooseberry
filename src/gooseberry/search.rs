@@ -2,14 +2,15 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
+use console::{strip_ansi_codes, style};
 use skim::prelude::{unbounded, SkimOptionsBuilder};
 use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
 
-use crate::errors::Apologize;
-use crate::gooseberry::Gooseberry;
-use console::{strip_ansi_codes, style};
 use hypothesis::annotations::{Annotation, Selector};
 use hypothesis::AnnotationID;
+
+use crate::errors::Apologize;
+use crate::gooseberry::Gooseberry;
 
 /// searchable annotation information
 #[derive(Debug)]
@@ -66,7 +67,7 @@ impl From<&Annotation> for SearchAnnotation {
             .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags = style(annotation.tags.as_deref().unwrap_or_default().join(":")).red();
+        let tags = style(annotation.tags.join(":")).red();
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();

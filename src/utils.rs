@@ -1,10 +1,13 @@
+use std::str;
+
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
+
 use hypothesis::AnnotationID;
-use std::str;
 
 pub const MIN_DATE: &str = "1900-01-01T00:00:00.000Z";
+pub const EMPTY_TAG: &str = "gooseberry_empty";
 
 /// ASCII code of semicolon
 pub const SEMICOLON: u8 = 59;

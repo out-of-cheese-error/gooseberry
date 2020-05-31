@@ -1,11 +1,13 @@
+use std::path::Path;
+use std::str;
+
+use hypothesis::annotations::Annotation;
+use hypothesis::AnnotationID;
+
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::utils::MIN_DATE;
-use hypothesis::annotations::Annotation;
-use hypothesis::AnnotationID;
-use std::path::Path;
-use std::str;
+use crate::utils::{EMPTY_TAG, MIN_DATE};
 
 /// If key exists, add value to existing values - join with a semicolon
 fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
@@ -85,13 +87,14 @@ impl Gooseberry {
         annotation_batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
-        annotation_batch.insert(
-            annotation_key,
-            utils::join_ids(&annotation.tags.as_deref().unwrap_or(&Vec::new()))?,
-        );
-        for tag in annotation.tags.as_deref().unwrap_or_default() {
-            let tag_key = tag.as_bytes();
-            self.add_to_tag(tag_key, annotation_key)?;
+        annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
+        if annotation.tags.is_empty() {
+            self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
+        } else {
+            for tag in &annotation.tags {
+                let tag_key = tag.as_bytes();
+                self.add_to_tag(tag_key, annotation_key)?;
+            }
         }
         Ok(())
     }
