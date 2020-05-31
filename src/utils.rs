@@ -8,6 +8,7 @@ use url::Url;
 use hypothesis::AnnotationID;
 
 /// ASCII code of semicolon
+/// TODO: Tag cannot have semicolon in it, remember to add this to the README
 pub const SEMICOLON: u8 = 59;
 
 /// Converts an array of bytes to a string
