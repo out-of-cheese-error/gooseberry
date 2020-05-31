@@ -28,7 +28,7 @@ pub enum GooseberryCLI {
         #[structopt(flatten)]
         filters: Filters,
         /// Use this flag to remove the given tag from the filtered annotations instead of adding it
-        #[structopt(long)]
+        #[structopt(short, long)]
         delete: bool,
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
@@ -80,6 +80,9 @@ pub struct Filters {
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime))]
     pub from: Option<DateTime<Utc>>,
+    /// If true, includes annotations updated after --from (instead of just created)
+    #[structopt(short, long)]
+    pub include_updated: bool,
     /// Filter annotations with this pattern in their URL
     /// Doesn't have to be the full URL, e.g. "wikipedia"
     #[structopt(default_value, long)]
@@ -104,7 +107,11 @@ impl Into<SearchQuery> for Filters {
             any: self.any,
             tags: self.tags,
             order: Order::Asc,
-            sort: Sort::Created,
+            sort: if self.include_updated {
+                Sort::Updated
+            } else {
+                Sort::Created
+            },
             ..Default::default()
         }
     }

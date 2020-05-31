@@ -96,7 +96,12 @@ impl Gooseberry {
         let (added, updated, ignored) =
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
-        println!("Added {} new notes\nUpdated {} notes", added, updated);
+        if added > 0 {
+            println!("Added {} new notes", added);
+        }
+        if updated > 0 {
+            println!("Updated {} notes", updated);
+        }
         if ignored > 0 {
             println!("Ignored {} notes", ignored);
         }
@@ -143,12 +148,12 @@ impl Gooseberry {
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
-
         if delete {
             self.delete_tag_from_annotations(annotations, tag).await?;
         } else {
             self.add_tag_to_annotations(annotations, tag).await?;
         }
+        self.sync().await?;
         Ok(())
     }
 
@@ -168,12 +173,13 @@ impl Gooseberry {
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
+        let num_annotations = annotations.len();
         if !annotations.is_empty()
             && (force
                 || Confirm::new()
                     .with_prompt(&format!(
                         "Delete {} notes from gooseberry?",
-                        annotations.len()
+                        num_annotations
                     ))
                     .default(false)
                     .interact()?)
@@ -193,7 +199,7 @@ impl Gooseberry {
                 self.api.delete_annotations(&ids).await?;
                 println!(
                     "{} notes deleted from gooseberry and Hypothesis",
-                    annotations.len()
+                    num_annotations
                 );
             } else {
                 self.api
@@ -214,7 +220,7 @@ impl Gooseberry {
                     .await?;
                 println!("{} notes deleted from gooseberry.\n\
                  These still exist in Hypothesis but will be ignored in future `gooseberry sync` calls \
-                 unless the \"gooseberry_ignore\" tag is removed.", annotations.len());
+                 unless the \"gooseberry_ignore\" tag is removed.", num_annotations);
             }
         }
         Ok(())

@@ -108,14 +108,18 @@ impl Gooseberry {
         let mut updated = 0;
         let mut ignored = 0;
         let mut annotation_batch = sled::Batch::default();
+        let mut tag_batch = sled::Batch::default();
         for annotation in annotations {
             if annotation.tags.contains(&crate::IGNORE_TAG.to_string()) {
+                if self.annotation_to_tags()?.contains_key(&annotation.id)? {
+                    self.delete_annotation(&annotation.id, &mut tag_batch)?;
+                }
                 ignored += 1;
                 continue;
             }
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
-                self.delete_annotation(&annotation.id)?;
+                self.delete_annotation(&annotation.id, &mut tag_batch)?;
                 self.add_annotation(annotation, &mut annotation_batch)?;
                 updated += 1;
             } else {
@@ -123,6 +127,7 @@ impl Gooseberry {
                 added += 1;
             }
         }
+        self.tag_to_annotations()?.apply_batch(tag_batch)?;
         self.annotation_to_tags()?.apply_batch(annotation_batch)?;
         Ok((added, updated, ignored))
     }
@@ -163,13 +168,15 @@ impl Gooseberry {
     }
 
     /// Delete annotation from database
-    pub fn delete_annotation(&self, id: &AnnotationID) -> color_eyre::Result<Vec<String>> {
+    pub fn delete_annotation(
+        &self,
+        id: &AnnotationID,
+        tag_batch: &mut sled::Batch,
+    ) -> color_eyre::Result<Vec<String>> {
         let tags = self.delete_from_annotations(id)?;
-        let mut tag_batch = sled::Batch::default();
         for tag in &tags {
-            self.delete_from_tag(tag.as_bytes(), id, &mut tag_batch)?;
+            self.delete_from_tag(tag.as_bytes(), id, tag_batch)?;
         }
-        self.tag_to_annotations()?.apply_batch(tag_batch)?;
         Ok(tags)
     }
 
