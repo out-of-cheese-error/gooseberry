@@ -3,6 +3,7 @@ use std::str;
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
+use url::Url;
 
 use hypothesis::AnnotationID;
 
@@ -68,4 +69,15 @@ pub fn user_input(
                 .to_owned(),
         ),
     }
+}
+
+pub(crate) fn base_url(mut url: Url) -> Option<Url> {
+    match url.path_segments_mut() {
+        Ok(mut path) => {
+            path.clear();
+        }
+        Err(_) => return None,
+    }
+    url.set_query(None);
+    Some(url)
 }

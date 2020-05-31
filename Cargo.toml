@@ -9,6 +9,7 @@ edition = "2018"
 hypothesis = {default-features = false, path = "../hypothesis"}
 tokio = { version = "0.2", features = ["macros"] }
 mdbook = "0.3.7"
+url = "2.1.1"
 
 structopt = "0.3.14"
 
