@@ -166,6 +166,24 @@ impl Gooseberry {
         Ok(tags)
     }
 
+    /// Delete multiple annotations
+    pub fn delete_annotations(&self, ids: &[AnnotationID]) -> color_eyre::Result<Vec<Vec<String>>> {
+        let mut tag_batch = sled::Batch::default();
+        let mut annotation_batch = sled::Batch::default();
+        let mut tags_list = Vec::with_capacity(ids.len());
+        for id in ids {
+            let tags = self.get_annotation_tags(id)?;
+            annotation_batch.remove(id.as_bytes());
+            for tag in &tags {
+                self.delete_from_tag(tag.as_bytes(), id, &mut tag_batch)?;
+            }
+            tags_list.push(tags);
+        }
+        self.tag_to_annotations()?.apply_batch(tag_batch)?;
+        self.annotation_to_tags()?.apply_batch(annotation_batch)?;
+        Ok(tags_list)
+    }
+
     /// Retrieve annotations tagged with a given tag
     pub fn get_tagged_annotations(&self, tag: &str) -> color_eyre::Result<Vec<AnnotationID>> {
         utils::split_ids(&self.tag_to_annotations()?.get(tag.as_bytes())?.ok_or(

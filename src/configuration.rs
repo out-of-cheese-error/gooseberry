@@ -118,7 +118,7 @@ impl GooseberryConfig {
     }
 
     /// Read config from default location
-    pub(crate) fn load() -> color_eyre::Result<Self> {
+    pub async fn load() -> color_eyre::Result<Self> {
         // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
         let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         let mut config = match config_file {
@@ -153,18 +153,19 @@ impl GooseberryConfig {
             || !Self::authorize(
                 config.hypothesis_username.as_deref().unwrap(),
                 config.hypothesis_key.as_deref().unwrap(),
-            )?
+            )
+            .await?
         {
-            config.set_credentials()?;
+            config.set_credentials().await?;
         }
 
         if config.hypothesis_group.is_none() {
-            config.set_group()?;
+            config.set_group().await?;
         }
         Ok(config)
     }
 
-    fn set_group(&mut self) -> color_eyre::Result<()> {
+    async fn set_group(&mut self) -> color_eyre::Result<()> {
         let group_name = utils::user_input(
             "Enter a group name to annotate with",
             Some(NAME),
@@ -176,22 +177,24 @@ impl GooseberryConfig {
                 self.hypothesis_username.as_deref().unwrap(),
                 self.hypothesis_key.as_deref().unwrap(),
             )?
-            .create_group(&group_name, Some("Gooseberry knowledge base annotations"))?
+            .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
+            .await?
             .id,
         );
         self.store()?;
         Ok(())
     }
 
-    fn authorize(name: &str, key: &str) -> color_eyre::Result<bool> {
+    async fn authorize(name: &str, key: &str) -> color_eyre::Result<bool> {
         Ok(Hypothesis::new(name, key)?
-            .fetch_user_profile()?
+            .fetch_user_profile()
+            .await?
             .userid
             .is_some())
     }
 
     /// Asks user for Hypothesis credentials and sets them in the config
-    pub(crate) fn request_credentials(&mut self) -> color_eyre::Result<()> {
+    pub async fn request_credentials(&mut self) -> color_eyre::Result<()> {
         let (mut name, mut key) = (String::new(), String::new());
         loop {
             name = utils::user_input(
@@ -206,7 +209,7 @@ impl GooseberryConfig {
                 true,
                 false,
             )?;
-            if Self::authorize(&name, &key)? {
+            if Self::authorize(&name, &key).await? {
                 self.hypothesis_username = Some(name);
                 self.hypothesis_key = Some(key);
                 self.store()?;
@@ -218,13 +221,13 @@ impl GooseberryConfig {
     }
     /// Reads the HYPOTHESIS_NAME and HYPOTHESIS_KEY environment variables to get Hypothesis credentials.
     /// If not present or invalid, requests credentials from user.
-    fn set_credentials(&mut self) -> color_eyre::Result<()> {
+    async fn set_credentials(&mut self) -> color_eyre::Result<()> {
         let (name, key) = (
             env::var("HYPOTHESIS_NAME").ok(),
             env::var("HYPOTHESIS_KEY").ok(),
         );
         if let (Some(n), Some(k)) = (&name, &key) {
-            if Self::authorize(n, k)? {
+            if Self::authorize(n, k).await? {
                 self.hypothesis_username = Some(n.to_owned());
                 self.hypothesis_key = Some(k.to_owned());
                 self.store()?;
@@ -232,21 +235,22 @@ impl GooseberryConfig {
                 println!(
                     "Authorization with environment variables did not work. Enter details below"
                 );
-                self.request_credentials()?;
+                self.request_credentials().await?;
             }
         } else {
-            self.request_credentials()?;
+            self.request_credentials().await?;
         }
         Ok(())
     }
 
     /// Change the group ID of the group used by gooseberry
-    pub fn change_group(&mut self, id: GroupID) -> color_eyre::Result<()> {
+    pub async fn change_group(&mut self, id: GroupID) -> color_eyre::Result<()> {
         if Hypothesis::new(
             self.hypothesis_username.as_deref().unwrap(),
             self.hypothesis_key.as_deref().unwrap(),
         )?
         .fetch_group(&id, Vec::new())
+        .await
         .is_err()
         {
             Err(Apologize::GroupNotFound { id }.into())

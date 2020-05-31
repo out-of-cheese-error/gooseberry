@@ -10,7 +10,7 @@ use std::fs;
 
 pub mod cli;
 pub mod database;
-pub mod markdown;
+// pub mod markdown;
 pub mod search;
 pub mod tag;
 
@@ -27,15 +27,15 @@ impl Gooseberry {
     /// Initialize program with command line input.
     /// Reads `sled` trees and metadata file from the locations specified in config.
     /// (makes new ones the first time).
-    pub fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
+    pub async fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
         if let GooseberryCLI::Config { cmd } = &cli {
-            return Ok(ConfigCommand::run(cmd)?);
+            return Ok(ConfigCommand::run(cmd).await?);
         }
         if let GooseberryCLI::Complete { shell } = &cli {
             GooseberryCLI::complete(*shell);
             return Ok(());
         }
-        let config = GooseberryConfig::load()?;
+        let config = GooseberryConfig::load().await?;
         let api = Hypothesis::new(
             config
                 .hypothesis_username
@@ -56,31 +56,31 @@ impl Gooseberry {
             config,
         };
         gooseberry.set_merge()?;
-        gooseberry.run(cli)?;
+        gooseberry.run(cli).await?;
         Ok(())
     }
 
-    pub fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
+    async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
         match cli {
-            GooseberryCLI::Sync => self.sync(),
+            GooseberryCLI::Sync => self.sync().await,
             GooseberryCLI::Tag {
                 filters,
                 delete,
                 search,
                 tag,
-            } => self.tag(filters, delete, search, &tag),
+            } => self.tag(filters, delete, search, &tag).await,
             GooseberryCLI::Delete {
                 filters,
                 search,
                 force,
-            } => self.delete(filters, search, force),
+            } => self.delete(filters, search, force).await,
             GooseberryCLI::Make => Ok(()),
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
         }
     }
 
-    fn sync(&self) -> color_eyre::Result<()> {
+    async fn sync(&self) -> color_eyre::Result<()> {
         let mut query = SearchQuery {
             limit: 200,
             order: Order::Asc,
@@ -89,7 +89,8 @@ impl Gooseberry {
             group: self.config.hypothesis_group.clone().unwrap(),
             ..Default::default()
         };
-        let (added, updated) = self.sync_annotations(&self.api_fetch_annotations(&mut query)?)?;
+        let (added, updated) =
+            self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
         println!(
             "Added {} new annotations\nUpdated {} annotations",
@@ -98,17 +99,18 @@ impl Gooseberry {
         Ok(())
     }
 
-    fn filter_annotations(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
+    async fn filter_annotations(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
         let mut query: SearchQuery = filters.into();
         query.user = self.api.user.to_owned();
         query.group = self.config.hypothesis_group.clone().unwrap();
         Ok(self
-            .api_fetch_annotations(&mut query)?
+            .api_search_annotations(&mut query)
+            .await?
             .into_iter()
             .collect())
     }
 
-    fn tag(
+    async fn tag(
         &self,
         filters: Filters,
         delete: bool,
@@ -116,7 +118,8 @@ impl Gooseberry {
         tag: &str,
     ) -> color_eyre::Result<()> {
         let mut annotations: Vec<Annotation> = self
-            .filter_annotations(filters)?
+            .filter_annotations(filters)
+            .await?
             .into_iter()
             .filter(|a| {
                 if delete {
@@ -144,28 +147,15 @@ impl Gooseberry {
         }
 
         if delete {
-            let mut tag_batch = sled::Batch::default();
-            let mut annotation_batch = sled::Batch::default();
-            for annotation in annotations {
-                self.delete_tag_from_annotation(
-                    annotation,
-                    &mut annotation_batch,
-                    tag,
-                    &mut tag_batch,
-                )?;
-            }
-            self.annotation_to_tags()?.apply_batch(annotation_batch)?;
-            self.tag_to_annotations()?.apply_batch(tag_batch)?;
+            self.delete_tag_from_annotations(annotations, tag).await?;
         } else {
-            for annotation in annotations {
-                self.add_tag_to_annotation(annotation, tag)?;
-            }
+            self.add_tag_to_annotations(annotations, tag).await?;
         }
         Ok(())
     }
 
-    fn delete(&self, filters: Filters, search: bool, force: bool) -> color_eyre::Result<()> {
-        let mut annotations = self.filter_annotations(filters)?;
+    async fn delete(&self, filters: Filters, search: bool, force: bool) -> color_eyre::Result<()> {
+        let mut annotations = self.filter_annotations(filters).await?;
         if search {
             // Run a search window for fuzzy search capability.
             let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
@@ -181,10 +171,9 @@ impl Gooseberry {
                     .default(false)
                     .interact()?)
         {
-            for annotation in annotations {
-                self.delete_annotation(&annotation.id)?;
-                self.api.delete_annotation(&annotation.id)?;
-            }
+            let ids = annotations.into_iter().map(|a| a.id).collect::<Vec<_>>();
+            self.api.delete_annotations(&ids).await?;
+            self.delete_annotations(&ids)?;
         }
         Ok(())
     }
@@ -214,13 +203,13 @@ impl Gooseberry {
     }
 
     /// Retrieve all annotations matching query
-    pub fn api_fetch_annotations(
+    pub async fn api_search_annotations(
         &self,
         query: &mut SearchQuery,
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut annotations = Vec::new();
         loop {
-            let next = self.api.search_annotations(&query)?;
+            let next = self.api.search_annotations(&query).await?;
             if next.is_empty() {
                 break;
             }

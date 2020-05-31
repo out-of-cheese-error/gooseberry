@@ -123,7 +123,7 @@ pub enum ConfigCommand {
 }
 
 impl ConfigCommand {
-    pub fn run(&self) -> color_eyre::Result<()> {
+    pub async fn run(&self) -> color_eyre::Result<()> {
         match self {
             ConfigCommand::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
@@ -132,12 +132,12 @@ impl ConfigCommand {
                 GooseberryConfig::print_config_location()?;
             }
             ConfigCommand::Authorize => {
-                let mut config = GooseberryConfig::load()?;
-                config.request_credentials()?;
+                let mut config = GooseberryConfig::load().await?;
+                config.request_credentials().await?;
             }
             ConfigCommand::Group { id } => {
-                let mut config = GooseberryConfig::load()?;
-                config.change_group(id.to_owned())?;
+                let mut config = GooseberryConfig::load().await?;
+                config.change_group(id.to_owned()).await?;
             }
         }
         Ok(())
