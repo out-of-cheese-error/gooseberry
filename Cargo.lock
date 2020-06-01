@@ -1148,6 +1148,8 @@ dependencies = [
 [[package]]
 name = "hypothesis"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc243496e0ca79970cd49ef26a56c2fac8ce388d72a5bf903138de1198f4bd2c"
 dependencies = [
  "chrono",
  "color-eyre",
