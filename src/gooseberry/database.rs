@@ -88,10 +88,20 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
         annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
-        if annotation.tags.is_empty() {
+        if annotation.tags.is_empty()
+            || annotation
+                .tags
+                .iter()
+                .filter(|t| !t.trim().is_empty())
+                .next()
+                .is_none()
+        {
             self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
         } else {
             for tag in &annotation.tags {
+                if tag.is_empty() {
+                    continue;
+                }
                 let tag_key = tag.as_bytes();
                 self.add_to_tag(tag_key, annotation_key)?;
             }
@@ -175,6 +185,9 @@ impl Gooseberry {
     ) -> color_eyre::Result<Vec<String>> {
         let tags = self.delete_from_annotations(id)?;
         for tag in &tags {
+            if tag.is_empty() {
+                continue;
+            }
             self.delete_from_tag(tag.as_bytes(), id, tag_batch)?;
         }
         Ok(tags)

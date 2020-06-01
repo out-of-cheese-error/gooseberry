@@ -230,7 +230,7 @@ impl Gooseberry {
     fn clear(&self, force: bool) -> color_eyre::Result<()> {
         if force
             || Confirm::new()
-                .with_prompt("Clear all data?")
+                .with_prompt("Clear all gooseberry data?")
                 .default(false)
                 .interact()?
         {

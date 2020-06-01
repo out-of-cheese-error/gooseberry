@@ -104,8 +104,6 @@ impl Gooseberry {
     }
 
     async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
-        println!("here");
-
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
             // Initialize
@@ -125,7 +123,8 @@ impl Gooseberry {
             let (tag, annotation_ids) = tag?;
             let tag = utils::u8_to_str(&tag)?;
             let annotation_ids = utils::split_ids(&annotation_ids)?;
-            let annotations = self.api.fetch_annotations(&annotation_ids).await?;
+            let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
+            annotations.sort_by(|a, b| a.created.cmp(&b.created));
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
             let mut annotations_string = if tag == EMPTY_TAG {

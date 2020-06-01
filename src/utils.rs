@@ -19,7 +19,7 @@ pub fn u8_to_str(input: &[u8]) -> color_eyre::Result<String> {
 /// Makes DateTime from a string, can be colloquial like "last Friday 8pm"
 pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>> {
     if datetime_string.to_ascii_lowercase() == "today" {
-        Ok(Utc::now())
+        Ok(Utc::now().date().and_hms(0, 0, 0))
     } else {
         Ok(parse_date_string(datetime_string, Utc::now(), Dialect::Uk)?)
     }
