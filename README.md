@@ -54,3 +54,6 @@ TODO: There's a section on a tag's page which lists related tags. You can also l
 * Since it's just markdown you could even integrate it with other markdown-based KB systems or use it for non-annotation related notes with your editor of choice. 
   (TODO: this requires that gooseberry doesn't destroy user changes / overwrite markdown files)
 
+## Why "Gooseberry"?
+Because Discworld will never let me down when it comes to names:
+[Dis-organizer Mark 5, the Gooseberry](https://wiki.lspace.org/mediawiki/Dis-organiser)
