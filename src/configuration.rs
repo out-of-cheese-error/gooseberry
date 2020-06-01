@@ -127,7 +127,24 @@ impl GooseberryConfig {
         let mut file = fs::File::open(Self::location()?)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        Ok(contents)
+        Ok(contents
+            .split('\n')
+            .map(|k| {
+                let parts = k.split(" = ").collect::<Vec<_>>();
+                if parts[0] == "hypothesis_key" {
+                    format!(
+                        "{} = '{}{}'\n",
+                        parts[0],
+                        (0..(parts[1].len() - 2 - 3))
+                            .map(|_| '*')
+                            .collect::<String>(),
+                        &parts[1][parts[1].len() - 5..parts[1].len() - 2]
+                    )
+                } else {
+                    format!("{}\n", parts.join(" = "))
+                }
+            })
+            .collect::<String>())
     }
 
     /// Read config from default location
