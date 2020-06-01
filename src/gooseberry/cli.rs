@@ -7,7 +7,6 @@ use structopt::clap::Shell;
 use structopt::StructOpt;
 
 use hypothesis::annotations::{Order, SearchQuery, Sort};
-use hypothesis::GroupID;
 
 use crate::configuration::GooseberryConfig;
 use crate::utils;
@@ -128,15 +127,18 @@ pub enum ConfigCommand {
     /// Prints / writes the default configuration options.
     /// Set the generated config file as default by setting the $GOOSEBERRY_CONFIG environment variable
     Default {
+        /// Write to (TOML-formatted) file
         #[structopt(parse(from_os_str))]
         file: Option<PathBuf>,
     },
+    /// Prints current configuration
+    Get,
     /// Prints location of currently set configuration file
     Where,
     /// Change Hypothesis credentials
     Authorize,
-    /// Change the group ID of the group used for hypothesis annotations
-    Group { id: GroupID },
+    /// Change the group used for Hypothesis annotations
+    Group,
 }
 
 impl ConfigCommand {
@@ -145,16 +147,20 @@ impl ConfigCommand {
             ConfigCommand::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
             }
+            ConfigCommand::Get => {
+                GooseberryConfig::load().await?;
+                println!("{}", GooseberryConfig::get()?);
+            }
             ConfigCommand::Where => {
-                GooseberryConfig::print_config_location()?;
+                GooseberryConfig::print_location()?;
             }
             ConfigCommand::Authorize => {
                 let mut config = GooseberryConfig::load().await?;
                 config.request_credentials().await?;
             }
-            ConfigCommand::Group { id } => {
+            ConfigCommand::Group => {
                 let mut config = GooseberryConfig::load().await?;
-                config.change_group(id.to_owned()).await?;
+                config.set_group().await?;
             }
         }
         Ok(())

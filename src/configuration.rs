@@ -1,14 +1,16 @@
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs, io};
 
 use color_eyre::Help;
+use dialoguer::{theme, Select};
 use directories_next::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
+use hypothesis::{GroupID, Hypothesis};
+
 use crate::errors::Apologize;
 use crate::{utils, NAME};
-use hypothesis::{GroupID, Hypothesis};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
@@ -58,13 +60,17 @@ impl GooseberryConfig {
             None => Box::new(io::stdout()),
         };
         let mut buffered = io::BufWriter::new(writer);
-        let contents = "db_dir = 'gooseberry_db'\nkb_dir = 'gooseberry'\nusername = <Hypothesis username>\ndeveloper_key = <Developer key>";
+        let contents = "db_dir = '<full path to database directory>'\n\
+                             kb_dir = '<knowledge-base directory>'\n\
+                             hypothesis_username = '<Hypothesis username>'\n\
+                             hypothesis_key = '<Hypothesis personal API key>'\n\
+                             hypothesis_group = '<Hypothesis group ID to take annotations from>";
         write!(&mut buffered, "{}", contents)?;
         Ok(())
     }
 
-    pub(crate) fn print_config_location() -> color_eyre::Result<()> {
-        println!("{}", GooseberryConfig::get()?.to_string_lossy());
+    pub(crate) fn print_location() -> color_eyre::Result<()> {
+        println!("{}", GooseberryConfig::location()?.to_string_lossy());
         Ok(())
     }
 
@@ -95,7 +101,7 @@ impl GooseberryConfig {
     }
 
     /// Gets the current config file location
-    fn get() -> color_eyre::Result<PathBuf> {
+    fn location() -> color_eyre::Result<PathBuf> {
         let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         match config_file {
             Some(file) => {
@@ -115,6 +121,13 @@ impl GooseberryConfig {
             }
             None => Self::get_default_config_file(),
         }
+    }
+
+    pub fn get() -> color_eyre::Result<String> {
+        let mut file = fs::File::open(Self::location()?)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        Ok(contents)
     }
 
     /// Read config from default location
@@ -165,22 +178,57 @@ impl GooseberryConfig {
         Ok(config)
     }
 
-    async fn set_group(&mut self) -> color_eyre::Result<()> {
-        let group_name = utils::user_input(
-            "Enter a group name to annotate with",
-            Some(NAME),
-            true,
-            false,
-        )?;
-        self.hypothesis_group = Some(
-            Hypothesis::new(
-                self.hypothesis_username.as_deref().unwrap(),
-                self.hypothesis_key.as_deref().unwrap(),
-            )?
-            .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
-            .await?
-            .id,
-        );
+    pub(crate) async fn set_group(&mut self) -> color_eyre::Result<()> {
+        let selections = &[
+            "Create a new Hypothesis group",
+            "Use an existing Hypothesis group",
+        ];
+
+        let group_id = loop {
+            let selection = Select::with_theme(&theme::ColorfulTheme::default())
+                .with_prompt("Where should gooseberry take annotations from?")
+                .items(&selections[..])
+                .interact()
+                .unwrap();
+
+            if selection == 0 {
+                let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
+                let group_id = Hypothesis::new(
+                    self.hypothesis_username.as_deref().unwrap(),
+                    self.hypothesis_key.as_deref().unwrap(),
+                )?
+                .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
+                .await?
+                .id;
+                break group_id;
+            } else {
+                let group_id = utils::user_input(
+                    "Enter an existing group's ID (from the group URL)",
+                    None,
+                    false,
+                    false,
+                )?;
+                if Hypothesis::new(
+                    self.hypothesis_username.as_deref().unwrap(),
+                    self.hypothesis_key.as_deref().unwrap(),
+                )?
+                .fetch_group(&group_id, Vec::new())
+                .await
+                .is_ok()
+                {
+                    break group_id;
+                } else {
+                    println!(
+                        "\nGroup ID could not be found or authorized, try again.\n\
+                          You can find the group ID in the URL of the Hypothesis group:\n \
+                          e.g. https://hypothes.is/groups/<group_id>/<group_name>.\n\
+                          Make sure you are authorized to access the group.\n\n"
+                    )
+                }
+            }
+        };
+
+        self.hypothesis_group = Some(group_id);
         self.store()?;
         Ok(())
     }
@@ -241,24 +289,6 @@ impl GooseberryConfig {
             self.request_credentials().await?;
         }
         Ok(())
-    }
-
-    /// Change the group ID of the group used by gooseberry
-    pub async fn change_group(&mut self, id: GroupID) -> color_eyre::Result<()> {
-        if Hypothesis::new(
-            self.hypothesis_username.as_deref().unwrap(),
-            self.hypothesis_key.as_deref().unwrap(),
-        )?
-        .fetch_group(&id, Vec::new())
-        .await
-        .is_err()
-        {
-            Err(Apologize::GroupNotFound { id }.into())
-        } else {
-            self.hypothesis_group = Some(id);
-            self.store()?;
-            Ok(())
-        }
     }
 
     /// Write possibly modified config
