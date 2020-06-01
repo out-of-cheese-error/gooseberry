@@ -32,16 +32,24 @@ and a wonderfully interlinked wiki powered by [mdBook](https://rust-lang.github.
 Here's an example. Today I read and annotated three articles about insects: this [Nautilus article titled "We need insects more than they need us"](https://nautil.us/issue/73/play/we-need-insects-more-than-they-need-us),
 this [publication about honey bees and pesticides](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0070182), 
 and [an Atlantic article about the "anternet"](https://www.theatlantic.com/technology/archive/2012/08/lessons-from-the-anternet-what-ants-and-computers-have-in-common/261580/).
+
 I synced and tagged these annotations:
+
 ![gooseberry sync and tag](data/images/sync_tag.png)
 
 Then ran `gooseberry make` and `mdbook serve` to open the generated wiki in a browser. 
 The front page has a graph of all tags, how they relate to each other, and how many notes are in each:
+
 ![Graph of tags](data/images/index_graph.png)
+
 Each tag is clickable and leads to a page of annotations associated with it:
+
 ![Tag page example](data/images/wiki.png)
+
 Annotation text is just markdown so text formatting, LaTeX, pictures etc. goes too!
+
 ![Picture example](data/images/md_picture.png)
+
 Each annotation also links back to the position in the website that you got it from, if ever you feel like you're missing context. 
 
 TODO: There's a section on a tag's page which lists related tags. You can also link annotations to each other directly, they'll show up as footnote-style links. 
