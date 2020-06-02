@@ -3,7 +3,9 @@ use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
-use hypothesis::annotations::{Annotation, InputAnnotation, Order, SearchQuery};
+use hypothesis::annotations::{
+    Annotation, InputAnnotationBuilder, Order, SearchQuery, SearchQueryBuilder,
+};
 use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
@@ -86,14 +88,13 @@ impl Gooseberry {
     }
 
     async fn sync(&self) -> color_eyre::Result<()> {
-        let mut query = SearchQuery {
-            limit: 200,
-            order: Order::Asc,
-            search_after: self.get_sync_time()?,
-            user: self.api.user.to_owned(),
-            group: self.config.hypothesis_group.clone().unwrap(),
-            ..Default::default()
-        };
+        let mut query = SearchQueryBuilder::default()
+            .limit(200)
+            .order(Order::Asc)
+            .search_after(self.get_sync_time()?)
+            .user(&self.api.user)
+            .group(self.config.hypothesis_group.as_deref().unwrap())
+            .build()?;
         let (added, updated, ignored) =
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
@@ -213,12 +214,9 @@ impl Gooseberry {
                             .map(|a| {
                                 let mut tags = a.tags;
                                 tags.push(crate::IGNORE_TAG.to_owned());
-                                InputAnnotation {
-                                    tags: Some(tags),
-                                    ..Default::default()
-                                }
+                                InputAnnotationBuilder::default().tags(tags).build()
                             })
-                            .collect::<Vec<_>>(),
+                            .collect::<color_eyre::Result<Vec<_>>>()?,
                     )
                     .await?;
                 println!("{} notes deleted from gooseberry.\n\

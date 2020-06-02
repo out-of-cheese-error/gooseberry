@@ -1,4 +1,4 @@
-use hypothesis::annotations::{Annotation, InputAnnotation};
+use hypothesis::annotations::{Annotation, InputAnnotationBuilder};
 
 use crate::gooseberry::Gooseberry;
 
@@ -15,10 +15,11 @@ impl Gooseberry {
             let mut annotation = annotation;
             annotation.tags.push(new_tag.to_owned());
             update_ids.push(annotation.id);
-            updaters.push(InputAnnotation {
-                tags: Some(annotation.tags),
-                ..Default::default()
-            });
+            updaters.push(
+                InputAnnotationBuilder::default()
+                    .tags(annotation.tags)
+                    .build()?,
+            );
         }
         self.api.update_annotations(&update_ids, &updaters).await?;
         Ok(())
@@ -36,10 +37,11 @@ impl Gooseberry {
             let mut annotation = annotation;
             annotation.tags.retain(|t| t != remove_tag);
             update_ids.push(annotation.id);
-            updaters.push(InputAnnotation {
-                tags: Some(annotation.tags),
-                ..Default::default()
-            });
+            updaters.push(
+                InputAnnotationBuilder::default()
+                    .tags(annotation.tags)
+                    .build()?,
+            );
         }
         self.api.update_annotations(&update_ids, &updaters).await?;
         Ok(())
