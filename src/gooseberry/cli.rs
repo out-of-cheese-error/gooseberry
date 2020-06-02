@@ -31,6 +31,9 @@ pub enum GooseberryCLI {
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search")]
+        exact: bool,
         /// The tag to add to / remove from the filtered annotations
         tag: String,
     },
@@ -42,10 +45,13 @@ pub enum GooseberryCLI {
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search")]
+        exact: bool,
         /// Also delete from Hypothesis.
         /// Without this flag, the "gooseberry_ignore" flag is added to the selected annotations to ensure that they are not synced by gooseberry in the future.
         /// If the flag is given then the annotations are also deleted from Hypothesis.
-        #[structopt(short, long)]
+        #[structopt(short = "a", long)]
         hypothesis: bool,
         /// Don't ask for confirmation
         #[structopt(short, long)]
@@ -76,7 +82,7 @@ pub enum GooseberryCLI {
 pub struct Filters {
     /// Only annotations created after this date and time
     /// Can be colloquial, e.g. "last Friday 8pm"
-    #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "before")]
+    #[structopt(long, parse(try_from_str = utils::parse_datetime))]
     pub from: Option<DateTime<Utc>>,
     /// Only annotations created before this date and time
     /// Can be colloquial, e.g. "last Friday 8pm"

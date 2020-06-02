@@ -69,14 +69,16 @@ impl Gooseberry {
                 filters,
                 delete,
                 search,
+                exact,
                 tag,
-            } => self.tag(filters, delete, search, &tag).await,
+            } => self.tag(filters, delete, search, exact, &tag).await,
             GooseberryCLI::Delete {
                 filters,
                 search,
+                exact,
                 hypothesis,
                 force,
-            } => self.delete(filters, search, hypothesis, force).await,
+            } => self.delete(filters, search, exact, hypothesis, force).await,
             GooseberryCLI::Make => self.make().await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
@@ -123,6 +125,7 @@ impl Gooseberry {
         filters: Filters,
         delete: bool,
         search: bool,
+        exact: bool,
         tag: &str,
     ) -> color_eyre::Result<()> {
         let mut annotations: Vec<Annotation> = self
@@ -139,9 +142,9 @@ impl Gooseberry {
                 }
             })
             .collect();
-        if search {
-            // Run a search window for fuzzy search capability.
-            let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
@@ -160,13 +163,14 @@ impl Gooseberry {
         &self,
         filters: Filters,
         search: bool,
+        exact: bool,
         hypothesis: bool,
         force: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = self.filter_annotations(filters).await?;
-        if search {
-            // Run a search window for fuzzy search capability.
-            let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))

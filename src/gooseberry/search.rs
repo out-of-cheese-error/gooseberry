@@ -78,17 +78,21 @@ impl From<&Annotation> for SearchAnnotation {
 }
 
 impl Gooseberry {
-    /// Makes a fuzzy search window
-    pub fn search(annotations: &[Annotation]) -> color_eyre::Result<impl Iterator<Item = String>> {
+    /// Makes a skim search window
+    pub fn search(
+        annotations: &[Annotation],
+        exact: bool,
+    ) -> color_eyre::Result<impl Iterator<Item = String>> {
         let options = SkimOptionsBuilder::default()
-            .height(Some("100%"))
+            .height(Some("70%"))
             .preview(Some(""))
-            .preview_window(Some("down:10%"))
+            .preview_window(Some("down:15%"))
             .bind(vec![
                 "ctrl-a:select-all",
                 "left:scroll-left",
                 "right:scroll-right",
             ])
+            .exact(exact)
             .multi(true)
             .reverse(true)
             .build()
