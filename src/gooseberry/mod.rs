@@ -3,8 +3,7 @@ use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
-
-use hypothesis::annotations::{Annotation, AnnotationMaker, Order, SearchQuery};
+use hypothesis::annotations::{Annotation, InputAnnotation, Order, SearchQuery};
 use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
@@ -210,7 +209,7 @@ impl Gooseberry {
                             .map(|a| {
                                 let mut tags = a.tags;
                                 tags.push(crate::IGNORE_TAG.to_owned());
-                                AnnotationMaker {
+                                InputAnnotation {
                                     tags: Some(tags),
                                     ..Default::default()
                                 }

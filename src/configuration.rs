@@ -5,9 +5,8 @@ use std::{env, fs, io};
 use color_eyre::Help;
 use dialoguer::{theme, Select};
 use directories_next::ProjectDirs;
+use hypothesis::Hypothesis;
 use serde::{Deserialize, Serialize};
-
-use hypothesis::{GroupID, Hypothesis};
 
 use crate::errors::Apologize;
 use crate::{utils, NAME};
@@ -23,7 +22,7 @@ pub struct GooseberryConfig {
     /// Hypothesis personal API key
     pub(crate) hypothesis_key: Option<String>,
     /// Hypothesis group with knowledge base annotations
-    pub(crate) hypothesis_group: Option<GroupID>,
+    pub(crate) hypothesis_group: Option<String>,
 }
 
 /// Main project directory, cross-platform

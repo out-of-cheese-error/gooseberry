@@ -2,7 +2,7 @@ use std::path::Path;
 use std::str;
 
 use hypothesis::annotations::Annotation;
-use hypothesis::AnnotationID;
+use hypothesis::String;
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -146,7 +146,7 @@ impl Gooseberry {
     pub fn delete_from_tag(
         &self,
         tag_key: &[u8],
-        annotation_id: &AnnotationID,
+        annotation_id: &str,
         batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
         let new_indices: Vec<_> =
@@ -167,7 +167,7 @@ impl Gooseberry {
     }
 
     /// Delete annotation from the annotation tree
-    fn delete_from_annotations(&self, id: &AnnotationID) -> color_eyre::Result<Vec<String>> {
+    fn delete_from_annotations(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
         Ok(utils::split_ids(
             &self
@@ -180,7 +180,7 @@ impl Gooseberry {
     /// Delete annotation from database
     pub fn delete_annotation(
         &self,
-        id: &AnnotationID,
+        id: &str,
         tag_batch: &mut sled::Batch,
     ) -> color_eyre::Result<Vec<String>> {
         let tags = self.delete_from_annotations(id)?;
@@ -194,7 +194,7 @@ impl Gooseberry {
     }
 
     /// Delete multiple annotations
-    pub fn delete_annotations(&self, ids: &[AnnotationID]) -> color_eyre::Result<Vec<Vec<String>>> {
+    pub fn delete_annotations(&self, ids: &[String]) -> color_eyre::Result<Vec<Vec<String>>> {
         let mut tag_batch = sled::Batch::default();
         let mut annotation_batch = sled::Batch::default();
         let mut tags_list = Vec::with_capacity(ids.len());
@@ -212,7 +212,7 @@ impl Gooseberry {
     }
 
     /// Retrieve annotations tagged with a given tag
-    pub fn get_tagged_annotations(&self, tag: &str) -> color_eyre::Result<Vec<AnnotationID>> {
+    pub fn get_tagged_annotations(&self, tag: &str) -> color_eyre::Result<Vec<String>> {
         utils::split_ids(&self.tag_to_annotations()?.get(tag.as_bytes())?.ok_or(
             Apologize::TagNotFound {
                 tag: tag.to_owned(),
@@ -221,7 +221,7 @@ impl Gooseberry {
     }
 
     /// Retrieve tags associated with an annotation
-    pub fn get_annotation_tags(&self, id: &AnnotationID) -> color_eyre::Result<Vec<String>> {
+    pub fn get_annotation_tags(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
         let tags = utils::split_ids(
             &self

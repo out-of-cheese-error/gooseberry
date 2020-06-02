@@ -1,4 +1,4 @@
-use hypothesis::annotations::{Annotation, AnnotationMaker};
+use hypothesis::annotations::{Annotation, InputAnnotation};
 
 use crate::gooseberry::Gooseberry;
 
@@ -15,7 +15,7 @@ impl Gooseberry {
             let mut annotation = annotation;
             annotation.tags.push(new_tag.to_owned());
             update_ids.push(annotation.id);
-            updaters.push(AnnotationMaker {
+            updaters.push(InputAnnotation {
                 tags: Some(annotation.tags),
                 ..Default::default()
             });
@@ -36,7 +36,7 @@ impl Gooseberry {
             let mut annotation = annotation;
             annotation.tags.retain(|t| t != remove_tag);
             update_ids.push(annotation.id);
-            updaters.push(AnnotationMaker {
+            updaters.push(InputAnnotation {
                 tags: Some(annotation.tags),
                 ..Default::default()
             });

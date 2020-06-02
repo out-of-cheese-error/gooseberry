@@ -5,8 +5,6 @@ use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
 use url::Url;
 
-use hypothesis::AnnotationID;
-
 /// ASCII code of semicolon
 /// TODO: Tag cannot have semicolon in it, remember to add this to the README
 pub const SEMICOLON: u8 = 59;
@@ -25,8 +23,8 @@ pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>
     }
 }
 
-/// Splits byte array by semicolon into list of AnnotationIDs
-pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<AnnotationID>> {
+/// Splits byte array by semicolon into list of Annotation IDs
+pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<String>> {
     let index_list_string = str::from_utf8(index_list)?;
     Ok(index_list_string
         .split(str::from_utf8(&[SEMICOLON])?)

@@ -3,11 +3,9 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use console::{strip_ansi_codes, style};
+use hypothesis::annotations::{Annotation, Selector};
 use skim::prelude::{unbounded, SkimOptionsBuilder};
 use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
-
-use hypothesis::annotations::{Annotation, Selector};
-use hypothesis::AnnotationID;
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -81,9 +79,7 @@ impl From<&Annotation> for SearchAnnotation {
 
 impl Gooseberry {
     /// Makes a fuzzy search window
-    pub fn search(
-        annotations: &[Annotation],
-    ) -> color_eyre::Result<impl Iterator<Item = AnnotationID>> {
+    pub fn search(annotations: &[Annotation]) -> color_eyre::Result<impl Iterator<Item = String>> {
         let options = SkimOptionsBuilder::default()
             .height(Some("100%"))
             .preview(Some(""))
