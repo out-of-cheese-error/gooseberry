@@ -4,10 +4,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use hypothesis::annotations::{Annotation, Selector};
 use mdbook::MDBook;
 use url::Url;
-
-use hypothesis::annotations::{Annotation, Selector};
 
 use crate::gooseberry::Gooseberry;
 use crate::utils;
@@ -149,11 +148,7 @@ impl Gooseberry {
                 }
             }
             tag_file.write_all(annotations_string.as_bytes())?;
-            let link_string = if tag == EMPTY_TAG {
-                format!("- [Untagged]({}.md)\n", tag)
-            } else {
-                format!("- [{}]({}.md)\n", tag, tag)
-            };
+            let link_string = format!("- [{}]({}.md)\n", tag, tag);
             summary_links.push(link_string);
         }
         fs::File::create(index_page)?

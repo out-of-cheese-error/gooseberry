@@ -1147,12 +1147,13 @@ dependencies = [
 
 [[package]]
 name = "hypothesis"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc243496e0ca79970cd49ef26a56c2fac8ce388d72a5bf903138de1198f4bd2c"
+checksum = "7f4645daee260a0eca8fac968cc48ab86a377b8ec7206cf1b91c0777c4327fa9"
 dependencies = [
  "chrono",
  "color-eyre",
+ "derive_builder",
  "dotenv",
  "eyre",
  "futures",

@@ -2,7 +2,6 @@ use std::path::Path;
 use std::str;
 
 use hypothesis::annotations::Annotation;
-use hypothesis::String;
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -92,8 +91,7 @@ impl Gooseberry {
             || annotation
                 .tags
                 .iter()
-                .filter(|t| !t.trim().is_empty())
-                .next()
+                .find(|t| !t.trim().is_empty())
                 .is_none()
         {
             self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;

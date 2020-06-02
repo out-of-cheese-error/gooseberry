@@ -2,11 +2,10 @@ use std::io;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
+use hypothesis::annotations::{Order, SearchQuery, Sort};
 use structopt::clap::AppSettings;
 use structopt::clap::Shell;
 use structopt::StructOpt;
-
-use hypothesis::annotations::{Order, SearchQuery, Sort};
 
 use crate::configuration::GooseberryConfig;
 use crate::utils;
@@ -75,21 +74,25 @@ pub enum GooseberryCLI {
 
 #[derive(StructOpt, Debug)]
 pub struct Filters {
-    /// Filter annotations created after this date and time
+    /// Only annotations created after this date and time
     /// Can be colloquial, e.g. "last Friday 8pm"
-    #[structopt(long, parse(try_from_str = utils::parse_datetime))]
+    #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "before")]
     pub from: Option<DateTime<Utc>>,
-    /// If true, includes annotations updated after --from (instead of just created)
+    /// Only annotations created before this date and time
+    /// Can be colloquial, e.g. "last Friday 8pm"
+    #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
+    pub before: Option<DateTime<Utc>>,
+    /// If true, includes annotations updated after --from or before --before (instead of just created)
     #[structopt(short, long)]
     pub include_updated: bool,
-    /// Filter annotations with this pattern in their URL
+    /// Only annotations with this pattern in their URL
     /// Doesn't have to be the full URL, e.g. "wikipedia"
     #[structopt(default_value, long)]
     pub uri: String,
-    /// Filter annotations with this pattern in their `quote`, `tags`, `text`, or `url`
+    /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `url`
     #[structopt(default_value, long)]
     pub any: String,
-    /// Filter annotations with these tags
+    /// Only annotations with these tags
     #[structopt(long)]
     pub tags: Vec<String>,
 }
@@ -98,14 +101,20 @@ impl Into<SearchQuery> for Filters {
     fn into(self) -> SearchQuery {
         SearchQuery {
             limit: 200,
-            search_after: match self.from {
-                None => crate::MIN_DATE.to_owned(),
-                Some(date) => date.to_rfc3339(),
+            search_after: match (self.from, self.before) {
+                (Some(date), None) => date.to_rfc3339(),
+                (None, Some(date)) => date.to_rfc3339(),
+                (None, None) => crate::MIN_DATE.to_string(),
+                _ => panic!("can't use both --from and --before"),
             },
             uri_parts: self.uri,
             any: self.any,
             tags: self.tags,
-            order: Order::Asc,
+            order: if self.before.is_some() {
+                Order::Desc
+            } else {
+                Order::Asc
+            },
             sort: if self.include_updated {
                 Sort::Updated
             } else {
