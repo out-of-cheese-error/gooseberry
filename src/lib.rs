@@ -1,10 +1,3 @@
-#![warn(
-// clippy::all,
-// clippy::restriction,
-clippy::pedantic,
-// clippy::nursery,
-// clippy::cargo,
-)]
 //! # Gooseberry - A Knowledge Base for the Lazy
 pub mod configuration;
 pub mod errors;

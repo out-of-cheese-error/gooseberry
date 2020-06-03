@@ -12,6 +12,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 # Hypothesis
+# TODO: Uses the local version of hypothesis for now to make debugging quicker, remember to change this in the end
 hypothesis = {default-features = false, path = "../hypothesis"}
 tokio = { version = "0.2", features = ["macros"] }
 
