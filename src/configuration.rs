@@ -1,3 +1,4 @@
+//! Configuration of data directories and Hypothesis authorization
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs, io};
@@ -7,11 +8,12 @@ use dialoguer::{theme, Select};
 use directories_next::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
-use hypothesis::{GroupID, Hypothesis};
+use hypothesis::Hypothesis;
 
 use crate::errors::Apologize;
 use crate::{utils, NAME};
 
+/// Configuration struct, asks for user input to fill in the optional values the first time gooseberry is run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
     /// Directory to store `sled` database files
@@ -23,7 +25,7 @@ pub struct GooseberryConfig {
     /// Hypothesis personal API key
     pub(crate) hypothesis_key: Option<String>,
     /// Hypothesis group with knowledge base annotations
-    pub(crate) hypothesis_group: Option<GroupID>,
+    pub(crate) hypothesis_group: Option<String>,
 }
 
 /// Main project directory, cross-platform
@@ -70,7 +72,7 @@ impl GooseberryConfig {
     }
 
     pub(crate) fn print_location() -> color_eyre::Result<()> {
-        println!("{}", GooseberryConfig::location()?.to_string_lossy());
+        println!("{}", Self::location()?.to_string_lossy());
         Ok(())
     }
 
@@ -123,6 +125,8 @@ impl GooseberryConfig {
         }
     }
 
+    /// Get current configuration
+    /// Hides the developer key (except last three digits)
     pub fn get() -> color_eyre::Result<String> {
         let mut file = fs::File::open(Self::location()?)?;
         let mut contents = String::new();
@@ -155,7 +159,7 @@ impl GooseberryConfig {
             Some(file) => {
                 let path = Path::new(&file).to_owned();
                 if path.exists() {
-                    let config: GooseberryConfig = confy::load_path(Path::new(&file))?;
+                    let config: Self = confy::load_path(Path::new(&file))?;
                     config.make_dirs()?;
                     Ok(config)
                 } else {
@@ -284,7 +288,7 @@ impl GooseberryConfig {
             }
         }
     }
-    /// Reads the HYPOTHESIS_NAME and HYPOTHESIS_KEY environment variables to get Hypothesis credentials.
+    /// Reads the `HYPOTHESIS_NAME` and `HYPOTHESIS_KEY` environment variables to get Hypothesis credentials.
     /// If not present or invalid, requests credentials from user.
     async fn set_credentials(&mut self) -> color_eyre::Result<()> {
         let (name, key) = (

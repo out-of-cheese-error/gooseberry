@@ -1,5 +1,4 @@
-#![allow(clippy::ptr_arg)]
-
+//! # Gooseberry - A Knowledge Base for the Lazy
 pub mod configuration;
 pub mod errors;
 pub mod gooseberry;
@@ -11,7 +10,7 @@ pub const NAME: &str = "gooseberry";
 pub const MIN_DATE: &str = "1900-01-01T00:00:00.000Z";
 /// Tag used to store untagged Hypothesis annotations
 /// This shows up only in gooseberry and not in Hypothesis
-pub const EMPTY_TAG: &str = "gooseberry_empty";
+pub const EMPTY_TAG: &str = "Untagged";
 /// Tag used to tell gooseberry to ignore an annotation
 /// This shows up only in Hypothesis and not in gooseberry
 pub const IGNORE_TAG: &str = "gooseberry_ignore";

@@ -1,3 +1,4 @@
+//! Convert annotations to markdown for the wiki and for the terminal
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
@@ -9,36 +10,17 @@ use url::Url;
 
 use hypothesis::annotations::{Annotation, Selector};
 
+use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
 
-impl Gooseberry {
-    pub async fn make(&self) -> color_eyre::Result<()> {
-        self.make_book_toml()?;
-        let src_dir = self.config.kb_dir.join("src");
-        if src_dir.exists() {
-            fs::remove_dir_all(&src_dir)?;
-        }
-        fs::create_dir(&src_dir)?;
-        self.start_mermaid()?;
-        self.make_book(&src_dir).await?;
-        let book = MDBook::load(&self.config.kb_dir);
-        assert!(book.is_ok());
-        assert!(book.unwrap().build().is_ok());
-        Ok(())
-    }
+#[derive(Debug)]
+pub(crate) struct MarkdownAnnotation<'a>(pub(crate) &'a Annotation);
 
-    fn start_mermaid(&self) -> color_eyre::Result<()> {
-        Command::new("cargo")
-            .arg("mdbook-mermaid")
-            .arg(&self.config.kb_dir)
-            .output()?;
-        Ok(())
-    }
-
-    fn annotation_to_md(&self, annotation: &Annotation) -> color_eyre::Result<String> {
-        let quote = annotation
+impl<'a> MarkdownAnnotation<'a> {
+    fn format_quote(&self) -> String {
+        self.0
             .target
             .iter()
             .map(|target| {
@@ -55,39 +37,98 @@ impl Gooseberry {
                     .join("\n")
             })
             .collect::<Vec<_>>()
-            .join("\n");
-        let incontext = annotation.links.get("incontext").unwrap_or(&annotation.uri);
-        let text = annotation
-            .text
-            .split('\n')
-            .map(|t| format!("{}\n", t))
-            .collect::<String>();
-        let tags: String = if annotation.tags.is_empty() {
+            .join("\n")
+    }
+
+    fn format_tags(&self, with_links: bool) -> String {
+        if self.0.tags.is_empty() {
             String::new()
-        } else {
+        } else if with_links {
             format!(
                 "|{}|",
-                annotation
+                self.0
                     .tags
                     .iter()
                     .map(|tag| format!(" **[{}]({}.md)** ", tag, tag))
                     .collect::<Vec<_>>()
                     .join("|")
             )
-        };
-        let base_url = utils::base_url(Url::parse(&annotation.uri)?);
-        let incontext = match base_url {
-            Some(url) => format!("[[_see in context at {}_]({})]", url.as_str(), incontext),
-            None => format!("[[_see in context_]({})]", incontext),
-        };
-        let annotation = if quote.trim().is_empty() {
-            format!("{}\n{}\n{}\n", tags, text, incontext)
         } else {
-            format!("{}\n{}\n\n{}\n{}\n", tags, quote, text, incontext)
-        };
-        Ok(annotation)
+            format!(
+                "|{}|",
+                self.0
+                    .tags
+                    .iter()
+                    .map(|tag| format!(" **{}** ", tag))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            )
+        }
     }
 
+    pub(crate) fn to_md(&self, with_links: bool) -> color_eyre::Result<String> {
+        let quote = self.format_quote();
+        let tags = self.format_tags(with_links);
+        let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
+        let base_url = utils::base_url(Url::parse(&self.0.uri)?);
+        let incontext = if with_links {
+            if let Some(url) = base_url {
+                format!("[[*see in context at {}*]({})]", url.as_str(), incontext)
+            } else {
+                format!("[[*see in context*]({})]", incontext)
+            }
+        } else {
+            format!("Source - *{}*", self.0.uri)
+        };
+        let date = self.0.created.format("%c");
+        let formatted = if quote.trim().is_empty() {
+            format!(
+                "##### {} - *{}*\n\n{}\n{}\n\n{}\n",
+                date, self.0.id, tags, self.0.text, incontext
+            )
+        } else {
+            format!(
+                "##### {} - *{}*\n\n{}\n{}\n\n{}\n\n{}\n",
+                date, self.0.id, tags, quote, self.0.text, incontext
+            )
+        };
+        Ok(formatted)
+    }
+}
+
+impl Gooseberry {
+    /// Make mdBook wiki
+    pub async fn make(&self) -> color_eyre::Result<()> {
+        self.make_book_toml()?;
+        let src_dir = self.config.kb_dir.join("src");
+        if src_dir.exists() {
+            fs::remove_dir_all(&src_dir)?;
+        }
+        fs::create_dir(&src_dir)?;
+        self.start_mermaid()?;
+        self.make_book(&src_dir).await?;
+        MDBook::load(&self.config.kb_dir)
+            .map_err(|e| Apologize::MdBookError {
+                message: format!("Couldn't load book: {:?}", e),
+            })?
+            .build()
+            .map_err(|e| Apologize::MdBookError {
+                message: format!("Couldn't build book: {:?}", e),
+            })?;
+        Ok(())
+    }
+
+    /// Sets up mermaid-js support
+    /// Needs to already be installed
+    fn start_mermaid(&self) -> color_eyre::Result<()> {
+        Command::new("cargo")
+            .arg("mdbook-mermaid")
+            .arg(&self.config.kb_dir)
+            .output()?;
+        Ok(())
+    }
+
+    /// Write default book.toml if not present
     fn make_book_toml(&self) -> color_eyre::Result<()> {
         let book_toml = self.config.kb_dir.join("book.toml");
         if book_toml.exists() {
@@ -95,7 +136,7 @@ impl Gooseberry {
         }
 
         let book_toml_string = format!(
-            "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]",
+            "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]\n[output.html]\nmathjax-support = true",
             self.api.username
         );
 
@@ -103,6 +144,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Write markdown files for wiki
     async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
@@ -121,7 +163,7 @@ impl Gooseberry {
         let mut tag_counts = HashMap::new();
         for tag in self.tag_to_annotations()?.iter() {
             let (tag, annotation_ids) = tag?;
-            let tag = utils::u8_to_str(&tag)?;
+            let tag = std::str::from_utf8(&tag)?.to_owned();
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
@@ -134,7 +176,7 @@ impl Gooseberry {
             };
             tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
-                annotations_string.push_str(&self.annotation_to_md(annotation)?);
+                annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
                     if other_tag == &tag
@@ -142,18 +184,13 @@ impl Gooseberry {
                     {
                         continue;
                     }
-                    let count = tag_graph
+                    *tag_graph
                         .entry((tag.to_owned(), other_tag.to_owned()))
-                        .or_insert(0usize);
-                    *count += 1;
+                        .or_insert(0_usize) += 1;
                 }
             }
             tag_file.write_all(annotations_string.as_bytes())?;
-            let link_string = if tag == EMPTY_TAG {
-                format!("- [Untagged]({}.md)\n", tag)
-            } else {
-                format!("- [{}]({}.md)\n", tag, tag)
-            };
+            let link_string = format!("- [{}]({}.md)\n", tag, tag);
             summary_links.push(link_string);
         }
         fs::File::create(index_page)?

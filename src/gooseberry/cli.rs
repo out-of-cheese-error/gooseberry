@@ -1,3 +1,4 @@
+//! Command-line interface
 use std::io;
 use std::path::PathBuf;
 
@@ -19,6 +20,7 @@ about = "Create and manage your Hypothesis knowledge-base",
 rename_all = "kebab-case",
 global_settings = & [AppSettings::DeriveDisplayOrder]
 )]
+/// Create and manage your Hypothesis knowledge-base
 pub enum GooseberryCLI {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
@@ -32,6 +34,9 @@ pub enum GooseberryCLI {
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search")]
+        exact: bool,
         /// The tag to add to / remove from the filtered annotations
         tag: String,
     },
@@ -43,19 +48,37 @@ pub enum GooseberryCLI {
         /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search")]
+        exact: bool,
         /// Also delete from Hypothesis.
         /// Without this flag, the "gooseberry_ignore" flag is added to the selected annotations to ensure that they are not synced by gooseberry in the future.
         /// If the flag is given then the annotations are also deleted from Hypothesis.
-        #[structopt(short, long)]
+        #[structopt(short = "a", long)]
         hypothesis: bool,
         /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
     },
+    /// View (optionally filtered) annotations
+    View {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long, conflicts_with = "id")]
+        search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
+        exact: bool,
+        /// View annotation by ID
+        #[structopt(conflicts_with = "filters")]
+        id: Option<String>,
+    },
     /// Create and update your knowledge-base markdown files
     Make,
     /// Generate shell completions
     Complete {
+        /// type of shell
         #[structopt(possible_values = & Shell::variants())]
         shell: Shell,
     },
@@ -66,30 +89,51 @@ pub enum GooseberryCLI {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
     },
+    /// Clear all gooseberry data
+    /// "ob oggle sobble obble"
     Clear {
         /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
     },
+    /// Move (optionally filtered) annotations from a different hypothesis group to Gooseberry's
+    /// Only moves annotations created by the current user
+    Move {
+        /// Group ID to move from
+        group_id: String,
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long)]
+        search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
+        exact: bool,
+    },
 }
 
+/// CLI options for filtering annotations
 #[derive(StructOpt, Debug)]
 pub struct Filters {
-    /// Filter annotations created after this date and time
+    /// Only annotations created after this date and time
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime))]
     pub from: Option<DateTime<Utc>>,
-    /// If true, includes annotations updated after --from (instead of just created)
+    /// Only annotations created before this date and time
+    /// Can be colloquial, e.g. "last Friday 8pm"
+    #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
+    pub before: Option<DateTime<Utc>>,
+    /// If true, includes annotations updated after --from or before --before (instead of just created)
     #[structopt(short, long)]
     pub include_updated: bool,
-    /// Filter annotations with this pattern in their URL
+    /// Only annotations with this pattern in their URL
     /// Doesn't have to be the full URL, e.g. "wikipedia"
     #[structopt(default_value, long)]
     pub uri: String,
-    /// Filter annotations with this pattern in their `quote`, `tags`, `text`, or `url`
+    /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `url`
     #[structopt(default_value, long)]
     pub any: String,
-    /// Filter annotations with these tags
+    /// Only annotations with these tags
     #[structopt(long)]
     pub tags: Vec<String>,
 }
@@ -98,30 +142,37 @@ impl Into<SearchQuery> for Filters {
     fn into(self) -> SearchQuery {
         SearchQuery {
             limit: 200,
-            search_after: match self.from {
-                None => crate::MIN_DATE.to_owned(),
-                Some(date) => date.to_rfc3339(),
+            search_after: match (self.from, self.before) {
+                (Some(date), None) | (None, Some(date)) => date.to_rfc3339(),
+                (None, None) => crate::MIN_DATE.to_string(),
+                _ => panic!("can't use both --from and --before"),
             },
             uri_parts: self.uri,
             any: self.any,
             tags: self.tags,
-            order: Order::Asc,
+            order: if self.before.is_some() {
+                Order::Desc
+            } else {
+                Order::Asc
+            },
             sort: if self.include_updated {
                 Sort::Updated
             } else {
                 Sort::Created
             },
-            ..Default::default()
+            ..SearchQuery::default()
         }
     }
 }
 
 impl GooseberryCLI {
+    /// Generate shell completions for gooseberry
     pub fn complete(shell: Shell) {
-        GooseberryCLI::clap().gen_completions_to(NAME, shell, &mut io::stdout());
+        Self::clap().gen_completions_to(NAME, shell, &mut io::stdout());
     }
 }
 
+/// CLI options related to configuration management
 #[derive(StructOpt, Debug)]
 pub enum ConfigCommand {
     /// Prints / writes the default configuration options.
@@ -142,23 +193,24 @@ pub enum ConfigCommand {
 }
 
 impl ConfigCommand {
+    /// Handle config related commands
     pub async fn run(&self) -> color_eyre::Result<()> {
         match self {
-            ConfigCommand::Default { file } => {
+            Self::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
             }
-            ConfigCommand::Get => {
+            Self::Get => {
                 GooseberryConfig::load().await?;
                 println!("{}", GooseberryConfig::get()?);
             }
-            ConfigCommand::Where => {
+            Self::Where => {
                 GooseberryConfig::print_location()?;
             }
-            ConfigCommand::Authorize => {
+            Self::Authorize => {
                 let mut config = GooseberryConfig::load().await?;
                 config.request_credentials().await?;
             }
-            ConfigCommand::Group => {
+            Self::Group => {
                 let mut config = GooseberryConfig::load().await?;
                 config.set_group().await?;
             }

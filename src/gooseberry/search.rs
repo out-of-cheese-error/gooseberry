@@ -1,4 +1,4 @@
-//! Fuzzy search capabilities
+//! skim-based search capabilities
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -7,7 +7,6 @@ use skim::prelude::{unbounded, SkimOptionsBuilder};
 use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
 
 use hypothesis::annotations::{Annotation, Selector};
-use hypothesis::AnnotationID;
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -15,6 +14,7 @@ use crate::gooseberry::Gooseberry;
 /// searchable annotation information
 #[derive(Debug)]
 struct SearchAnnotation {
+    /// Annotation ID
     id: String,
     /// Highlighted text, quote, URL, and tag information
     highlight: String,
@@ -33,7 +33,7 @@ impl<'a> SkimItem for SearchAnnotation {
 
     fn preview(&self) -> ItemPreview {
         ItemPreview::Text(
-            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all, CTRL-C to abort"
+            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"
                 .into(),
         )
     }
@@ -61,17 +61,16 @@ impl From<&Annotation> for SearchAnnotation {
                 if quotes.is_empty() {
                     None
                 } else {
-                    Some((&target.source, quotes))
+                    Some(format!("{}", style(quotes.join(" ")).green()))
                 }
             })
-            .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags = style(annotation.tags.join(":")).red();
+        let tags = style(annotation.tags.join("|")).red();
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();
-        SearchAnnotation {
+        Self {
             highlight,
             plain,
             id: annotation.id.to_owned(),
@@ -80,12 +79,13 @@ impl From<&Annotation> for SearchAnnotation {
 }
 
 impl Gooseberry {
-    /// Makes a fuzzy search window
+    /// Makes a skim search window
     pub fn search(
         annotations: &[Annotation],
-    ) -> color_eyre::Result<impl Iterator<Item = AnnotationID>> {
+        exact: bool,
+    ) -> color_eyre::Result<impl Iterator<Item = String>> {
         let options = SkimOptionsBuilder::default()
-            .height(Some("100%"))
+            .height(Some("70%"))
             .preview(Some(""))
             .preview_window(Some("down:10%"))
             .bind(vec![
@@ -93,6 +93,7 @@ impl Gooseberry {
                 "left:scroll-left",
                 "right:scroll-right",
             ])
+            .exact(exact)
             .multi(true)
             .reverse(true)
             .build()

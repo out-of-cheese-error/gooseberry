@@ -1,22 +1,24 @@
+//! Main gooseberry logic
 use std::collections::HashSet;
 use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
 
-use hypothesis::annotations::{Annotation, AnnotationMaker, Order, SearchQuery};
+use hypothesis::annotations::{Annotation, Order, SearchQuery, SearchQueryBuilder};
 use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
+use crate::gooseberry::markdown::MarkdownAnnotation;
 
 pub mod cli;
 pub mod database;
 pub mod markdown;
 pub mod search;
-pub mod tag;
 
+/// Gooseberry database, API client, and configuration
 pub struct Gooseberry {
     /// database storing annotations and links
     db: sled::Db,
@@ -63,6 +65,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Run knowledge-base related functions
     async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
         match cli {
             GooseberryCLI::Sync => self.sync().await,
@@ -70,29 +73,43 @@ impl Gooseberry {
                 filters,
                 delete,
                 search,
+                exact,
                 tag,
-            } => self.tag(filters, delete, search, &tag).await,
+            } => self.tag(filters, delete, search, exact, &tag).await,
             GooseberryCLI::Delete {
                 filters,
                 search,
+                exact,
                 hypothesis,
                 force,
-            } => self.delete(filters, search, hypothesis, force).await,
+            } => self.delete(filters, search, exact, hypothesis, force).await,
+            GooseberryCLI::View {
+                filters,
+                search,
+                exact,
+                id,
+            } => self.view(filters, search, exact, id).await,
+            GooseberryCLI::Move {
+                group_id,
+                filters,
+                search,
+                exact,
+            } => self.sync_group(group_id, filters, search, exact).await,
             GooseberryCLI::Make => self.make().await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
         }
     }
 
+    /// Sync newly added / updated annotations
     async fn sync(&self) -> color_eyre::Result<()> {
-        let mut query = SearchQuery {
-            limit: 200,
-            order: Order::Asc,
-            search_after: self.get_sync_time()?,
-            user: self.api.user.to_owned(),
-            group: self.config.hypothesis_group.clone().unwrap(),
-            ..Default::default()
-        };
+        let mut query = SearchQueryBuilder::default()
+            .limit(200)
+            .order(Order::Asc)
+            .search_after(self.get_sync_time()?)
+            .user(&self.api.user.0)
+            .group(self.config.hypothesis_group.as_deref().unwrap())
+            .build()?;
         let (added, updated, ignored) =
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
@@ -108,26 +125,77 @@ impl Gooseberry {
         Ok(())
     }
 
-    async fn filter_annotations(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
+    /// Move (optionally filtered) annotations from a different group to the group gooseberry looks at (set in config)
+    async fn sync_group(
+        &self,
+        group_id: String,
+        filters: Filters,
+        search: bool,
+        exact: bool,
+    ) -> color_eyre::Result<()> {
+        let mut annotations = self
+            .filter_annotations(filters, Some(group_id.to_owned()))
+            .await?;
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            annotations = annotations
+                .into_iter()
+                .filter(|a| annotation_ids.contains(&a.id))
+                .collect();
+        }
+        // Change the group ID attached to each annotation
+        self.api
+            .update_annotations(
+                &annotations
+                    .into_iter()
+                    .map(|mut a| {
+                        a.group = group_id.to_owned();
+                        a
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
+        self.sync().await?;
+        Ok(())
+    }
+
+    /// Filter annotations based on command-line flags
+    async fn filter_annotations(
+        &self,
+        filters: Filters,
+        group: Option<String>,
+    ) -> color_eyre::Result<Vec<Annotation>> {
         let mut query: SearchQuery = filters.into();
-        query.user = self.api.user.to_owned();
-        query.group = self.config.hypothesis_group.clone().unwrap();
-        Ok(self
+        query.user = self.api.user.0.to_owned();
+        query.group = match group {
+            Some(group) => group,
+            None => self
+                .config
+                .hypothesis_group
+                .clone()
+                .expect("This should have been set by Config"),
+        };
+        let mut annotations: Vec<_> = self
             .api_search_annotations(&mut query)
             .await?
             .into_iter()
-            .collect())
+            .collect();
+        annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        Ok(annotations)
     }
 
+    /// Tag a filtered set of annotations with a given tag
     async fn tag(
         &self,
         filters: Filters,
         delete: bool,
         search: bool,
+        exact: bool,
         tag: &str,
     ) -> color_eyre::Result<()> {
         let mut annotations: Vec<Annotation> = self
-            .filter_annotations(filters)
+            .filter_annotations(filters, None)
             .await?
             .into_iter()
             .filter(|a| {
@@ -140,34 +208,56 @@ impl Gooseberry {
                 }
             })
             .collect();
-        if search {
-            // Run a search window for fuzzy search capability.
-            let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
         if delete {
-            self.delete_tag_from_annotations(annotations, tag).await?;
+            self.api
+                .update_annotations(
+                    &annotations
+                        .into_iter()
+                        .map(|mut a| {
+                            a.tags.retain(|t| t != tag);
+                            a
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .await?;
         } else {
-            self.add_tag_to_annotations(annotations, tag).await?;
+            self.api
+                .update_annotations(
+                    &annotations
+                        .into_iter()
+                        .map(|mut a| {
+                            a.tags.push(tag.to_owned());
+                            a
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .await?;
         }
         self.sync().await?;
         Ok(())
     }
 
+    /// Delete filtered annotations from gooseberry (by adding an ignore tag) or also from Hypothesis
     async fn delete(
         &self,
         filters: Filters,
         search: bool,
+        exact: bool,
         hypothesis: bool,
         force: bool,
     ) -> color_eyre::Result<()> {
-        let mut annotations = self.filter_annotations(filters).await?;
-        if search {
-            // Run a search window for fuzzy search capability.
-            let annotation_ids: HashSet<String> = Self::search(&annotations)?.collect();
+        let mut annotations = self.filter_annotations(filters, None).await?;
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
@@ -202,27 +292,61 @@ impl Gooseberry {
                     num_annotations
                 );
             } else {
-                self.api
-                    .update_annotations(
-                        &ids,
-                        &annotations
-                            .into_iter()
-                            .map(|a| {
-                                let mut tags = a.tags;
-                                tags.push(crate::IGNORE_TAG.to_owned());
-                                AnnotationMaker {
-                                    tags: Some(tags),
-                                    ..Default::default()
-                                }
-                            })
-                            .collect::<Vec<_>>(),
-                    )
-                    .await?;
+                annotations = annotations
+                    .into_iter()
+                    .map(|mut a| {
+                        a.tags.push(crate::IGNORE_TAG.to_owned());
+                        a
+                    })
+                    .collect();
+                self.api.update_annotations(&annotations).await?;
                 println!("{} notes deleted from gooseberry.\n\
                  These still exist in Hypothesis but will be ignored in future `gooseberry sync` calls \
                  unless the \"gooseberry_ignore\" tag is removed.", num_annotations);
             }
         }
+        Ok(())
+    }
+
+    /// View optionally filtered annotations in the terminal
+    async fn view(
+        &self,
+        filters: Filters,
+        search: bool,
+        exact: bool,
+        id: Option<String>,
+    ) -> color_eyre::Result<()> {
+        if let Some(id) = id {
+            let annotation = self
+                .api
+                .fetch_annotation(&id)
+                .await
+                .suggestion("Are you sure this is a valid and existing annotation ID?")?;
+            termimad::print_text(&MarkdownAnnotation(&annotation).to_md(false)?);
+            return Ok(());
+        }
+
+        let mut annotations: Vec<Annotation> = self
+            .filter_annotations(filters, None)
+            .await?
+            .into_iter()
+            .collect();
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            annotations = annotations
+                .into_iter()
+                .filter(|a| annotation_ids.contains(&a.id))
+                .collect();
+        }
+        let mut text = String::new();
+        for annotation in annotations {
+            text.push_str(&format!(
+                "\n{}\n---\n",
+                MarkdownAnnotation(&annotation).to_md(false)?
+            ));
+        }
+        termimad::print_text(&text);
         Ok(())
     }
 
@@ -251,13 +375,13 @@ impl Gooseberry {
     }
 
     /// Retrieve all annotations matching query
-    pub async fn api_search_annotations(
+    async fn api_search_annotations(
         &self,
         query: &mut SearchQuery,
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut annotations = Vec::new();
         loop {
-            let next = self.api.search_annotations(&query).await?;
+            let next = self.api.search_annotations(query).await?;
             if next.is_empty() {
                 break;
             }
