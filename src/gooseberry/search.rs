@@ -61,10 +61,9 @@ impl From<&Annotation> for SearchAnnotation {
                 if quotes.is_empty() {
                     None
                 } else {
-                    Some((&target.source, quotes))
+                    Some(format!("{}", style(quotes.join(" ")).green()))
                 }
             })
-            .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
         let tags = style(annotation.tags.join("|")).red();

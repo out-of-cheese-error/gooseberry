@@ -1,7 +1,4 @@
 //! Utility functions
-
-use std::str;
-
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
@@ -11,12 +8,7 @@ use url::Url;
 /// TODO: Tag cannot have semicolon in it, remember to add this to the README
 pub const SEMICOLON: u8 = 59;
 
-/// Converts an array of bytes to a string
-pub fn u8_to_str(input: &[u8]) -> color_eyre::Result<String> {
-    Ok(str::from_utf8(input)?.to_owned())
-}
-
-/// Makes DateTime from a string, can be colloquial like "last Friday 8pm"
+/// Makes `DateTime` from a string, can be colloquial like "last Friday 8pm"
 pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>> {
     if datetime_string.to_ascii_lowercase() == "today" {
         Ok(Utc::now().date().and_hms(0, 0, 0))
@@ -27,9 +19,9 @@ pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>
 
 /// Splits byte array by semicolon into list of Annotation IDs
 pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<String>> {
-    let index_list_string = str::from_utf8(index_list)?;
+    let index_list_string = std::str::from_utf8(index_list)?;
     Ok(index_list_string
-        .split(str::from_utf8(&[SEMICOLON])?)
+        .split(std::str::from_utf8(&[SEMICOLON])?)
         .map(|x| x.to_string())
         .collect())
 }
@@ -37,7 +29,7 @@ pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<String>> {
 /// List of String into semicolon-joined byte array
 pub fn join_ids(index_list: &[String]) -> color_eyre::Result<Vec<u8>> {
     Ok(index_list
-        .join(str::from_utf8(&[SEMICOLON])?)
+        .join(std::str::from_utf8(&[SEMICOLON])?)
         .as_bytes()
         .to_vec())
 }

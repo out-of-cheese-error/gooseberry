@@ -143,8 +143,7 @@ impl Into<SearchQuery> for Filters {
         SearchQuery {
             limit: 200,
             search_after: match (self.from, self.before) {
-                (Some(date), None) => date.to_rfc3339(),
-                (None, Some(date)) => date.to_rfc3339(),
+                (Some(date), None) | (None, Some(date)) => date.to_rfc3339(),
                 (None, None) => crate::MIN_DATE.to_string(),
                 _ => panic!("can't use both --from and --before"),
             },
@@ -161,7 +160,7 @@ impl Into<SearchQuery> for Filters {
             } else {
                 Sort::Created
             },
-            ..Default::default()
+            ..SearchQuery::default()
         }
     }
 }

@@ -72,9 +72,10 @@ impl<'a> MarkdownAnnotation<'a> {
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
         let base_url = utils::base_url(Url::parse(&self.0.uri)?);
         let incontext = if with_links {
-            match base_url {
-                Some(url) => format!("[[*see in context at {}*]({})]", url.as_str(), incontext),
-                None => format!("[[*see in context*]({})]", incontext),
+            if let Some(url) = base_url {
+                format!("[[*see in context at {}*]({})]", url.as_str(), incontext)
+            } else {
+                format!("[[*see in context*]({})]", incontext)
             }
         } else {
             format!("Source - *{}*", self.0.uri)
@@ -162,7 +163,7 @@ impl Gooseberry {
         let mut tag_counts = HashMap::new();
         for tag in self.tag_to_annotations()?.iter() {
             let (tag, annotation_ids) = tag?;
-            let tag = utils::u8_to_str(&tag)?;
+            let tag = std::str::from_utf8(&tag)?.to_owned();
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
@@ -183,10 +184,9 @@ impl Gooseberry {
                     {
                         continue;
                     }
-                    let count = tag_graph
+                    *tag_graph
                         .entry((tag.to_owned(), other_tag.to_owned()))
-                        .or_insert(0usize);
-                    *count += 1;
+                        .or_insert(0_usize) += 1;
                 }
             }
             tag_file.write_all(annotations_string.as_bytes())?;

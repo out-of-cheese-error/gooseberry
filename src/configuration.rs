@@ -288,7 +288,7 @@ impl GooseberryConfig {
             }
         }
     }
-    /// Reads the HYPOTHESIS_NAME and HYPOTHESIS_KEY environment variables to get Hypothesis credentials.
+    /// Reads the `HYPOTHESIS_NAME` and `HYPOTHESIS_KEY` environment variables to get Hypothesis credentials.
     /// If not present or invalid, requests credentials from user.
     async fn set_credentials(&mut self) -> color_eyre::Result<()> {
         let (name, key) = (

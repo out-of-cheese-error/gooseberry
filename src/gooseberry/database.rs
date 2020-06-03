@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::str;
 
 use hypothesis::annotations::Annotation;
 
@@ -151,7 +150,7 @@ impl Gooseberry {
         let new_indices: Vec<_> =
             utils::split_ids(&self.tag_to_annotations()?.get(tag_key)?.ok_or(
                 Apologize::TagNotFound {
-                    tag: utils::u8_to_str(tag_key)?,
+                    tag: std::str::from_utf8(tag_key)?.to_owned(),
                 },
             )?)?
             .into_iter()
