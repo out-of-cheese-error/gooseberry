@@ -2,10 +2,11 @@ use std::io;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
-use hypothesis::annotations::{Order, SearchQuery, Sort};
 use structopt::clap::AppSettings;
 use structopt::clap::Shell;
 use structopt::StructOpt;
+
+use hypothesis::annotations::{Order, SearchQuery, Sort};
 
 use crate::configuration::GooseberryConfig;
 use crate::utils;
@@ -89,6 +90,20 @@ pub enum GooseberryCLI {
         /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
+    },
+    /// Move (optionally filtered) annotations from a different hypothesis group to Gooseberry's
+    /// Only moves annotations created by the current user
+    Move {
+        /// group ID to move from
+        group_id: String,
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long)]
+        search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
+        exact: bool,
     },
 }
 

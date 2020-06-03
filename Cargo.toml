@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 # Hypothesis
-hypothesis = {default-features = false, version = "0.4.0"}
+hypothesis = {default-features = false, path = "../hypothesis"}
 tokio = { version = "0.2", features = ["macros"] }
 
 # mdBook
