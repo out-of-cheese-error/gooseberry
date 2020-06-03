@@ -1,4 +1,3 @@
-//! Fuzzy search capabilities
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -31,7 +30,7 @@ impl<'a> SkimItem for SearchAnnotation {
 
     fn preview(&self) -> ItemPreview {
         ItemPreview::Text(
-            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all, CTRL-C to abort"
+            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"
                 .into(),
         )
     }
@@ -65,7 +64,7 @@ impl From<&Annotation> for SearchAnnotation {
             .map(|(_source, quotes)| format!("{}", style(quotes.join(" ")).green(),))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags = style(annotation.tags.join(":")).red();
+        let tags = style(annotation.tags.join("|")).red();
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();
@@ -86,7 +85,7 @@ impl Gooseberry {
         let options = SkimOptionsBuilder::default()
             .height(Some("70%"))
             .preview(Some(""))
-            .preview_window(Some("down:15%"))
+            .preview_window(Some("down:10%"))
             .bind(vec![
                 "ctrl-a:select-all",
                 "left:scroll-left",

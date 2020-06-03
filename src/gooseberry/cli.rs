@@ -57,6 +57,20 @@ pub enum GooseberryCLI {
         #[structopt(short, long)]
         force: bool,
     },
+    /// View (optionally filtered) annotations
+    View {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        #[structopt(short, long, conflicts_with = "id")]
+        search: bool,
+        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
+        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
+        exact: bool,
+        /// View annotation by ID
+        #[structopt(conflicts_with = "filters")]
+        id: Option<String>,
+    },
     /// Create and update your knowledge-base markdown files
     Make,
     /// Generate shell completions

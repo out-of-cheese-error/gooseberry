@@ -11,6 +11,7 @@ use hypothesis::Hypothesis;
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
+use crate::gooseberry::markdown::MarkdownAnnotation;
 
 pub mod cli;
 pub mod database;
@@ -81,6 +82,12 @@ impl Gooseberry {
                 hypothesis,
                 force,
             } => self.delete(filters, search, exact, hypothesis, force).await,
+            GooseberryCLI::View {
+                filters,
+                search,
+                exact,
+                id,
+            } => self.view(filters, search, exact, id).await,
             GooseberryCLI::Make => self.make().await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
@@ -114,11 +121,13 @@ impl Gooseberry {
         let mut query: SearchQuery = filters.into();
         query.user = self.api.user.to_owned();
         query.group = self.config.hypothesis_group.clone().unwrap();
-        Ok(self
+        let mut annotations: Vec<_> = self
             .api_search_annotations(&mut query)
             .await?
             .into_iter()
-            .collect())
+            .collect();
+        annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        Ok(annotations)
     }
 
     async fn tag(
@@ -224,6 +233,47 @@ impl Gooseberry {
                  unless the \"gooseberry_ignore\" tag is removed.", num_annotations);
             }
         }
+        Ok(())
+    }
+
+    async fn view(
+        &self,
+        filters: Filters,
+        search: bool,
+        exact: bool,
+        id: Option<String>,
+    ) -> color_eyre::Result<()> {
+        if let Some(id) = id {
+            let annotation = self
+                .api
+                .fetch_annotation(&id)
+                .await
+                .suggestion("Are you sure this is a valid and existing annotation ID?")?;
+            termimad::print_text(&MarkdownAnnotation(&annotation).to_md(false)?);
+            return Ok(());
+        }
+
+        let mut annotations: Vec<Annotation> = self
+            .filter_annotations(filters)
+            .await?
+            .into_iter()
+            .collect();
+        if search || exact {
+            // Run a search window.
+            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            annotations = annotations
+                .into_iter()
+                .filter(|a| annotation_ids.contains(&a.id))
+                .collect();
+        }
+        let mut text = String::new();
+        for annotation in annotations {
+            text.push_str(&format!(
+                "\n{}\n---\n",
+                MarkdownAnnotation(&annotation).to_md(false)?
+            ));
+        }
+        termimad::print_text(&text);
         Ok(())
     }
 

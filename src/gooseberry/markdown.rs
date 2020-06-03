@@ -12,6 +12,86 @@ use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
 
+#[derive(Debug)]
+pub(crate) struct MarkdownAnnotation<'a>(pub(crate) &'a Annotation);
+
+impl<'a> MarkdownAnnotation<'a> {
+    fn format_quote(&self) -> String {
+        self.0
+            .target
+            .iter()
+            .map(|target| {
+                target
+                    .selector
+                    .iter()
+                    .filter_map(|selector| match selector {
+                        Selector::TextQuoteSelector(selector) => {
+                            Some(format!("> {}", selector.exact))
+                        }
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn format_tags(&self, with_links: bool) -> String {
+        if self.0.tags.is_empty() {
+            String::new()
+        } else if with_links {
+            format!(
+                "|{}|",
+                self.0
+                    .tags
+                    .iter()
+                    .map(|tag| format!(" **[{}]({}.md)** ", tag, tag))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            )
+        } else {
+            format!(
+                "|{}|",
+                self.0
+                    .tags
+                    .iter()
+                    .map(|tag| format!(" **{}** ", tag))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            )
+        }
+    }
+
+    pub(crate) fn to_md(&self, with_links: bool) -> color_eyre::Result<String> {
+        let quote = self.format_quote();
+        let tags = self.format_tags(with_links);
+        let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
+        let base_url = utils::base_url(Url::parse(&self.0.uri)?);
+        let incontext = if with_links {
+            match base_url {
+                Some(url) => format!("[[*see in context at {}*]({})]", url.as_str(), incontext),
+                None => format!("[[*see in context*]({})]", incontext),
+            }
+        } else {
+            format!("Source - *{}*", self.0.uri)
+        };
+        let date = self.0.created.format("%c");
+        let formatted = if quote.trim().is_empty() {
+            format!(
+                "##### {} - *{}*\n\n{}\n{}\n\n{}\n",
+                date, self.0.id, tags, self.0.text, incontext
+            )
+        } else {
+            format!(
+                "##### {} - *{}*\n\n{}\n{}\n\n{}\n\n{}\n",
+                date, self.0.id, tags, quote, self.0.text, incontext
+            )
+        };
+        Ok(formatted)
+    }
+}
+
 impl Gooseberry {
     pub async fn make(&self) -> color_eyre::Result<()> {
         self.make_book_toml()?;
@@ -34,57 +114,6 @@ impl Gooseberry {
             .arg(&self.config.kb_dir)
             .output()?;
         Ok(())
-    }
-
-    fn annotation_to_md(&self, annotation: &Annotation) -> color_eyre::Result<String> {
-        let quote = annotation
-            .target
-            .iter()
-            .map(|target| {
-                target
-                    .selector
-                    .iter()
-                    .filter_map(|selector| match selector {
-                        Selector::TextQuoteSelector(selector) => {
-                            Some(format!("> {}", selector.exact))
-                        }
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let incontext = annotation.links.get("incontext").unwrap_or(&annotation.uri);
-        let text = annotation
-            .text
-            .split('\n')
-            .map(|t| format!("{}\n", t))
-            .collect::<String>();
-        let tags: String = if annotation.tags.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "|{}|",
-                annotation
-                    .tags
-                    .iter()
-                    .map(|tag| format!(" **[{}]({}.md)** ", tag, tag))
-                    .collect::<Vec<_>>()
-                    .join("|")
-            )
-        };
-        let base_url = utils::base_url(Url::parse(&annotation.uri)?);
-        let incontext = match base_url {
-            Some(url) => format!("[[_see in context at {}_]({})]", url.as_str(), incontext),
-            None => format!("[[_see in context_]({})]", incontext),
-        };
-        let annotation = if quote.trim().is_empty() {
-            format!("{}\n{}\n{}\n", tags, text, incontext)
-        } else {
-            format!("{}\n{}\n\n{}\n{}\n", tags, quote, text, incontext)
-        };
-        Ok(annotation)
     }
 
     fn make_book_toml(&self) -> color_eyre::Result<()> {
@@ -133,7 +162,7 @@ impl Gooseberry {
             };
             tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
-                annotations_string.push_str(&self.annotation_to_md(annotation)?);
+                annotations_string.push_str(&MarkdownAnnotation(&annotation).to_md(true)?);
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
                     if other_tag == &tag

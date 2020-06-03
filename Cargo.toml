@@ -3,16 +3,26 @@ name = "gooseberry"
 version = "0.1.0"
 authors = ["Ninjani"]
 edition = "2018"
-
+description = "a knowledge base tool combining Hypothesis web annotations with an mdBook wiki"
+repository = "https://github.com/out-of-cheese-error/gooseberry"
+readme = "README.md"
+license = "MIT"
+keywords = ["knowledge-base", "hypothesis", "cli", "markdown", "wiki"]
+categories = ["command-line-utilities"]
 
 [dependencies]
+# Hypothesis
 hypothesis = {default-features = false, version = "0.4.0"}
 tokio = { version = "0.2", features = ["macros"] }
+
+# mdBook
 mdbook = "0.3.7"
 url = "2.1.1"
 
+# CLI
 structopt = "0.3.14"
 
+# Database
 sled = "0.32.0-rc1"
 
 # Configuration management
@@ -37,5 +47,10 @@ chrono-english = "0.1.4"
 # Fuzzy search
 skim = "0.8.1"
 
+# Console related
 dialoguer = "0.6.2"
 console = "0.11.3"
+termimad = "0.8.23"
+
+[profile.release]
+panic = 'abort'
