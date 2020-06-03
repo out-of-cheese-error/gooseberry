@@ -252,7 +252,7 @@ impl Gooseberry {
     }
 
     /// Retrieve all annotations matching query
-    pub async fn api_search_annotations(
+    async fn api_search_annotations(
         &self,
         query: &mut SearchQuery,
     ) -> color_eyre::Result<Vec<Annotation>> {
