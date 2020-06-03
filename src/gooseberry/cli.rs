@@ -1,3 +1,4 @@
+//! Command-line interface
 use std::io;
 use std::path::PathBuf;
 
@@ -19,6 +20,7 @@ about = "Create and manage your Hypothesis knowledge-base",
 rename_all = "kebab-case",
 global_settings = & [AppSettings::DeriveDisplayOrder]
 )]
+/// Create and manage your Hypothesis knowledge-base
 pub enum GooseberryCLI {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
@@ -76,6 +78,7 @@ pub enum GooseberryCLI {
     Make,
     /// Generate shell completions
     Complete {
+        /// type of shell
         #[structopt(possible_values = & Shell::variants())]
         shell: Shell,
     },
@@ -86,6 +89,8 @@ pub enum GooseberryCLI {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
     },
+    /// Clear all gooseberry data
+    /// "ob oggle sobble obble"
     Clear {
         /// Don't ask for confirmation
         #[structopt(short, long)]
@@ -94,7 +99,7 @@ pub enum GooseberryCLI {
     /// Move (optionally filtered) annotations from a different hypothesis group to Gooseberry's
     /// Only moves annotations created by the current user
     Move {
-        /// group ID to move from
+        /// Group ID to move from
         group_id: String,
         #[structopt(flatten)]
         filters: Filters,
@@ -107,6 +112,7 @@ pub enum GooseberryCLI {
     },
 }
 
+/// CLI options for filtering annotations
 #[derive(StructOpt, Debug)]
 pub struct Filters {
     /// Only annotations created after this date and time
@@ -161,11 +167,13 @@ impl Into<SearchQuery> for Filters {
 }
 
 impl GooseberryCLI {
+    /// Generate shell completions for gooseberry
     pub fn complete(shell: Shell) {
-        GooseberryCLI::clap().gen_completions_to(NAME, shell, &mut io::stdout());
+        Self::clap().gen_completions_to(NAME, shell, &mut io::stdout());
     }
 }
 
+/// CLI options related to configuration management
 #[derive(StructOpt, Debug)]
 pub enum ConfigCommand {
     /// Prints / writes the default configuration options.
@@ -186,23 +194,24 @@ pub enum ConfigCommand {
 }
 
 impl ConfigCommand {
+    /// Handle config related commands
     pub async fn run(&self) -> color_eyre::Result<()> {
         match self {
-            ConfigCommand::Default { file } => {
+            Self::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
             }
-            ConfigCommand::Get => {
+            Self::Get => {
                 GooseberryConfig::load().await?;
                 println!("{}", GooseberryConfig::get()?);
             }
-            ConfigCommand::Where => {
+            Self::Where => {
                 GooseberryConfig::print_location()?;
             }
-            ConfigCommand::Authorize => {
+            Self::Authorize => {
                 let mut config = GooseberryConfig::load().await?;
                 config.request_credentials().await?;
             }
-            ConfigCommand::Group => {
+            Self::Group => {
                 let mut config = GooseberryConfig::load().await?;
                 config.set_group().await?;
             }

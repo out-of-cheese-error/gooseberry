@@ -1,3 +1,4 @@
+//! Main gooseberry logic
 use std::collections::HashSet;
 use std::fs;
 
@@ -17,6 +18,7 @@ pub mod database;
 pub mod markdown;
 pub mod search;
 
+/// Gooseberry database, API client, and configuration
 pub struct Gooseberry {
     /// database storing annotations and links
     db: sled::Db,
@@ -63,6 +65,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Run knowledge-base related functions
     async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
         match cli {
             GooseberryCLI::Sync => self.sync().await,
@@ -98,6 +101,7 @@ impl Gooseberry {
         }
     }
 
+    /// Sync newly added / updated annotations
     async fn sync(&self) -> color_eyre::Result<()> {
         let mut query = SearchQueryBuilder::default()
             .limit(200)
@@ -121,6 +125,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Move (optionally filtered) annotations from a different group to the group gooseberry looks at (set in config)
     async fn sync_group(
         &self,
         group_id: String,
@@ -155,6 +160,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Filter annotations based on command-line flags
     async fn filter_annotations(
         &self,
         filters: Filters,
@@ -164,7 +170,11 @@ impl Gooseberry {
         query.user = self.api.user.0.to_owned();
         query.group = match group {
             Some(group) => group,
-            None => self.config.hypothesis_group.clone().unwrap(),
+            None => self
+                .config
+                .hypothesis_group
+                .clone()
+                .expect("This should have been set by Config"),
         };
         let mut annotations: Vec<_> = self
             .api_search_annotations(&mut query)
@@ -175,6 +185,7 @@ impl Gooseberry {
         Ok(annotations)
     }
 
+    /// Tag a filtered set of annotations with a given tag
     async fn tag(
         &self,
         filters: Filters,
@@ -234,6 +245,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Delete filtered annotations from gooseberry (by adding an ignore tag) or also from Hypothesis
     async fn delete(
         &self,
         filters: Filters,
@@ -296,6 +308,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// View optionally filtered annotations in the terminal
     async fn view(
         &self,
         filters: Filters,
@@ -368,7 +381,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut annotations = Vec::new();
         loop {
-            let next = self.api.search_annotations(&query).await?;
+            let next = self.api.search_annotations(query).await?;
             if next.is_empty() {
                 break;
             }

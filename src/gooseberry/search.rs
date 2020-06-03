@@ -1,10 +1,12 @@
+//! skim-based search capabilities
 use std::borrow::Cow;
 use std::sync::Arc;
 
 use console::{strip_ansi_codes, style};
-use hypothesis::annotations::{Annotation, Selector};
 use skim::prelude::{unbounded, SkimOptionsBuilder};
 use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
+
+use hypothesis::annotations::{Annotation, Selector};
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -12,6 +14,7 @@ use crate::gooseberry::Gooseberry;
 /// searchable annotation information
 #[derive(Debug)]
 struct SearchAnnotation {
+    /// Annotation ID
     id: String,
     /// Highlighted text, quote, URL, and tag information
     highlight: String,
@@ -68,7 +71,7 @@ impl From<&Annotation> for SearchAnnotation {
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
         let plain = strip_ansi_codes(&highlight).to_string();
-        SearchAnnotation {
+        Self {
             highlight,
             plain,
             id: annotation.id.to_owned(),

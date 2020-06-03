@@ -1,3 +1,5 @@
+//! Utility functions
+
 use std::str;
 
 use chrono::{DateTime, Utc};

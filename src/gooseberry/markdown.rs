@@ -1,13 +1,16 @@
+//! Convert annotations to markdown for the wiki and for the terminal
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use hypothesis::annotations::{Annotation, Selector};
 use mdbook::MDBook;
 use url::Url;
 
+use hypothesis::annotations::{Annotation, Selector};
+
+use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
@@ -93,6 +96,7 @@ impl<'a> MarkdownAnnotation<'a> {
 }
 
 impl Gooseberry {
+    /// Make mdBook wiki
     pub async fn make(&self) -> color_eyre::Result<()> {
         self.make_book_toml()?;
         let src_dir = self.config.kb_dir.join("src");
@@ -102,12 +106,19 @@ impl Gooseberry {
         fs::create_dir(&src_dir)?;
         self.start_mermaid()?;
         self.make_book(&src_dir).await?;
-        let book = MDBook::load(&self.config.kb_dir);
-        assert!(book.is_ok());
-        assert!(book.unwrap().build().is_ok());
+        MDBook::load(&self.config.kb_dir)
+            .map_err(|e| Apologize::MdBookError {
+                message: format!("Couldn't load book: {:?}", e),
+            })?
+            .build()
+            .map_err(|e| Apologize::MdBookError {
+                message: format!("Couldn't build book: {:?}", e),
+            })?;
         Ok(())
     }
 
+    /// Sets up mermaid-js support
+    /// Needs to already be installed
     fn start_mermaid(&self) -> color_eyre::Result<()> {
         Command::new("cargo")
             .arg("mdbook-mermaid")
@@ -116,6 +127,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Write default book.toml if not present
     fn make_book_toml(&self) -> color_eyre::Result<()> {
         let book_toml = self.config.kb_dir.join("book.toml");
         if book_toml.exists() {
@@ -123,7 +135,7 @@ impl Gooseberry {
         }
 
         let book_toml_string = format!(
-            "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]",
+            "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]\n[output.html]\nmathjax-support = true",
             self.api.username
         );
 
@@ -131,6 +143,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Write markdown files for wiki
     async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
@@ -162,7 +175,7 @@ impl Gooseberry {
             };
             tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
-                annotations_string.push_str(&MarkdownAnnotation(&annotation).to_md(true)?);
+                annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
                     if other_tag == &tag

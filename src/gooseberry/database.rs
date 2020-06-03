@@ -44,6 +44,7 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Get time of last sync
     pub fn get_sync_time(&self) -> color_eyre::Result<String> {
         match self.db.get("last_sync_time")? {
             Some(date_bytes) => Ok(std::str::from_utf8(&date_bytes)?.to_owned()),

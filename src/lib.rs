@@ -1,5 +1,4 @@
-#![allow(clippy::ptr_arg)]
-
+//! # Gooseberry - A Knowledge Base for the Lazy
 pub mod configuration;
 pub mod errors;
 pub mod gooseberry;

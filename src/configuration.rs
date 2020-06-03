@@ -1,3 +1,4 @@
+//! Configuration of data directories and Hypothesis authorization
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs, io};
@@ -5,12 +6,14 @@ use std::{env, fs, io};
 use color_eyre::Help;
 use dialoguer::{theme, Select};
 use directories_next::ProjectDirs;
-use hypothesis::Hypothesis;
 use serde::{Deserialize, Serialize};
+
+use hypothesis::Hypothesis;
 
 use crate::errors::Apologize;
 use crate::{utils, NAME};
 
+/// Configuration struct, asks for user input to fill in the optional values the first time gooseberry is run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
     /// Directory to store `sled` database files
@@ -69,7 +72,7 @@ impl GooseberryConfig {
     }
 
     pub(crate) fn print_location() -> color_eyre::Result<()> {
-        println!("{}", GooseberryConfig::location()?.to_string_lossy());
+        println!("{}", Self::location()?.to_string_lossy());
         Ok(())
     }
 
@@ -122,6 +125,8 @@ impl GooseberryConfig {
         }
     }
 
+    /// Get current configuration
+    /// Hides the developer key (except last three digits)
     pub fn get() -> color_eyre::Result<String> {
         let mut file = fs::File::open(Self::location()?)?;
         let mut contents = String::new();
@@ -154,7 +159,7 @@ impl GooseberryConfig {
             Some(file) => {
                 let path = Path::new(&file).to_owned();
                 if path.exists() {
-                    let config: GooseberryConfig = confy::load_path(Path::new(&file))?;
+                    let config: Self = confy::load_path(Path::new(&file))?;
                     config.make_dirs()?;
                     Ok(config)
                 } else {
