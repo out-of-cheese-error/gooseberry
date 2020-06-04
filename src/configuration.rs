@@ -1,4 +1,3 @@
-//! Configuration of data directories and Hypothesis authorization
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs, io};
@@ -29,7 +28,7 @@ pub struct GooseberryConfig {
 }
 
 /// Main project directory, cross-platform
-fn get_project_dir() -> color_eyre::Result<ProjectDirs> {
+pub fn get_project_dir() -> color_eyre::Result<ProjectDirs> {
     Ok(ProjectDirs::from("rs", "", NAME).ok_or(Apologize::Homeless)?)
 }
 
@@ -56,7 +55,7 @@ impl Default for GooseberryConfig {
 }
 
 impl GooseberryConfig {
-    pub(crate) fn default_config(file: Option<&Path>) -> color_eyre::Result<()> {
+    pub fn default_config(file: Option<&Path>) -> color_eyre::Result<()> {
         let writer: Box<dyn io::Write> = match file {
             Some(file) => Box::new(fs::File::open(file)?),
             None => Box::new(io::stdout()),
@@ -71,12 +70,14 @@ impl GooseberryConfig {
         Ok(())
     }
 
-    pub(crate) fn print_location() -> color_eyre::Result<()> {
+    /// Print location of config.toml file
+    pub fn print_location() -> color_eyre::Result<()> {
         println!("{}", Self::location()?.to_string_lossy());
         Ok(())
     }
 
-    fn make_dirs(&self) -> color_eyre::Result<()> {
+    /// Make db and kb directories
+    pub fn make_dirs(&self) -> color_eyre::Result<()> {
         if !self.db_dir.exists() {
             fs::create_dir(&self.db_dir).map_err(|e: io::Error| Apologize::ConfigError {
                 message: format!(
@@ -96,6 +97,8 @@ impl GooseberryConfig {
         Ok(())
     }
 
+    /// Get a template for making a custom config file
+    /// If you leave hypothesis details empty, Goosberry asks you for them the first time
     fn get_default_config_file() -> color_eyre::Result<PathBuf> {
         let dir = get_project_dir()?;
         let config_dir = dir.config_dir();
@@ -103,7 +106,7 @@ impl GooseberryConfig {
     }
 
     /// Gets the current config file location
-    fn location() -> color_eyre::Result<PathBuf> {
+    pub fn location() -> color_eyre::Result<PathBuf> {
         let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         match config_file {
             Some(file) => {
@@ -199,7 +202,10 @@ impl GooseberryConfig {
         Ok(config)
     }
 
-    pub(crate) async fn set_group(&mut self) -> color_eyre::Result<()> {
+    /// Sets the Hypothesis group used for Gooseberry annotations
+    /// This opens a command-line prompt wherein the user can select creating a new group or
+    /// using an existing group by ID
+    pub async fn set_group(&mut self) -> color_eyre::Result<()> {
         let selections = &[
             "Create a new Hypothesis group",
             "Use an existing Hypothesis group",
@@ -254,7 +260,8 @@ impl GooseberryConfig {
         Ok(())
     }
 
-    async fn authorize(name: &str, key: &str) -> color_eyre::Result<bool> {
+    /// Check if user can be authorized
+    pub async fn authorize(name: &str, key: &str) -> color_eyre::Result<bool> {
         Ok(Hypothesis::new(name, key)?
             .fetch_user_profile()
             .await?
@@ -290,7 +297,7 @@ impl GooseberryConfig {
     }
     /// Reads the `HYPOTHESIS_NAME` and `HYPOTHESIS_KEY` environment variables to get Hypothesis credentials.
     /// If not present or invalid, requests credentials from user.
-    async fn set_credentials(&mut self) -> color_eyre::Result<()> {
+    pub async fn set_credentials(&mut self) -> color_eyre::Result<()> {
         let (name, key) = (
             env::var("HYPOTHESIS_NAME").ok(),
             env::var("HYPOTHESIS_KEY").ok(),

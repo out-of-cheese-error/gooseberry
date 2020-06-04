@@ -1,4 +1,3 @@
-//! Main gooseberry logic
 use std::collections::HashSet;
 use std::fs;
 
@@ -13,9 +12,13 @@ use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
 use crate::gooseberry::markdown::MarkdownAnnotation;
 
+/// Command-line interface with `structopt`
 pub mod cli;
+/// `sled` database related
 pub mod database;
+/// Convert annotations to markdown for the `mdBook` wiki and for the terminal (via `termimad`)
 pub mod markdown;
+/// `skim`-based search capabilities
 pub mod search;
 
 /// Gooseberry database, API client, and configuration
@@ -28,6 +31,8 @@ pub struct Gooseberry {
     config: GooseberryConfig,
 }
 
+/// ## CLI
+/// Functions related to handling CLI commands
 impl Gooseberry {
     /// Initialize program with command line input.
     /// Reads `sled` trees and metadata file from the locations specified in config.
@@ -66,7 +71,7 @@ impl Gooseberry {
     }
 
     /// Run knowledge-base related functions
-    async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
+    pub async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
         match cli {
             GooseberryCLI::Sync => self.sync().await,
             GooseberryCLI::Tag {
@@ -102,7 +107,7 @@ impl Gooseberry {
     }
 
     /// Sync newly added / updated annotations
-    async fn sync(&self) -> color_eyre::Result<()> {
+    pub async fn sync(&self) -> color_eyre::Result<()> {
         let mut query = SearchQueryBuilder::default()
             .limit(200)
             .order(Order::Asc)
@@ -126,7 +131,7 @@ impl Gooseberry {
     }
 
     /// Move (optionally filtered) annotations from a different group to the group gooseberry looks at (set in config)
-    async fn sync_group(
+    pub async fn sync_group(
         &self,
         group_id: String,
         filters: Filters,
@@ -161,7 +166,7 @@ impl Gooseberry {
     }
 
     /// Filter annotations based on command-line flags
-    async fn filter_annotations(
+    pub async fn filter_annotations(
         &self,
         filters: Filters,
         group: Option<String>,
@@ -186,7 +191,7 @@ impl Gooseberry {
     }
 
     /// Tag a filtered set of annotations with a given tag
-    async fn tag(
+    pub async fn tag(
         &self,
         filters: Filters,
         delete: bool,
@@ -246,7 +251,7 @@ impl Gooseberry {
     }
 
     /// Delete filtered annotations from gooseberry (by adding an ignore tag) or also from Hypothesis
-    async fn delete(
+    pub async fn delete(
         &self,
         filters: Filters,
         search: bool,
@@ -309,7 +314,7 @@ impl Gooseberry {
     }
 
     /// View optionally filtered annotations in the terminal
-    async fn view(
+    pub async fn view(
         &self,
         filters: Filters,
         search: bool,
@@ -351,7 +356,8 @@ impl Gooseberry {
     }
 
     /// Removes all `sled` trees
-    fn clear(&self, force: bool) -> color_eyre::Result<()> {
+    /// Deletes everything in the `db_dir`
+    pub fn clear(&self, force: bool) -> color_eyre::Result<()> {
         if force
             || Confirm::new()
                 .with_prompt("Clear all gooseberry data?")
@@ -375,7 +381,7 @@ impl Gooseberry {
     }
 
     /// Retrieve all annotations matching query
-    async fn api_search_annotations(
+    pub async fn api_search_annotations(
         &self,
         query: &mut SearchQuery,
     ) -> color_eyre::Result<Vec<Annotation>> {

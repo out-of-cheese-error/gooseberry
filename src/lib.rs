@@ -1,7 +1,13 @@
 //! # Gooseberry - A Knowledge Base for the Lazy
+
+/// Configuration of data directories and Hypothesis authorization
 pub mod configuration;
+/// "It claimed to have 15 functions, although it appeared that at least ten were apologizing for
+/// the useless manner in which it performed the others." - [Dis-organizer](https://wiki.lspace.org/mediawiki/Dis-organiser)
 pub mod errors;
+/// Main gooseberry logic
 pub mod gooseberry;
+/// Utility functions
 pub mod utils;
 
 /// Name of the app, used for making project directories etc.

@@ -1,4 +1,3 @@
-//! Convert annotations to markdown for the wiki and for the terminal
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
@@ -15,11 +14,13 @@ use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
 
+/// To convert an annotation to markdown
 #[derive(Debug)]
-pub(crate) struct MarkdownAnnotation<'a>(pub(crate) &'a Annotation);
+pub struct MarkdownAnnotation<'a>(pub &'a Annotation);
 
 impl<'a> MarkdownAnnotation<'a> {
-    fn format_quote(&self) -> String {
+    /// Format the highlighted quote as a blockquote
+    pub fn format_quote(&self) -> String {
         self.0
             .target
             .iter()
@@ -40,33 +41,42 @@ impl<'a> MarkdownAnnotation<'a> {
             .join("\n")
     }
 
-    fn format_tags(&self, with_links: bool) -> String {
+    /// formats tags with '|'s in between
+    pub fn format_tags(&self, with_links: bool) -> String {
         if self.0.tags.is_empty() {
             String::new()
-        } else if with_links {
-            format!(
-                "|{}|",
-                self.0
-                    .tags
-                    .iter()
-                    .map(|tag| format!(" **[{}]({}.md)** ", tag, tag))
-                    .collect::<Vec<_>>()
-                    .join("|")
-            )
         } else {
             format!(
                 "|{}|",
                 self.0
                     .tags
                     .iter()
-                    .map(|tag| format!(" **{}** ", tag))
+                    .map(|tag| {
+                        if with_links {
+                            format!(" **[{}]({}.md)** ", tag, tag)
+                        } else {
+                            format!(" **{}** ", tag)
+                        }
+                    })
                     .collect::<Vec<_>>()
                     .join("|")
             )
         }
     }
 
-    pub(crate) fn to_md(&self, with_links: bool) -> color_eyre::Result<String> {
+    /// Format an annotation as markdown. Example:
+    ///
+    /// ##### Jun 1 23:53:30 2020 - *annotation ID*
+    ///
+    /// | tag1 | tag2 |
+    /// > Highlighted quote from the website
+    ///
+    /// Comment about quote.
+    /// **This** can be *arbitrary* markdown
+    /// with LaTeX math $$\pi = 3.14$$.
+    ///
+    /// Source - *www.source_url.com*
+    pub fn to_md(&self, with_links: bool) -> color_eyre::Result<String> {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
@@ -96,6 +106,8 @@ impl<'a> MarkdownAnnotation<'a> {
     }
 }
 
+/// ## Markdown generation
+/// functions related to generating the `mdBook` wiki
 impl Gooseberry {
     /// Make mdBook wiki
     pub async fn make(&self) -> color_eyre::Result<()> {
@@ -120,7 +132,7 @@ impl Gooseberry {
 
     /// Sets up mermaid-js support
     /// Needs to already be installed
-    fn start_mermaid(&self) -> color_eyre::Result<()> {
+    pub fn start_mermaid(&self) -> color_eyre::Result<()> {
         Command::new("cargo")
             .arg("mdbook-mermaid")
             .arg(&self.config.kb_dir)
@@ -129,7 +141,7 @@ impl Gooseberry {
     }
 
     /// Write default book.toml if not present
-    fn make_book_toml(&self) -> color_eyre::Result<()> {
+    pub fn make_book_toml(&self) -> color_eyre::Result<()> {
         let book_toml = self.config.kb_dir.join("book.toml");
         if book_toml.exists() {
             return Ok(());
@@ -145,7 +157,7 @@ impl Gooseberry {
     }
 
     /// Write markdown files for wiki
-    async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
+    pub async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
             // Initialize
@@ -200,7 +212,8 @@ impl Gooseberry {
         Ok(())
     }
 
-    fn make_mermaid_graph(
+    /// Write index graph of tags in mermaid-js format
+    pub fn make_mermaid_graph(
         tag_graph: &HashMap<(String, String), usize>,
         tag_counts: &HashMap<String, usize>,
     ) -> color_eyre::Result<String> {

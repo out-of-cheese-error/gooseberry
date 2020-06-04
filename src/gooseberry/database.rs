@@ -8,7 +8,7 @@ use crate::utils;
 use crate::{EMPTY_TAG, MIN_DATE};
 
 /// If key exists, add value to existing values - join with a semicolon
-fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
+pub fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
     let mut ret = old_indices.map_or_else(Vec::new, |old| old.to_vec());
     if !ret.is_empty() {
         ret.extend_from_slice(&[utils::SEMICOLON]);
@@ -17,6 +17,10 @@ fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Opt
     Some(ret)
 }
 
+/// ## Database
+/// `sled` database related functions to create, manipulate, and retrieve information in
+/// the annotation ID: (tags IDs) tree and the tag ID: (annotation IDs) tree.
+/// Also stores and updates the time of the last sync.
 impl Gooseberry {
     /// Gets the `sled` database with all gooseberry info.
     /// Makes a new one the first time round
@@ -31,13 +35,13 @@ impl Gooseberry {
         Ok(())
     }
 
-    /// (re)sets date of last sync to way in the past
+    /// (re)sets time of last sync to way in the past
     pub fn reset_sync_time(&self) -> color_eyre::Result<()> {
         self.db.insert("last_sync_time", MIN_DATE.as_bytes())?;
         Ok(())
     }
 
-    /// Update last sync date after sync
+    /// Update last sync time after sync
     pub fn set_sync_time(&self, date: &str) -> color_eyre::Result<()> {
         self.db.insert("last_sync_time", date.as_bytes())?;
         Ok(())
@@ -52,11 +56,13 @@ impl Gooseberry {
     }
 
     /// Tree storing annotation id: (tags ...)
+    /// Referred to as the annotation tree
     pub fn annotation_to_tags(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("annotation_to_tags")?)
     }
 
     /// Tree storing tag: ( annotation IDs ...)
+    /// Referred to as the tags tree
     pub fn tag_to_annotations(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("tag_to_annotations")?)
     }
@@ -80,7 +86,7 @@ impl Gooseberry {
     }
 
     /// Add an annotation to both trees
-    fn add_annotation(
+    pub fn add_annotation(
         &self,
         annotation: &Annotation,
         annotation_batch: &mut sled::Batch,
@@ -164,8 +170,8 @@ impl Gooseberry {
         Ok(())
     }
 
-    /// Delete annotation from the annotation tree
-    fn delete_from_annotations(&self, id: &str) -> color_eyre::Result<Vec<String>> {
+    /// Delete an annotation ID from the annotation tree
+    pub fn delete_from_annotations(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
         Ok(utils::split_ids(
             &self

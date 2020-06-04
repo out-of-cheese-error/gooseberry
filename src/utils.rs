@@ -1,4 +1,3 @@
-//! Utility functions
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
@@ -61,7 +60,8 @@ pub fn user_input(
     }
 }
 
-pub(crate) fn base_url(mut url: Url) -> Option<Url> {
+/// Get the base of a Url, e.g."https://github.com/rust-lang/cargo?asdf" -> "https://github.com/"
+pub fn base_url(mut url: Url) -> Option<Url> {
     match url.path_segments_mut() {
         Ok(mut path) => {
             path.clear();

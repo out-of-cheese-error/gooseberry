@@ -1,4 +1,3 @@
-//! Command-line interface
 use std::io;
 use std::path::PathBuf;
 

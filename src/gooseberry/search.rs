@@ -1,4 +1,3 @@
-//! skim-based search capabilities
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -13,7 +12,7 @@ use crate::gooseberry::Gooseberry;
 
 /// searchable annotation information
 #[derive(Debug)]
-struct SearchAnnotation {
+pub struct SearchAnnotation {
     /// Annotation ID
     id: String,
     /// Highlighted text, quote, URL, and tag information
@@ -26,24 +25,23 @@ impl<'a> SkimItem for SearchAnnotation {
     fn display(&self) -> Cow<AnsiString> {
         Cow::Owned(AnsiString::parse(&self.highlight))
     }
-
     fn text(&self) -> Cow<str> {
         Cow::Borrowed(&self.plain)
     }
-
     fn preview(&self) -> ItemPreview {
         ItemPreview::Text(
             "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"
                 .into(),
         )
     }
-
     fn output(&self) -> Cow<str> {
         Cow::Borrowed(&self.id)
     }
 }
 
 impl From<&Annotation> for SearchAnnotation {
+    /// Write annotation on a single line for searching
+    /// Format: <highlighted quote in green> <comment in white> < '|' separated tags in red> <uri in cyan>  
     fn from(annotation: &Annotation) -> Self {
         // Find highlighted text from `TextQuoteSelector`s
         let quotes: String = annotation
@@ -78,8 +76,10 @@ impl From<&Annotation> for SearchAnnotation {
     }
 }
 
+/// ## Search
+/// `skim` search window functions
 impl Gooseberry {
-    /// Makes a skim search window
+    /// Makes a skim search window for given annotations
     pub fn search(
         annotations: &[Annotation],
         exact: bool,
