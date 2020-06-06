@@ -5,7 +5,7 @@ use hypothesis::annotations::Annotation;
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::{EMPTY_TAG, MIN_DATE};
+use crate::{EMPTY_TAG, IGNORE_TAG, MIN_DATE};
 
 /// If key exists, add value to existing values - join with a semicolon
 pub fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
@@ -124,7 +124,7 @@ impl Gooseberry {
         let mut annotation_batch = sled::Batch::default();
         let mut tag_batch = sled::Batch::default();
         for annotation in annotations {
-            if annotation.tags.contains(&crate::IGNORE_TAG.to_string()) {
+            if annotation.tags.iter().any(|t| t == IGNORE_TAG) {
                 if self.annotation_to_tags()?.contains_key(&annotation.id)? {
                     self.delete_annotation(&annotation.id, &mut tag_batch)?;
                 }

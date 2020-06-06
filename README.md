@@ -4,9 +4,16 @@ Gooseberry combines [Hypothesis](https://web.hypothes.is/) (a tool to annotate t
  with [mdBook](https://rust-lang.github.io/mdBook/) (a tool to create a book from markdown files)
   in a command-line interface to generate a knowledge-base wiki without you having to actually type your knowledge out.
 
+## Installation requirements
+* [mdBook](https://rust-lang.github.io/mdBook/index.html) 
+* [mdbook_mermaid](https://docs.rs/mdbook-mermaid/0.4.2/mdbook_mermaid/index.html)
+* A Hypothesis account, and a personal API token obtained as described [here](https://h.readthedocs.io/en/latest/api/authorization/).
+* clone this repository
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for an in-depth explanation of how Gooseberry works and what could be improved. 
 
 ## Motivation
-
 So yes, knowledge-base tools are old hat and a dime a dozen and we really have no excuse to not have a nice big 
 tangled folder of markdown files filled with our overflowing wisdom. But after spending all day writing code and papers 
 and tasks, it just isn't fair that our reading time also needs to be typing time to get all that knowledge down. 

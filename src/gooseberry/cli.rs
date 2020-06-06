@@ -2,11 +2,10 @@ use std::io;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
+use hypothesis::annotations::{Order, SearchQuery, Sort};
 use structopt::clap::AppSettings;
 use structopt::clap::Shell;
 use structopt::StructOpt;
-
-use hypothesis::annotations::{Order, SearchQuery, Sort};
 
 use crate::configuration::GooseberryConfig;
 use crate::utils;
@@ -17,7 +16,7 @@ use crate::NAME;
 name = "gooseberry",
 about = "Create and manage your Hypothesis knowledge-base",
 rename_all = "kebab-case",
-global_settings = & [AppSettings::DeriveDisplayOrder]
+global_settings = & [AppSettings::DeriveDisplayOrder, AppSettings::ColoredHelp]
 )]
 /// Create and manage your Hypothesis knowledge-base
 pub enum GooseberryCLI {
@@ -129,7 +128,7 @@ pub struct Filters {
     /// Doesn't have to be the full URL, e.g. "wikipedia"
     #[structopt(default_value, long)]
     pub uri: String,
-    /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `url`
+    /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
     #[structopt(default_value, long)]
     pub any: String,
     /// Only annotations with these tags

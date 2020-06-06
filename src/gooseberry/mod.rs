@@ -3,7 +3,6 @@ use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
-
 use hypothesis::annotations::{Annotation, Order, SearchQuery, SearchQueryBuilder};
 use hypothesis::Hypothesis;
 
@@ -206,10 +205,10 @@ impl Gooseberry {
             .filter(|a| {
                 if delete {
                     // only consider annotations with the tag
-                    a.tags.contains(&tag.to_string())
+                    a.tags.iter().any(|t| t == tag)
                 } else {
                     // don't consider annotations which already have the tag
-                    !a.tags.contains(&tag.to_string())
+                    a.tags.iter().all(|t| t != tag)
                 }
             })
             .collect();
