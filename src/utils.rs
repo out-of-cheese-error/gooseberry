@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
-use url::Url;
 
 /// ASCII code of semicolon
 /// TODO: Tag cannot have semicolon in it, remember to add this to the README
@@ -20,17 +19,14 @@ pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>
 pub fn split_ids(index_list: &[u8]) -> color_eyre::Result<Vec<String>> {
     let index_list_string = std::str::from_utf8(index_list)?;
     Ok(index_list_string
-        .split(std::str::from_utf8(&[SEMICOLON])?)
+        .split(';')
         .map(|x| x.to_string())
         .collect())
 }
 
 /// List of String into semicolon-joined byte array
 pub fn join_ids(index_list: &[String]) -> color_eyre::Result<Vec<u8>> {
-    Ok(index_list
-        .join(std::str::from_utf8(&[SEMICOLON])?)
-        .as_bytes()
-        .to_vec())
+    Ok(index_list.join(";").as_bytes().to_vec())
 }
 
 /// Takes user input from terminal, optionally has a default and optionally displays it.
@@ -58,16 +54,4 @@ pub fn user_input(
                 .to_owned(),
         ),
     }
-}
-
-/// Get the base of a Url, e.g."https://github.com/rust-lang/cargo?asdf" -> "https://github.com/"
-pub fn base_url(mut url: Url) -> Option<Url> {
-    match url.path_segments_mut() {
-        Ok(mut path) => {
-            path.clear();
-        }
-        Err(_) => return None,
-    }
-    url.set_query(None);
-    Some(url)
 }

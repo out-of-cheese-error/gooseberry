@@ -4,10 +4,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use hypothesis::annotations::{Annotation, Selector};
 use mdbook::MDBook;
 use url::Url;
-
-use hypothesis::annotations::{Annotation, Selector};
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -80,13 +79,9 @@ impl<'a> MarkdownAnnotation<'a> {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
-        let base_url = utils::base_url(Url::parse(&self.0.uri)?);
+        let base_url = &Url::parse(&self.0.uri)?[..url::Position::BeforePath];
         let incontext = if with_links {
-            if let Some(url) = base_url {
-                format!("[[*see in context at {}*]({})]", url.as_str(), incontext)
-            } else {
-                format!("[[*see in context*]({})]", incontext)
-            }
+            format!("[[*see in context at {}*]({})]", base_url, incontext)
         } else {
             format!("Source - *{}*", self.0.uri)
         };
