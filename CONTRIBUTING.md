@@ -87,6 +87,7 @@ Note: this functionality was removed because `bincode` doesn't support "tagged" 
 The knowledge base is written out using `mdBook` as a set of flat Markdown files. Annotations can also be printed out in markdown to the terminal, using `termimad`.
 
 The format of a single annotation in the terminal is:
+```
 ##### Jun 1 23:53:30 2020 - *annotation ID*
 
 | tag1 | tag2 |
@@ -97,7 +98,7 @@ Comment about quote.
 with LaTeX math $$\pi = 3.14$$.
 
 Source - *www.source_url.com*
-
+```
 and in the `mdBook` file is:
 ```
 ##### Jun 1 23:53:30 2020 - *annotation ID*
