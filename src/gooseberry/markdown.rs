@@ -179,6 +179,8 @@ impl Gooseberry {
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
+            let mut rel_tags = HashMap::new();
+
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
             let mut annotations_string = if tag == EMPTY_TAG {
@@ -198,6 +200,9 @@ impl Gooseberry {
                     }
                     *tag_graph
                         .entry((tag.to_owned(), other_tag.to_owned()))
+                        .or_insert(0_usize) += 1;
+                    *rel_tags
+                        .entry(tag.to_owned())
                         .or_insert(0_usize) += 1;
                 }
             }
