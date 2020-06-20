@@ -79,7 +79,12 @@ impl<'a> MarkdownAnnotation<'a> {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
-        let base_url = &Url::parse(&self.0.uri)?[..url::Position::BeforePath];
+        let base_url = if let Ok(uri) = Url::parse(&self.0.uri) {
+            let uri = uri.to_owned();
+            uri[..url::Position::BeforePath].to_owned()
+        } else {
+            self.0.uri.to_owned()
+        };
         let incontext = if with_links {
             format!("[[*see in context at {}*]({})]", base_url, incontext)
         } else {
