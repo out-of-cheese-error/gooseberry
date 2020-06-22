@@ -202,7 +202,7 @@ impl Gooseberry {
                         .entry((tag.to_owned(), other_tag.to_owned()))
                         .or_insert(0_usize) += 1;
                     *rel_tags
-                        .entry(tag.as_str())
+                        .entry(other_tag.as_str())
                         .or_insert(0_usize) += 1;
                 }
             }
