@@ -179,6 +179,8 @@ impl Gooseberry {
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
+            let mut rel_tags = HashMap::new();
+
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
             let mut annotations_string = if tag == EMPTY_TAG {
@@ -199,8 +201,17 @@ impl Gooseberry {
                     *tag_graph
                         .entry((tag.to_owned(), other_tag.to_owned()))
                         .or_insert(0_usize) += 1;
+                    *rel_tags
+                        .entry(tag.as_str())
+                        .or_insert(0_usize) += 1;
                 }
             }
+            let mut rel_tags_count: Vec<_> = rel_tags.into_iter().collect();
+            rel_tags_count.sort_by(|a, b| b.1.cmp(&a.1));
+            let rel_tags_order: Vec<_> = rel_tags_count.into_iter().map(|x| format!("[{}]({}.md)", x.0, x.0)).collect();
+            let rel_tags_string = rel_tags_order.join(", ");
+            annotations_string.push_str(&rel_tags_string);
+            
             tag_file.write_all(annotations_string.as_bytes())?;
             let link_string = format!("- [{}]({}.md)\n", tag, tag);
             summary_links.push(link_string);
