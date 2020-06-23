@@ -59,7 +59,7 @@ Annotation text is just markdown so text formatting, LaTeX, pictures etc. goes t
 
 Each annotation also links back to the position in the website that you got it from, if ever you feel like you're missing context. 
 
-The last line a tag's page lists related tags. 
+The last line in a tag's page lists related tags. 
 TODO: You can also link annotations to each other directly, they'll show up as footnote-style links. 
 
 ## Some advantages
