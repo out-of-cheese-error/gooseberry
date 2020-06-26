@@ -53,5 +53,8 @@ dialoguer = "0.6.2"
 console = "0.11.3"
 termimad = "0.8.23"
 
+# Indicator bar
+indicatif = "0.15.0"
+
 [profile.release]
 panic = 'abort'
