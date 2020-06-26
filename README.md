@@ -59,7 +59,8 @@ Annotation text is just markdown so text formatting, LaTeX, pictures etc. goes t
 
 Each annotation also links back to the position in the website that you got it from, if ever you feel like you're missing context. 
 
-TODO: There's a section on a tag's page which lists related tags. You can also link annotations to each other directly, they'll show up as footnote-style links. 
+The last line in a tag's page lists related tags. 
+TODO: You can also link annotations to each other directly, they'll show up as footnote-style links. 
 
 ## Some advantages
 * You barely have to type while reading unless you're in the mood for taking notes.

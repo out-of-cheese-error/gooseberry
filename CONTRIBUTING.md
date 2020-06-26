@@ -121,7 +121,8 @@ These graph nodes link to the respective tag pages.
 The `mdBook` is constructed by calling `gooseberry make` and can be opened using `mdbook serve kb_dir`
 
 #### Possible improvements
-* Add a section to the top or bottom of a tag page that links to related tags (i.e. those with many shared notes). ([Issue #3](https://github.com/out-of-cheese-error/gooseberry/issues/3): easy)
+* ~~Add a section to the top or bottom of a tag page that links to related tags (i.e. those with many shared notes). ([Issue #3](https://github.com/out-of-cheese-error/gooseberry/issues/3): easy)~~
+* Print progress information and mdbook commands during book building. ([Issue #18](https://github.com/out-of-cheese-error/gooseberry/issues/18): easy)
 * One major improvement would be to incrementally generate Markdown files instead of regenerating from scratch every time `make` is called. 
 This would involve keeping track of each annotation as a Section and only modifying it if its Updated time has changed + appending newly created annotations to the end.
 This would theoretically allow a user to modify their markdown files in an editor of choice and store other kinds of (non-annotation) notes in it. 
