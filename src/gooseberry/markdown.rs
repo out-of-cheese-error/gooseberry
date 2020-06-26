@@ -120,14 +120,12 @@ impl Gooseberry {
             .template("{spinner:.dim.bold} Build in Progress"),
         );
         self.make_book_toml()?;
-
         let src_dir = self.config.kb_dir.join("src");
         if src_dir.exists() {
             fs::remove_dir_all(&src_dir)?;
         }
         fs::create_dir(&src_dir)?;
         self.start_mermaid()?;
-
         self.make_book(&src_dir).await?;
         MDBook::load(&self.config.kb_dir)
             .map_err(|e| Apologize::MdBookError {
@@ -137,7 +135,6 @@ impl Gooseberry {
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
-        
         pb.finish_and_clear();
         println!("Finished building book. Use mdbook serve {:?} and go to localhost:3000 to view it.", self.config.kb_dir);
         Ok(())
