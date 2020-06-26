@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, ProgressIterator};
 
 use hypothesis::annotations::{Annotation, Selector};
 use mdbook::MDBook;
@@ -113,12 +113,6 @@ impl<'a> MarkdownAnnotation<'a> {
 impl Gooseberry {
     /// Make mdBook wiki
     pub async fn make(&self) -> color_eyre::Result<()> {
-        let pb = ProgressBar::new(self.tag_to_annotations().iter().len() as u64);
-            pb.set_style(ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
-            .progress_chars("##-"));
-        pb.set_message("Build in progress...");
-
         self.make_book_toml()?;
         let src_dir = self.config.kb_dir.join("src");
         if src_dir.exists() {
@@ -127,7 +121,6 @@ impl Gooseberry {
         fs::create_dir(&src_dir)?;
         self.start_mermaid()?;
         self.make_book(&src_dir).await?;
-        pb.inc(1);
         MDBook::load(&self.config.kb_dir)
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't load book: {:?}", e),
@@ -136,8 +129,6 @@ impl Gooseberry {
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
-        //pb.finish_and_clear();
-        pb.finish_with_message("Complete!");
         println!("Finished building book. Use mdbook serve {:?} and go to localhost:3000 to view it.", self.config.kb_dir);
         Ok(())
     }
@@ -170,6 +161,12 @@ impl Gooseberry {
 
     /// Write markdown files for wiki
     pub async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
+        let pb = ProgressBar::new(self.tag_to_annotations().iter().len() as u64);
+            
+        pb.set_style(ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+            .progress_chars("##-"));
+                
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
             // Initialize
@@ -186,7 +183,7 @@ impl Gooseberry {
         let mut tag_graph = HashMap::new();
         let mut tag_counts = HashMap::new();
 
-        for tag in self.tag_to_annotations()?.iter() {
+        for tag in self.tag_to_annotations()?.iter().progress_with(pb) {
             let (tag, annotation_ids) = tag?;
             let tag = std::str::from_utf8(&tag)?.to_owned();
             let annotation_ids = utils::split_ids(&annotation_ids)?;
