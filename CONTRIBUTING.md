@@ -11,6 +11,30 @@ Gooseberry welcomes contributions from everyone. All contributors are expected t
 Clone this repository and explore the code via `cargo doc --open --no-deps`. 
 You'll also need to install [mdBook](https://rust-lang.github.io/mdBook/index.html) and [mdbook_mermaid](https://docs.rs/mdbook-mermaid/0.4.2/mdbook_mermaid/index.html) to view the generated markdown files.
 
+## Testing
+
+To run gooseberry's test suite you'll need a `.env` file in the main folder (i.e. next to `Cargo.toml`) with the following keys set
+```text
+DEVELOPER_KEY=<hypothesis API key>
+USERNAME=<hypothesis username>
+TEST_GROUP_ID=<hypothesis test group ID>
+```
+Set TEST_GROUP_ID to a **new** Hypothesis group without any annotations in it. The tests will create, update, and delete annotations within this group.
+
+Run tests with `cargo test -- --test-threads=1` (THIS IS IMPORTANT).
+
+If a test fails there may be annotations created in the group which are not yet deleted. This can interfere with further test runs.
+To fix this, **change the `HYPOTHESIS_GROUP` in your config to the test group ID** and run the following commands
+```bash
+gooseberry clear -f
+gooseberry sync
+gooseberry delete --tags=test_tag -a -f
+```
+Make sure this is done on the test group as this deletes annotations from Hypothesis!
+
+When creating new tests, make sure to tag each created annotation with "test_tag" to make cleanup easier.
+
+
 ## How Gooseberry works
 The general idea behind Gooseberry is to pull annotations from Hypothesis (via the [hypothesis](https://github.com/out-of-cheese-error/rust-hypothesis) crate) 
 and write them out as markdown files (in an [mdBook](https://rust-lang.github.io/mdBook/index.html) format) to form a personal knowledge base (PKB). 
