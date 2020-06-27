@@ -4,6 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use indicatif::{ProgressBar, ProgressIterator};
+
 use hypothesis::annotations::{Annotation, Selector};
 use mdbook::MDBook;
 use url::Url;
@@ -80,7 +82,6 @@ impl<'a> MarkdownAnnotation<'a> {
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
         let base_url = if let Ok(uri) = Url::parse(&self.0.uri) {
-            let uri = uri.to_owned();
             uri[..url::Position::BeforePath].to_owned()
         } else {
             self.0.uri.to_owned()
@@ -127,6 +128,8 @@ impl Gooseberry {
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
+        termimad::print_text(&format!("\n**Finished building knowledge base.**\nRun `mdbook serve {:?}` and go to localhost:3000 to view it.",
+            self.config.kb_dir));
         Ok(())
     }
 
@@ -158,6 +161,7 @@ impl Gooseberry {
 
     /// Write markdown files for wiki
     pub async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
+        let pb = ProgressBar::new(self.tag_to_annotations()?.iter().count() as u64);
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
             // Initialize
@@ -173,14 +177,14 @@ impl Gooseberry {
 
         let mut tag_graph = HashMap::new();
         let mut tag_counts = HashMap::new();
-        for tag in self.tag_to_annotations()?.iter() {
+
+        for tag in self.tag_to_annotations()?.iter().progress_with(pb) {
             let (tag, annotation_ids) = tag?;
             let tag = std::str::from_utf8(&tag)?.to_owned();
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
             let mut rel_tags = HashMap::new();
-
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
             let mut annotations_string = if tag == EMPTY_TAG {
@@ -201,17 +205,18 @@ impl Gooseberry {
                     *tag_graph
                         .entry((tag.to_owned(), other_tag.to_owned()))
                         .or_insert(0_usize) += 1;
-                    *rel_tags
-                        .entry(other_tag.as_str())
-                        .or_insert(0_usize) += 1;
+                    *rel_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
                 }
             }
             let mut rel_tags_count: Vec<_> = rel_tags.into_iter().collect();
             rel_tags_count.sort_by(|a, b| b.1.cmp(&a.1));
-            let rel_tags_order: Vec<_> = rel_tags_count.into_iter().map(|x| format!("[{}]({}.md)", x.0, x.0)).collect();
+            let rel_tags_order: Vec<_> = rel_tags_count
+                .into_iter()
+                .map(|x| format!("[{}]({}.md)", x.0, x.0))
+                .collect();
             let rel_tags_string = rel_tags_order.join(", ");
             annotations_string.push_str(&rel_tags_string);
-            
+
             tag_file.write_all(annotations_string.as_bytes())?;
             let link_string = format!("- [{}]({}.md)\n", tag, tag);
             summary_links.push(link_string);
