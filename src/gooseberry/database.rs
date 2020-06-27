@@ -85,11 +85,31 @@ impl Gooseberry {
         Ok(())
     }
 
+    /// Add an annotation index to a tag it's associated with
+    pub fn add_to_tag_batch(
+        &self,
+        tag_key: &[u8],
+        annotation_key: &[u8],
+        tag_batch: &mut sled::Batch,
+    ) -> color_eyre::Result<()> {
+        tag_batch.insert(
+            tag_key.to_vec(),
+            merge_index(
+                tag_key,
+                self.tag_to_annotations()?.get(tag_key)?.as_deref(),
+                annotation_key,
+            )
+            .unwrap(),
+        );
+        Ok(())
+    }
+
     /// Add an annotation to both trees
     pub fn add_annotation(
         &self,
         annotation: &Annotation,
         annotation_batch: &mut sled::Batch,
+        tag_batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
         annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
@@ -100,14 +120,14 @@ impl Gooseberry {
                 .find(|t| !t.trim().is_empty())
                 .is_none()
         {
-            self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
+            self.add_to_tag_batch(EMPTY_TAG.as_bytes(), annotation_key, tag_batch)?;
         } else {
             for tag in &annotation.tags {
                 if tag.is_empty() {
                     continue;
                 }
                 let tag_key = tag.as_bytes();
-                self.add_to_tag(tag_key, annotation_key)?;
+                self.add_to_tag_batch(tag_key, annotation_key, tag_batch)?;
             }
         }
         Ok(())
@@ -134,10 +154,10 @@ impl Gooseberry {
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
                 self.delete_annotation(&annotation.id, &mut tag_batch)?;
-                self.add_annotation(annotation, &mut annotation_batch)?;
+                self.add_annotation(annotation, &mut annotation_batch, &mut tag_batch)?;
                 updated += 1;
             } else {
-                self.add_annotation(annotation, &mut annotation_batch)?;
+                self.add_annotation(annotation, &mut annotation_batch, &mut tag_batch)?;
                 added += 1;
             }
         }
