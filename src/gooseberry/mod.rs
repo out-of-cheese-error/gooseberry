@@ -118,7 +118,7 @@ impl Gooseberry {
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
         if added > 0 {
-            println!("Added {} new notes", added);
+            println!("Added {} notes", added);
         }
         if updated > 0 {
             println!("Updated {} notes", updated);
