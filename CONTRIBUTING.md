@@ -97,8 +97,8 @@ Some specific behavior here:
     * Adding the `IGNORE_TAG` (found in `lib.rs`) removes a particular annotation from Gooseberry's consideration: i.e. it's removed from the database and never synced unless the tag is removed.
     * An annotation without any tags is stored in the database trees under the `EMPTY_TAG` key. This is not reflected in Hypothesis.
 
-* Calling `gooseberry delete` (with optional filters) deletes a set of annotations from Goosberry and optionally also from Hypothesis. If it's just from Gooseberry then the `IGNORE_TAG` is added to each.
-* Calling `gooseberry move <group_id>` (with optional filters) moves a set of annotations from the Hypothesis group corresponding to `group_id` to the configured Gooseberry group and then re-sync the database to add these.
+* Calling `gooseberry delete` (with optional filters) deletes a set of annotations from Gooseberry and optionally also from Hypothesis. If it's just from Gooseberry then the `IGNORE_TAG` is added to each.
+* Calling `gooseberry move <group_id>` (with optional filters) moves a set of annotations from the Hypothesis group corresponding to `group_id` to the configured Gooseberry group and then re-syncs the database to add these.
 
 #### Possible improvements
 * More flexible tagging behavior. Now the user has to specify each tag one at a time for a set of filtered annotations. May make sense to have an interactive window with multiple selections and tagging on the fly. (Hard)
@@ -146,7 +146,7 @@ The `mdBook` is constructed by calling `gooseberry make` and can be opened using
 
 #### Possible improvements
 * ~~Add a section to the top or bottom of a tag page that links to related tags (i.e. those with many shared notes). ([Issue #3](https://github.com/out-of-cheese-error/gooseberry/issues/3): easy)~~
-* Print progress information and mdbook commands during book building. ([Issue #18](https://github.com/out-of-cheese-error/gooseberry/issues/18): easy)
+* ~~Print progress information and mdbook commands during book building. ([Issue #18](https://github.com/out-of-cheese-error/gooseberry/issues/18): easy)~~
 * One major improvement would be to incrementally generate Markdown files instead of regenerating from scratch every time `make` is called. 
 This would involve keeping track of each annotation as a Section and only modifying it if its Updated time has changed + appending newly created annotations to the end.
 This would theoretically allow a user to modify their markdown files in an editor of choice and store other kinds of (non-annotation) notes in it. 
