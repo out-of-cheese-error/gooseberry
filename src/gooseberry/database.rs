@@ -42,8 +42,8 @@ impl Gooseberry {
     }
 
     /// Update last sync time after sync
-    pub fn set_sync_time(&self, date: &str) -> color_eyre::Result<()> {
-        self.db.insert("last_sync_time", date.as_bytes())?;
+    pub fn set_sync_time(&self, datetime: &str) -> color_eyre::Result<()> {
+        self.db.insert("last_sync_time", datetime.as_bytes())?;
         Ok(())
     }
 
@@ -51,7 +51,7 @@ impl Gooseberry {
     pub fn get_sync_time(&self) -> color_eyre::Result<String> {
         match self.db.get("last_sync_time")? {
             Some(date_bytes) => Ok(std::str::from_utf8(&date_bytes)?.to_owned()),
-            None => Ok(crate::MIN_DATE.to_owned()),
+            None => Ok(MIN_DATE.to_owned()),
         }
     }
 
@@ -75,13 +75,6 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         self.annotation_to_tags()?
             .merge(annotation_key.to_vec(), tag_key.to_vec())?;
-        Ok(())
-    }
-
-    /// Add an annotation index to a tag it's associated with
-    pub fn add_to_tag(&self, tag_key: &[u8], annotation_key: &[u8]) -> color_eyre::Result<()> {
-        self.tag_to_annotations()?
-            .merge(tag_key.to_vec(), annotation_key.to_vec())?;
         Ok(())
     }
 
