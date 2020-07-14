@@ -5,9 +5,8 @@ use std::{env, fs, io};
 use color_eyre::Help;
 use dialoguer::{theme, Select};
 use directories_next::ProjectDirs;
-use serde::{Deserialize, Serialize};
-
 use hypothesis::Hypothesis;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::Apologize;
 use crate::{utils, NAME};
@@ -57,7 +56,7 @@ impl Default for GooseberryConfig {
 impl GooseberryConfig {
     pub fn default_config(file: Option<&Path>) -> color_eyre::Result<()> {
         let writer: Box<dyn io::Write> = match file {
-            Some(file) => Box::new(fs::File::open(file)?),
+            Some(file) => Box::new(fs::File::create(file)?),
             None => Box::new(io::stdout()),
         };
         let mut buffered = io::BufWriter::new(writer);
