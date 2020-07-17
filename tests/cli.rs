@@ -4,6 +4,7 @@
 /// MAKE SURE TO RUN SINGLE-THREADED cargo test -- --test-threads=1
 use std::fs;
 use std::path::PathBuf;
+use std::{thread, time};
 
 use assert_cmd::Command;
 use tempfile::{tempdir, TempDir};
@@ -86,6 +87,9 @@ async fn sync() -> color_eyre::Result<()> {
     let mut a1 = hypothesis_client.create_annotation(&annotation_1).await?;
     let a2 = hypothesis_client.create_annotation(&annotation_2).await?;
 
+    let duration = time::Duration::from_millis(500);
+    thread::sleep(duration);
+
     // check sync add
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
@@ -96,6 +100,8 @@ async fn sync() -> color_eyre::Result<()> {
     // update annotation
     a1.text = "Updated test annotation".into();
     hypothesis_client.update_annotation(&a1).await?;
+
+    thread::sleep(duration);
 
     // check sync update
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -136,6 +142,7 @@ async fn tag() -> color_eyre::Result<()> {
     let key = dotenv::var("DEVELOPER_KEY")?;
     let group_id = dotenv::var("TEST_GROUP_ID")?;
     let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
+    let duration = time::Duration::from_millis(500);
 
     // make hypothesis client
     let hypothesis_client = hypothesis::Hypothesis::new(&username, &key);
@@ -163,12 +170,14 @@ async fn tag() -> color_eyre::Result<()> {
     let a2 = hypothesis_client.create_annotation(&annotation_2).await?;
 
     // check sync
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("sync")
         .assert()
         .stdout(predicates::str::contains("Added 2 notes"));
     // tag
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("tag")
@@ -188,6 +197,7 @@ async fn tag() -> color_eyre::Result<()> {
         .contains(&"test_tag3".to_owned()));
 
     // delete tags
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("tag")
@@ -207,6 +217,7 @@ async fn tag() -> color_eyre::Result<()> {
         .contains(&"test_tag3".to_owned()));
 
     // check tags filtered
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("tag")
