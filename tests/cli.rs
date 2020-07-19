@@ -108,7 +108,7 @@ async fn sync() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Updated 1 notes"));
+        .stdout(predicates::str::contains("Updated 1 note"));
 
     // delete annotations
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -224,7 +224,7 @@ async fn tag() -> color_eyre::Result<()> {
         .arg("--tags=test_tag2")
         .arg("test_tag4")
         .assert()
-        .stdout(predicates::str::contains("Updated 1 notes"));
+        .stdout(predicates::str::contains("Updated 1 note"));
     // NOT in a1
     assert!(!hypothesis_client
         .fetch_annotation(&a1.id)
