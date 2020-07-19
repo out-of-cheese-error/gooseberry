@@ -120,13 +120,28 @@ impl Gooseberry {
         self.set_sync_time(&query.search_after)?;
         spinner.finish_with_message("Done!");
         if added > 0 {
-            println!("Added {} notes", added);
+            if added == 1 {
+                println!("Added 1 note");
+            } else {
+                println!("Added {} notes", added);
+            }
         }
         if updated > 0 {
-            println!("Updated {} notes", updated);
+            if updated == 1 {
+                println!("Updated 1 note");
+            } else {
+                println!("Updated {} notes", updated);
+            }
         }
         if ignored > 0 {
-            println!("Ignored {} notes", ignored);
+            if ignored == 1 {
+                println!("Ignored 1 note");
+            } else {
+                println!("Ignored {} notes", ignored);
+            }
+        }
+        if added == 0 && updated == 0 && ignored == 0 {
+            println!("Everything up to date!")
         }
         Ok(())
     }
