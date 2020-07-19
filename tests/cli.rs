@@ -184,7 +184,7 @@ async fn tag() -> color_eyre::Result<()> {
         .arg("--tags=test_tag")
         .arg("test_tag3")
         .assert()
-        .stdout(predicates::str::contains("Updated 2 notes"));
+        .success();
     assert!(hypothesis_client
         .fetch_annotation(&a1.id)
         .await?
@@ -204,7 +204,7 @@ async fn tag() -> color_eyre::Result<()> {
         .arg("--delete")
         .arg("test_tag3")
         .assert()
-        .stdout(predicates::str::contains("Updated 2 notes"));
+        .success();
     assert!(!hypothesis_client
         .fetch_annotation(&a1.id)
         .await?
@@ -224,7 +224,8 @@ async fn tag() -> color_eyre::Result<()> {
         .arg("--tags=test_tag2")
         .arg("test_tag4")
         .assert()
-        .stdout(predicates::str::contains("Updated 1 note"));
+        .success();
+  
     // NOT in a1
     assert!(!hypothesis_client
         .fetch_annotation(&a1.id)

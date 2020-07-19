@@ -107,6 +107,7 @@ impl Gooseberry {
 
     /// Sync newly added / updated annotations
     pub async fn sync(&self) -> color_eyre::Result<()> {
+        let spinner = crate::utils::get_spinner("Syncing...");
         let mut query = SearchQueryBuilder::default()
             .limit(200)
             .order(Order::Asc)
@@ -117,6 +118,7 @@ impl Gooseberry {
         let (added, updated, ignored) =
             self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
+        spinner.finish_with_message("Done!");
         if added > 0 {
             if added == 1 {
                 println!("Added 1 note");
