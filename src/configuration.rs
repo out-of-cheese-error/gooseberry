@@ -270,7 +270,8 @@ impl GooseberryConfig {
 
     /// Asks user for Hypothesis credentials and sets them in the config
     pub async fn request_credentials(&mut self) -> color_eyre::Result<()> {
-        let (mut name, mut key) = (String::new(), String::new());
+        let mut name = String::new();
+        let mut key;
         loop {
             name = utils::user_input(
                 "Hypothesis username",
@@ -278,12 +279,9 @@ impl GooseberryConfig {
                 true,
                 false,
             )?;
-            key = utils::user_input(
-                "Hypothesis developer API key",
-                if key.is_empty() { None } else { Some(&key) },
-                true,
-                false,
-            )?;
+            key = dialoguer::Password::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                .with_prompt("Hypothesis developer API key")
+                .interact()?;
             if Self::authorize(&name, &key).await? {
                 self.hypothesis_username = Some(name);
                 self.hypothesis_key = Some(key);
