@@ -4,9 +4,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use indicatif::{ProgressBar, ProgressIterator};
-
+use color_eyre::Help;
 use hypothesis::annotations::{Annotation, Selector};
+use indicatif::{ProgressBar, ProgressIterator};
 use mdbook::MDBook;
 use url::Url;
 
@@ -20,6 +20,14 @@ use crate::EMPTY_TAG;
 pub struct MarkdownAnnotation<'a>(pub &'a Annotation);
 
 impl<'a> MarkdownAnnotation<'a> {
+    fn get_base_uri(&self) -> String {
+        if let Ok(uri) = Url::parse(&self.0.uri) {
+            uri[..url::Position::BeforePath].to_owned()
+        } else {
+            self.0.uri.to_owned()
+        }
+    }
+
     /// Format the highlighted quote as a blockquote
     pub fn format_quote(&self) -> String {
         self.0
@@ -81,13 +89,12 @@ impl<'a> MarkdownAnnotation<'a> {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
-        let base_url = if let Ok(uri) = Url::parse(&self.0.uri) {
-            uri[..url::Position::BeforePath].to_owned()
-        } else {
-            self.0.uri.to_owned()
-        };
         let incontext = if with_links {
-            format!("[[*see in context at {}*]({})]", base_url, incontext)
+            format!(
+                "[[*see in context at {}*]({})]",
+                self.get_base_uri(),
+                incontext
+            )
         } else {
             format!("Source - *{}*", self.0.uri)
         };
@@ -112,15 +119,24 @@ impl<'a> MarkdownAnnotation<'a> {
 impl Gooseberry {
     /// Make mdBook wiki
     pub async fn make(&self) -> color_eyre::Result<()> {
-        self.make_book_toml()?;
-        let src_dir = self.config.kb_dir.join("src");
+        if self.config.kb_dir.is_none() || !self.config.kb_dir.as_ref().unwrap().exists() {
+            return Err(Apologize::MdBookError {
+                message: "Knowledge base directory not set or does not exist.".into(),
+            })
+            .suggestion(
+                "Set and create the knowledge base directory using \'gooseberry config directory\'",
+            );
+        }
+        let kb_dir = self.config.kb_dir.as_ref().unwrap();
+        self.make_book_toml(&kb_dir.join("book.toml"))?;
+        let src_dir = kb_dir.join("src");
         if src_dir.exists() {
             fs::remove_dir_all(&src_dir)?;
         }
         fs::create_dir(&src_dir)?;
-        self.start_mermaid()?;
+        Self::start_mermaid(&kb_dir)?;
         self.make_book(&src_dir).await?;
-        MDBook::load(&self.config.kb_dir)
+        MDBook::load(&kb_dir)
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't load book: {:?}", e),
             })?
@@ -129,38 +145,35 @@ impl Gooseberry {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
         termimad::print_text(&format!("\n**Finished building knowledge base.**\nRun `mdbook serve {:?}` and go to localhost:3000 to view it.",
-            self.config.kb_dir));
+                                      kb_dir));
         Ok(())
     }
 
     /// Sets up mermaid-js support
     /// Needs to already be installed
-    pub fn start_mermaid(&self) -> color_eyre::Result<()> {
+    fn start_mermaid(kb_dir: &PathBuf) -> color_eyre::Result<()> {
         Command::new("cargo")
             .arg("mdbook-mermaid")
-            .arg(&self.config.kb_dir)
+            .arg(kb_dir)
             .output()?;
         Ok(())
     }
 
     /// Write default book.toml if not present
-    pub fn make_book_toml(&self) -> color_eyre::Result<()> {
-        let book_toml = self.config.kb_dir.join("book.toml");
+    fn make_book_toml(&self, book_toml: &PathBuf) -> color_eyre::Result<()> {
         if book_toml.exists() {
             return Ok(());
         }
-
         let book_toml_string = format!(
             "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]\n[output.html]\nmathjax-support = true",
             self.api.username
         );
-
         fs::File::create(book_toml)?.write_all(book_toml_string.as_bytes())?;
         Ok(())
     }
 
     /// Write markdown files for wiki
-    pub async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
+    async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let pb = ProgressBar::new(self.tag_to_annotations()?.iter().count() as u64);
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
@@ -172,21 +185,25 @@ impl Gooseberry {
             // Initialize
             fs::remove_file(&index_page)?;
         }
-
+        // SUMMARY.md has links to each page
         let mut summary_links = vec!["[Index](index.md)\n".to_string()];
-
+        // Counts common annotations between tags; (tag_1, tag_2): count
         let mut tag_graph = HashMap::new();
+        // Counts annotations per tag; tag: count
         let mut tag_counts = HashMap::new();
 
         for tag in self.tag_to_annotations()?.iter().progress_with(pb) {
+            // Get annotations for tag
             let (tag, annotation_ids) = tag?;
             let tag = std::str::from_utf8(&tag)?.to_owned();
             let annotation_ids = utils::split_ids(&annotation_ids)?;
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
-            let mut rel_tags = HashMap::new();
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
+            // Counts common annotations to tag; rel_tag: count
+            let mut rel_tags = HashMap::new();
+            // Collects formatted annotations
             let mut annotations_string = if tag == EMPTY_TAG {
                 String::new()
             } else {
@@ -195,6 +212,7 @@ impl Gooseberry {
             tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
                 annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
+                // Section divider
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
                     if other_tag == &tag
@@ -208,32 +226,43 @@ impl Gooseberry {
                     *rel_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
                 }
             }
+            // Sort related tags by count in decreasing order and add links to tag page
             let mut rel_tags_count: Vec<_> = rel_tags.into_iter().collect();
             rel_tags_count.sort_by(|a, b| b.1.cmp(&a.1));
-            let rel_tags_order: Vec<_> = rel_tags_count
-                .into_iter()
-                .map(|x| format!("[{}]({}.md)", x.0, x.0))
-                .collect();
-            let rel_tags_string = rel_tags_order.join(", ");
-            annotations_string.push_str(&rel_tags_string);
-
+            if !rel_tags_count.is_empty() {
+                annotations_string.push_str("#### Related Tags:\n");
+                annotations_string.push_str(
+                    &rel_tags_count
+                        .into_iter()
+                        .map(|x| format!("[{}]({}.md)", x.0, x.0))
+                        .collect::<Vec<_>>()
+                        .join("|"),
+                );
+            }
+            // Make tag.md
             tag_file.write_all(annotations_string.as_bytes())?;
+            // Add link to tag page to summary
             let link_string = format!("- [{}]({}.md)\n", tag, tag);
             summary_links.push(link_string);
         }
+
+        // Make index.md
         fs::File::create(index_page)?
             .write_all(Self::make_mermaid_graph(&tag_graph, &tag_counts)?.as_bytes())?;
+
+        // Make SUMMARY.md
         let summary_links = summary_links.into_iter().collect::<String>();
         fs::File::create(summary)?.write_all(summary_links.as_bytes())?;
         Ok(())
     }
 
     /// Write index graph of tags in mermaid-js format
-    pub fn make_mermaid_graph(
+    fn make_mermaid_graph(
         tag_graph: &HashMap<(String, String), usize>,
         tag_counts: &HashMap<String, usize>,
     ) -> color_eyre::Result<String> {
         let mut graph = String::from("```mermaid\ngraph TD;\n");
+        // Nodes
         graph.push_str(
             &tag_counts
                 .iter()
@@ -246,6 +275,7 @@ impl Gooseberry {
                 })
                 .collect::<String>(),
         );
+        // Edges
         for ((tag_1, tag_2), count) in tag_graph {
             if *count == 1 {
                 graph.push_str(&format!("    {}-- 1 note ---{};\n", tag_1, tag_2));
@@ -253,6 +283,7 @@ impl Gooseberry {
                 graph.push_str(&format!("    {}-- {} notes ---{};\n", tag_1, count, tag_2));
             }
         }
+        // Node links
         graph.push_str(
             &tag_counts
                 .keys()

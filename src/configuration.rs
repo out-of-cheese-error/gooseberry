@@ -4,7 +4,7 @@ use std::{env, fs, io};
 
 use color_eyre::Help;
 use dialoguer::{theme, Select};
-use directories_next::ProjectDirs;
+use directories_next::{ProjectDirs, UserDirs};
 use hypothesis::Hypothesis;
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub struct GooseberryConfig {
     /// Directory to store `sled` database files
     pub(crate) db_dir: PathBuf,
     /// Directory to write out knowledge base markdown files
-    pub(crate) kb_dir: PathBuf,
+    pub(crate) kb_dir: Option<PathBuf>,
     /// Hypothesis username
     pub(crate) hypothesis_username: Option<String>,
     /// Hypothesis personal API key
@@ -33,17 +33,17 @@ pub fn get_project_dir() -> color_eyre::Result<ProjectDirs> {
 
 impl Default for GooseberryConfig {
     fn default() -> Self {
-        let (db_dir, kb_dir) = {
+        let db_dir = {
             let dir = get_project_dir().expect("Couldn't get project dir");
             let data_dir = dir.data_dir();
             if !data_dir.exists() {
                 fs::create_dir_all(data_dir).expect("Couldn't create data dir");
             }
-            (data_dir.join("gooseberry_db"), data_dir.join("gooseberry"))
+            data_dir.join("gooseberry_db")
         };
         let config = Self {
             db_dir,
-            kb_dir,
+            kb_dir: None,
             hypothesis_username: None,
             hypothesis_key: None,
             hypothesis_group: None,
@@ -85,19 +85,21 @@ impl GooseberryConfig {
                 ),
             })?;
         }
-        if !self.kb_dir.exists() {
-            fs::create_dir(&self.kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
-                message: format!(
-                    "Couldn't create knowledge base directory {:?}, {}",
-                    self.kb_dir, e
-                ),
-            })?;
+        if let Some(kb_dir) = &self.kb_dir {
+            if !kb_dir.exists() {
+                fs::create_dir(kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
+                    message: format!(
+                        "Couldn't create knowledge base directory {:?}, {}",
+                        kb_dir, e
+                    ),
+                })?;
+            }
         }
         Ok(())
     }
 
     /// Get a template for making a custom config file
-    /// If you leave hypothesis details empty, Goosberry asks you for them the first time
+    /// If you leave kb_dir and hypothesis details empty, Gooseberry asks you for them the first time
     fn get_default_config_file() -> color_eyre::Result<PathBuf> {
         let dir = get_project_dir()?;
         let config_dir = dir.config_dir();
@@ -184,6 +186,10 @@ impl GooseberryConfig {
             },
         }?;
 
+        if config.kb_dir.is_none() {
+            config.set_kb_dir()?;
+        }
+
         if config.hypothesis_username.is_none()
             || config.hypothesis_key.is_none()
             || !Self::authorize(
@@ -199,6 +205,32 @@ impl GooseberryConfig {
             config.set_group().await?;
         }
         Ok(config)
+    }
+
+    /// Sets the knowledge base directory
+    pub fn set_kb_dir(&mut self) -> color_eyre::Result<()> {
+        let default = UserDirs::new()
+            .ok_or(Apologize::Homeless)?
+            .home_dir()
+            .join(crate::NAME);
+        self.kb_dir = loop {
+            let input = utils::user_input(
+                "Directory to build knowledge base",
+                Some(default.to_str().unwrap()),
+                true,
+                false,
+            )?;
+            let path = Path::new(&input);
+            if path.exists() || fs::create_dir(path).is_ok() {
+                break Some(path.to_owned());
+            } else {
+                println!(
+                    "\nFolder could not be created, make sure all parent folders exist and you have the right permissions.\n"
+                )
+            }
+        };
+        self.store()?;
+        Ok(())
     }
 
     /// Sets the Hypothesis group used for Gooseberry annotations
