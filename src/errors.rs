@@ -1,7 +1,7 @@
 use thiserror::Error;
 
-/// Errors which can be caused by normal Gooseberry operation.
-/// Those caused by external libraries throw their own errors when possible
+/// "It claimed to have 15 functions, although it appeared that at least ten were apologizing for
+/// the useless manner in which it performed the others." - [Dis-organizer](https://wiki.lspace.org/mediawiki/Dis-organiser)
 #[derive(Debug, Error)]
 pub enum Apologize {
     /// Thrown when trying to access an unrecorded tag

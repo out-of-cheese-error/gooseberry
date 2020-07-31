@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
+use color_eyre::Help;
 use hypothesis::annotations::{Annotation, Selector};
 use indicatif::{ProgressBar, ProgressIterator};
 use mdbook::MDBook;
@@ -118,15 +119,24 @@ impl<'a> MarkdownAnnotation<'a> {
 impl Gooseberry {
     /// Make mdBook wiki
     pub async fn make(&self) -> color_eyre::Result<()> {
-        self.make_book_toml()?;
-        let src_dir = self.config.kb_dir.join("src");
+        if self.config.kb_dir.is_none() || !self.config.kb_dir.as_ref().unwrap().exists() {
+            return Err(Apologize::MdBookError {
+                message: "Knowledge base directory not set or does not exist.".into(),
+            })
+            .suggestion(
+                "Set and create the knowledge base directory using \'gooseberry config directory\'",
+            );
+        }
+        let kb_dir = self.config.kb_dir.as_ref().unwrap();
+        self.make_book_toml(&kb_dir.join("book.toml"))?;
+        let src_dir = kb_dir.join("src");
         if src_dir.exists() {
             fs::remove_dir_all(&src_dir)?;
         }
         fs::create_dir(&src_dir)?;
-        self.start_mermaid()?;
+        Self::start_mermaid(&kb_dir)?;
         self.make_book(&src_dir).await?;
-        MDBook::load(&self.config.kb_dir)
+        MDBook::load(&kb_dir)
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't load book: {:?}", e),
             })?
@@ -135,38 +145,35 @@ impl Gooseberry {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
         termimad::print_text(&format!("\n**Finished building knowledge base.**\nRun `mdbook serve {:?}` and go to localhost:3000 to view it.",
-            self.config.kb_dir));
+                                      kb_dir));
         Ok(())
     }
 
     /// Sets up mermaid-js support
     /// Needs to already be installed
-    pub fn start_mermaid(&self) -> color_eyre::Result<()> {
+    fn start_mermaid(kb_dir: &PathBuf) -> color_eyre::Result<()> {
         Command::new("cargo")
             .arg("mdbook-mermaid")
-            .arg(&self.config.kb_dir)
+            .arg(kb_dir)
             .output()?;
         Ok(())
     }
 
     /// Write default book.toml if not present
-    pub fn make_book_toml(&self) -> color_eyre::Result<()> {
-        let book_toml = self.config.kb_dir.join("book.toml");
+    fn make_book_toml(&self, book_toml: &PathBuf) -> color_eyre::Result<()> {
         if book_toml.exists() {
             return Ok(());
         }
-
         let book_toml_string = format!(
             "[book]\ntitle = \"Gooseberry\"\nauthors=[\"{}\"]\n[output.html]\nmathjax-support = true",
             self.api.username
         );
-
         fs::File::create(book_toml)?.write_all(book_toml_string.as_bytes())?;
         Ok(())
     }
 
     /// Write markdown files for wiki
-    pub async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
+    async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let pb = ProgressBar::new(self.tag_to_annotations()?.iter().count() as u64);
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
@@ -250,7 +257,7 @@ impl Gooseberry {
     }
 
     /// Write index graph of tags in mermaid-js format
-    pub fn make_mermaid_graph(
+    fn make_mermaid_graph(
         tag_graph: &HashMap<(String, String), usize>,
         tag_counts: &HashMap<String, usize>,
     ) -> color_eyre::Result<String> {

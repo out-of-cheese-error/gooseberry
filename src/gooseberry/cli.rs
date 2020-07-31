@@ -188,6 +188,8 @@ pub enum ConfigCommand {
     Authorize,
     /// Change the group used for Hypothesis annotations
     Group,
+    /// Change knowledge base directory
+    Directory,
 }
 
 impl ConfigCommand {
@@ -211,6 +213,10 @@ impl ConfigCommand {
             Self::Group => {
                 let mut config = GooseberryConfig::load().await?;
                 config.set_group().await?;
+            }
+            Self::Directory => {
+                let mut config = GooseberryConfig::load().await?;
+                config.set_kb_dir()?;
             }
         }
         Ok(())
