@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -14,21 +14,19 @@ use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
 
-impl Annotation {
-    fn get_base_uri(&self) -> String {
-        if let Ok(uri) = Url::parse(&self.uri) {
-            uri[..url::Position::BeforePath].to_owned()
-        } else {
-            self.uri.to_owned()
-        }
-    }
-}
-
 /// To convert an annotation to markdown
 #[derive(Debug)]
 pub struct MarkdownAnnotation<'a>(pub &'a Annotation);
 
 impl<'a> MarkdownAnnotation<'a> {
+    fn get_base_uri(&self) -> String {
+        if let Ok(uri) = Url::parse(&self.0.uri) {
+            uri[..url::Position::BeforePath].to_owned()
+        } else {
+            self.0.uri.to_owned()
+        }
+    }
+
     /// Format the highlighted quote as a blockquote
     pub fn format_quote(&self) -> String {
         self.0
@@ -93,7 +91,7 @@ impl<'a> MarkdownAnnotation<'a> {
         let incontext = if with_links {
             format!(
                 "[[*see in context at {}*]({})]",
-                self.0.get_base_uri(),
+                self.get_base_uri(),
                 incontext
             )
         } else {
