@@ -14,6 +14,16 @@ use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::EMPTY_TAG;
 
+impl Annotation {
+    fn get_base_uri(&self) -> String {
+        if let Ok(uri) = Url::parse(&self.uri) {
+            uri[..url::Position::BeforePath].to_owned()
+        } else {
+            self.uri.to_owned()
+        }
+    }
+}
+
 /// To convert an annotation to markdown
 #[derive(Debug)]
 pub struct MarkdownAnnotation<'a>(pub &'a Annotation);
@@ -80,13 +90,12 @@ impl<'a> MarkdownAnnotation<'a> {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
-        let base_url = if let Ok(uri) = Url::parse(&self.0.uri) {
-            uri[..url::Position::BeforePath].to_owned()
-        } else {
-            self.0.uri.to_owned()
-        };
         let incontext = if with_links {
-            format!("[[*see in context at {}*]({})]", base_url, incontext)
+            format!(
+                "[[*see in context at {}*]({})]",
+                self.0.get_base_uri(),
+                incontext
+            )
         } else {
             format!("Source - *{}*", self.0.uri)
         };
@@ -233,8 +242,8 @@ impl Gooseberry {
         }
 
         // Make index.md
-        let mut index_file = fs::File::create(index_page)?;
-        index_file.write_all(Self::make_mermaid_graph(&tag_graph, &tag_counts)?.as_bytes())?;
+        fs::File::create(index_page)?
+            .write_all(Self::make_mermaid_graph(&tag_graph, &tag_counts)?.as_bytes())?;
 
         // Make SUMMARY.md
         let summary_links = summary_links.into_iter().collect::<String>();
