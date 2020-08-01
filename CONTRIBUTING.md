@@ -63,7 +63,7 @@ Deals with configuring Gooseberry in terms of:
 1. db_dir: the directory in which to store `sled` database files. 
 This is automatically set in a platform-specific manner using [directories-next](https://crates.io/crates/directories-next) and will not need to be accessed by the user.
 Running `gooseberry clear` will clear the database, empty this directory and reset the sync time.
-2. kb_dir: the `mdBook` directory storing the wiki. This is also automatically set but probably shouldn't be.
+2. kb_dir: the `mdBook` directory storing the wiki. This is set the first time Gooseberry is run and can be reset with `gooseberry config directory`.
 3. hypothesis_username: Username to authorize Hypothesis. This is taken from the `HYPOTHESIS_NAME` environment variable if it exists, or set the first time Gooseberry is run via an input prompt. It can be changed by calling `gooseberry config authorize`. 
 4. hypothesis_key: personal API developer key obtained from Hypothesis; queried and set during the first run or taken from the `HYPOTHESIS_KEY` environment variable. It can be changed by calling `gooseberry config authorize`.
 5. hypothesis_group: the Hypothesis group from which to sync annotations. On the first run, the user can either choose to create a new group or enter an existing group ID. This can be changed by calling `gooseberry config group`.
@@ -71,7 +71,7 @@ Running `gooseberry clear` will clear the database, empty this directory and res
 The config file location is automatically set but can be changed using the `GOOSEBERRY_CONFIG` environment variable.
 
 #### Possible improvements
-* Setting the kb_dir somewhere more accessible to the user ([Issue #8](https://github.com/out-of-cheese-error/gooseberry/issues/8): easy)
+~~* Setting the kb_dir somewhere more accessible to the user ([Issue #8](https://github.com/out-of-cheese-error/gooseberry/issues/8): easy)~~
 * Using a list of Hypothesis groups instead of just one, for different subjects for instance
     * This would open up the possibility of splitting the Wiki by group with interlinking tags ([Issue #9](https://github.com/out-of-cheese-error/gooseberry/issues/9): medium)
 
@@ -83,7 +83,7 @@ In general the code makes use of `suggestion`s via the [eyre](https://crates.io/
 The StructOpt CLI 
 
 #### Possible improvements
-Tests!! ([Issue #1](https://github.com/out-of-cheese-error/gooseberry/issues/1): medium)
+Needs more tests
 
 ### `gooseberry/database.rs`
 The database has two `sled` Trees (which behave like `BTreeMap`s) and one entry:
