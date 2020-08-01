@@ -201,8 +201,8 @@ impl Gooseberry {
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
 
             let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
-            // Counts common annotations to tag; rel_tag: count
-            let mut rel_tags = HashMap::new();
+            // Counts common annotations to tag; related_tag: count
+            let mut related_tags = HashMap::new();
             // Collects formatted annotations
             let mut annotations_string = if tag == EMPTY_TAG {
                 String::new()
@@ -215,24 +215,23 @@ impl Gooseberry {
                 // Section divider
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
-                    if other_tag == &tag
-                        || tag_graph.contains_key(&(other_tag.to_owned(), tag.to_owned()))
+                    *related_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
+                    if other_tag != &tag
+                        && !tag_graph.contains_key(&(other_tag.to_owned(), tag.to_owned()))
                     {
-                        continue;
+                        *tag_graph
+                            .entry((tag.to_owned(), other_tag.to_owned()))
+                            .or_insert(0_usize) += 1;
                     }
-                    *tag_graph
-                        .entry((tag.to_owned(), other_tag.to_owned()))
-                        .or_insert(0_usize) += 1;
-                    *rel_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
                 }
             }
             // Sort related tags by count in decreasing order and add links to tag page
-            let mut rel_tags_count: Vec<_> = rel_tags.into_iter().collect();
-            rel_tags_count.sort_by(|a, b| b.1.cmp(&a.1));
-            if !rel_tags_count.is_empty() {
-                annotations_string.push_str("#### Related Tags:\n");
+            let mut related_tags_count: Vec<_> = related_tags.into_iter().collect();
+            related_tags_count.sort_by(|a, b| b.1.cmp(&a.1));
+            if !related_tags_count.is_empty() {
+                annotations_string.push_str("\n#### Related Tags:\n");
                 annotations_string.push_str(
-                    &rel_tags_count
+                    &related_tags_count
                         .into_iter()
                         .map(|x| format!("[{}]({}.md)", x.0, x.0))
                         .collect::<Vec<_>>()
