@@ -152,8 +152,8 @@ impl Gooseberry {
     /// Sets up mermaid-js support
     /// Needs to already be installed
     fn start_mermaid(kb_dir: &PathBuf) -> color_eyre::Result<()> {
-        Command::new("cargo")
-            .arg("mdbook-mermaid")
+        Command::new("mdbook-mermaid")
+            .arg("install")
             .arg(kb_dir)
             .output()?;
         Ok(())
