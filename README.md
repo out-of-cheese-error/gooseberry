@@ -1,5 +1,7 @@
 # Gooseberry - a Knowledge Base for the Lazy
 
+**WIP**
+
 Gooseberry combines [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web)
  with [mdBook](https://rust-lang.github.io/mdBook/) (a tool to create a book from markdown files)
   in a command-line interface to generate a knowledge-base wiki without you having to actually type your knowledge out.
