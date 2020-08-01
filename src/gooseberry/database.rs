@@ -67,33 +67,9 @@ impl Gooseberry {
         Ok(self.db.open_tree("tag_to_annotations")?)
     }
 
-    /// Add a tag to an annotation it's associated with
-    pub fn add_to_annotation(
-        &self,
-        annotation_key: &[u8],
-        tag_key: &[u8],
-    ) -> color_eyre::Result<()> {
-        self.annotation_to_tags()?
-            .merge(annotation_key.to_vec(), tag_key.to_vec())?;
-        Ok(())
-    }
-
-    /// Add an annotation index to a tag it's associated with
-    pub fn add_to_tag_batch(
-        &self,
-        tag_key: &[u8],
-        annotation_key: &[u8],
-        tag_batch: &mut sled::Batch,
-    ) -> color_eyre::Result<()> {
-        tag_batch.insert(
-            tag_key.to_vec(),
-            merge_index(
-                tag_key,
-                self.tag_to_annotations()?.get(tag_key)?.as_deref(),
-                annotation_key,
-            )
-            .unwrap(),
-        );
+    pub fn add_to_tag(&self, tag_key: &[u8], annotation_key: &[u8]) -> color_eyre::Result<()> {
+        self.tag_to_annotations()?
+            .merge(tag_key.to_vec(), annotation_key.to_vec())?;
         Ok(())
     }
 
@@ -102,7 +78,6 @@ impl Gooseberry {
         &self,
         annotation: &Annotation,
         annotation_batch: &mut sled::Batch,
-        tag_batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
         annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
@@ -113,14 +88,14 @@ impl Gooseberry {
                 .find(|t| !t.trim().is_empty())
                 .is_none()
         {
-            self.add_to_tag_batch(EMPTY_TAG.as_bytes(), annotation_key, tag_batch)?;
+            self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
         } else {
             for tag in &annotation.tags {
                 if tag.is_empty() {
                     continue;
                 }
                 let tag_key = tag.as_bytes();
-                self.add_to_tag_batch(tag_key, annotation_key, tag_batch)?;
+                self.add_to_tag(tag_key, annotation_key)?;
             }
         }
         Ok(())
@@ -135,37 +110,30 @@ impl Gooseberry {
         let mut updated = 0;
         let mut ignored = 0;
         let mut annotation_batch = sled::Batch::default();
-        let mut tag_batch = sled::Batch::default();
         for annotation in annotations {
             if annotation.tags.iter().any(|t| t == IGNORE_TAG) {
                 if self.annotation_to_tags()?.contains_key(&annotation.id)? {
-                    self.delete_annotation(&annotation.id, &mut tag_batch)?;
+                    self.delete_annotation(&annotation.id)?;
                 }
                 ignored += 1;
                 continue;
             }
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
-                self.delete_annotation(&annotation.id, &mut tag_batch)?;
-                self.add_annotation(annotation, &mut annotation_batch, &mut tag_batch)?;
+                self.delete_annotation(&annotation.id)?;
+                self.add_annotation(annotation, &mut annotation_batch)?;
                 updated += 1;
             } else {
-                self.add_annotation(annotation, &mut annotation_batch, &mut tag_batch)?;
+                self.add_annotation(annotation, &mut annotation_batch)?;
                 added += 1;
             }
         }
-        self.tag_to_annotations()?.apply_batch(tag_batch)?;
         self.annotation_to_tags()?.apply_batch(annotation_batch)?;
         Ok((added, updated, ignored))
     }
 
     /// Delete an annotation index from the tag tree
-    pub fn delete_from_tag(
-        &self,
-        tag_key: &[u8],
-        annotation_id: &str,
-        batch: &mut sled::Batch,
-    ) -> color_eyre::Result<()> {
+    pub fn delete_from_tag(&self, tag_key: &[u8], annotation_id: &str) -> color_eyre::Result<()> {
         let new_indices: Vec<_> =
             utils::split_ids(&self.tag_to_annotations()?.get(tag_key)?.ok_or(
                 Apologize::TagNotFound {
@@ -176,9 +144,10 @@ impl Gooseberry {
             .filter(|index_i| index_i != annotation_id)
             .collect();
         if new_indices.is_empty() {
-            batch.remove(tag_key);
+            self.tag_to_annotations()?.remove(tag_key)?;
         } else {
-            batch.insert(tag_key.to_vec(), utils::join_ids(&new_indices)?);
+            self.tag_to_annotations()?
+                .insert(tag_key.to_vec(), utils::join_ids(&new_indices)?)?;
         }
         Ok(())
     }
@@ -195,35 +164,29 @@ impl Gooseberry {
     }
 
     /// Delete annotation from database
-    pub fn delete_annotation(
-        &self,
-        id: &str,
-        tag_batch: &mut sled::Batch,
-    ) -> color_eyre::Result<Vec<String>> {
+    pub fn delete_annotation(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let tags = self.delete_from_annotations(id)?;
         for tag in &tags {
             if tag.is_empty() {
                 continue;
             }
-            self.delete_from_tag(tag.as_bytes(), id, tag_batch)?;
+            self.delete_from_tag(tag.as_bytes(), id)?;
         }
         Ok(tags)
     }
 
     /// Delete multiple annotations
     pub fn delete_annotations(&self, ids: &[String]) -> color_eyre::Result<Vec<Vec<String>>> {
-        let mut tag_batch = sled::Batch::default();
         let mut annotation_batch = sled::Batch::default();
         let mut tags_list = Vec::with_capacity(ids.len());
         for id in ids {
             let tags = self.get_annotation_tags(id)?;
             annotation_batch.remove(id.as_bytes());
             for tag in &tags {
-                self.delete_from_tag(tag.as_bytes(), id, &mut tag_batch)?;
+                self.delete_from_tag(tag.as_bytes(), id)?;
             }
             tags_list.push(tags);
         }
-        self.tag_to_annotations()?.apply_batch(tag_batch)?;
         self.annotation_to_tags()?.apply_batch(annotation_batch)?;
         Ok(tags_list)
     }
