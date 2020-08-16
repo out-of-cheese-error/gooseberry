@@ -9,6 +9,7 @@ readme = "README.md"
 license = "MIT"
 keywords = ["knowledge-base", "hypothesis", "cli", "markdown", "wiki"]
 categories = ["command-line-utilities"]
+include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
