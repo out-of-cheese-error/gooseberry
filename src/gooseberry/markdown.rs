@@ -155,7 +155,8 @@ impl Gooseberry {
         Command::new("mdbook-mermaid")
             .arg("install")
             .arg(kb_dir)
-            .output()?;
+            .output()
+            .suggestion("Have you installed mdbook-mermaid?")?;
         Ok(())
     }
 
