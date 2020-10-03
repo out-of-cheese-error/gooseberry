@@ -62,9 +62,9 @@ impl<'a> MarkdownAnnotation<'a> {
                     .iter()
                     .map(|tag| {
                         if with_links {
-                            format!(" **[{}]({}.md)** ", tag, tag)
+                            format!(" **[{}]({}.md)** ", tag.replace(" ", "__"), tag.replace(" ", "__"))
                         } else {
-                            format!(" **{}** ", tag)
+                            format!(" **{}** ", tag.replace(" ", "__"))
                         }
                     })
                     .collect::<Vec<_>>()
@@ -201,27 +201,27 @@ impl Gooseberry {
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
 
-            let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag)))?;
+            let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag.replace(" ", "__"))))?;
             // Counts common annotations to tag; related_tag: count
             let mut related_tags = HashMap::new();
             // Collects formatted annotations
             let mut annotations_string = if tag == EMPTY_TAG {
                 String::new()
             } else {
-                format!("# {}\n", tag)
+                format!("# {}\n", tag.replace(" ", "__"))
             };
-            tag_counts.insert(tag.to_owned(), annotations.len());
+            tag_counts.insert(tag.to_owned().replace(" ", "__"), annotations.len());
             for annotation in &annotations {
                 annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
                 // Section divider
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
-                    *related_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
+                    *related_tags.entry(other_tag.as_str().replace(" ", "__")).or_insert(0_usize) += 1;
                     if other_tag != &tag
-                        && !tag_graph.contains_key(&(other_tag.to_owned(), tag.to_owned()))
+                        && !tag_graph.contains_key(&(other_tag.to_owned().replace(" ", "__"), tag.to_owned().replace(" ", "__")))
                     {
                         *tag_graph
-                            .entry((tag.to_owned(), other_tag.to_owned()))
+                            .entry((tag.to_owned().replace(" ", "__"), other_tag.to_owned().replace(" ", "__")))
                             .or_insert(0_usize) += 1;
                     }
                 }
@@ -234,7 +234,7 @@ impl Gooseberry {
                 annotations_string.push_str(
                     &related_tags_count
                         .into_iter()
-                        .map(|x| format!("[{}]({}.md)", x.0, x.0))
+                        .map(|x| format!("[{}]({}.md)", x.0.replace(" ", "__"), x.0.replace(" ", "__")))
                         .collect::<Vec<_>>()
                         .join("|"),
                 );
@@ -242,7 +242,7 @@ impl Gooseberry {
             // Make tag.md
             tag_file.write_all(annotations_string.as_bytes())?;
             // Add link to tag page to summary
-            let link_string = format!("- [{}]({}.md)\n", tag, tag);
+            let link_string = format!("- [{}]({}.md)\n", tag.replace(" ", "__"), tag.replace(" ", "__"));
             summary_links.push(link_string);
         }
 

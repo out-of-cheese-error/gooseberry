@@ -95,7 +95,7 @@ async fn sync() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Added 2 notes"));
+        .stdout(predicates::str::contains("Added 2 notes\n"));
 
     // update annotation
     a1.text = "Updated test annotation".into();
@@ -238,6 +238,44 @@ async fn tag() -> color_eyre::Result<()> {
         .await?
         .tags
         .contains(&"test_tag4".to_owned()));
+
+
+    // check tags contains space characters are replaced with "__" after `make`
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+        .arg("tag")
+        .arg("--tags=test_tag")
+        .arg("test tag5")
+        .assert()
+        .success();
+    assert!(hypothesis_client
+        .fetch_annotation(&a1.id)
+        .await?
+        .tags
+        .contains(&"test tag5".to_owned()));
+
+    // make
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+        .arg("make")
+        .assert()
+        .success();
+
+    // scan the tmp folder after `make`
+    let paths = fs::read_dir(temp_dir.path().join("kb").join("book").as_os_str()).unwrap();
+    let names = paths.map(|entry| {
+        let entry = entry.unwrap();
+        let entry_path = entry.path();
+        let file_name = entry_path.file_name().unwrap();
+        let file_name_as_str = file_name.to_str().unwrap();
+        let file_name_as_string = String::from(file_name_as_str);
+        file_name_as_string
+    }).collect::<Vec<String>>();
+    assert!(names
+        .iter()
+        .any(|x| x.find(&"test__tag5.html".to_owned()) != None));
 
     // delete annotations
     let mut cmd = Command::cargo_bin("gooseberry")?;
