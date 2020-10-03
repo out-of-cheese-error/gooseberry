@@ -39,8 +39,8 @@ hypothesis_group = \"{}\"",
 fn it_works() -> color_eyre::Result<()> {
     let temp_dir = tempdir()?;
     dotenv::dotenv()?;
-    let username = dotenv::var("USERNAME")?;
-    let key = dotenv::var("DEVELOPER_KEY")?;
+    let username = dotenv::var("HYPOTHESIS_NAME")?;
+    let key = dotenv::var("HYPOTHESIS_KEY")?;
     let group_id = dotenv::var("TEST_GROUP_ID")?;
     let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -57,8 +57,8 @@ async fn sync() -> color_eyre::Result<()> {
     // config file
     let temp_dir = tempdir()?;
     dotenv::dotenv()?;
-    let username = dotenv::var("USERNAME")?;
-    let key = dotenv::var("DEVELOPER_KEY")?;
+    let username = dotenv::var("HYPOTHESIS_NAME")?;
+    let key = dotenv::var("HYPOTHESIS_KEY")?;
     let group_id = dotenv::var("TEST_GROUP_ID")?;
     let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
 
@@ -68,13 +68,13 @@ async fn sync() -> color_eyre::Result<()> {
     let hypothesis_client = hypothesis_client?;
 
     // make annotations
-    let annotation_1 = hypothesis::annotations::InputAnnotationBuilder::default()
+    let annotation_1 = hypothesis::annotations::InputAnnotation::builder()
         .uri("https://www.example.com")
         .text("this is a test comment")
         .tags(vec!["test_tag".into(), "test_tag1".into()])
         .group(&group_id)
         .build()?;
-    let annotation_2 = hypothesis::annotations::InputAnnotationBuilder::default()
+    let annotation_2 = hypothesis::annotations::InputAnnotation::builder()
         .uri("https://www.example.com")
         .text("this is another test comment")
         .tags(vec![
@@ -138,8 +138,8 @@ async fn tag() -> color_eyre::Result<()> {
     // config file
     let temp_dir = tempdir()?;
     dotenv::dotenv()?;
-    let username = dotenv::var("USERNAME")?;
-    let key = dotenv::var("DEVELOPER_KEY")?;
+    let username = dotenv::var("HYPOTHESIS_NAME")?;
+    let key = dotenv::var("HYPOTHESIS_KEY")?;
     let group_id = dotenv::var("TEST_GROUP_ID")?;
     let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
     let duration = time::Duration::from_millis(500);
@@ -150,13 +150,13 @@ async fn tag() -> color_eyre::Result<()> {
     let hypothesis_client = hypothesis_client?;
 
     // make annotations
-    let annotation_1 = hypothesis::annotations::InputAnnotationBuilder::default()
+    let annotation_1 = hypothesis::annotations::InputAnnotation::builder()
         .uri("https://www.example.com")
         .text("this is a test comment")
         .tags(vec!["test_tag".into(), "test_tag1".into()])
         .group(&group_id)
         .build()?;
-    let annotation_2 = hypothesis::annotations::InputAnnotationBuilder::default()
+    let annotation_2 = hypothesis::annotations::InputAnnotation::builder()
         .uri("https://www.example.com")
         .text("this is another test comment")
         .tags(vec![
@@ -225,7 +225,7 @@ async fn tag() -> color_eyre::Result<()> {
         .arg("test_tag4")
         .assert()
         .success();
-  
+
     // NOT in a1
     assert!(!hypothesis_client
         .fetch_annotation(&a1.id)

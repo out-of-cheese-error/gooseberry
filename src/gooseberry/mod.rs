@@ -3,7 +3,7 @@ use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
-use hypothesis::annotations::{Annotation, Order, SearchQuery, SearchQueryBuilder};
+use hypothesis::annotations::{Annotation, Order, SearchQuery};
 use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
@@ -108,7 +108,7 @@ impl Gooseberry {
     /// Sync newly added / updated annotations
     pub async fn sync(&self) -> color_eyre::Result<()> {
         let spinner = crate::utils::get_spinner("Syncing...");
-        let mut query = SearchQueryBuilder::default()
+        let mut query = SearchQuery::builder()
             .limit(200)
             .order(Order::Asc)
             .search_after(self.get_sync_time()?)
@@ -116,7 +116,7 @@ impl Gooseberry {
             .group(self.config.hypothesis_group.as_deref().unwrap())
             .build()?;
         let (added, updated, ignored) =
-            self.sync_annotations(&self.api_search_annotations(&mut query).await?)?;
+            self.sync_annotations(&self.api.search_annotations_return_all(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
         spinner.finish_with_message("Done!");
         if added > 0 {
@@ -198,7 +198,8 @@ impl Gooseberry {
                 .expect("This should have been set by Config"),
         };
         let mut annotations: Vec<_> = self
-            .api_search_annotations(&mut query)
+            .api
+            .search_annotations_return_all(&mut query)
             .await?
             .into_iter()
             .collect();
@@ -394,22 +395,5 @@ impl Gooseberry {
             let error: color_eyre::Result<()> = Err(Apologize::DoingNothing.into());
             error.suggestion("Press Y next time!")
         }
-    }
-
-    /// Retrieve all annotations matching query
-    pub async fn api_search_annotations(
-        &self,
-        query: &mut SearchQuery,
-    ) -> color_eyre::Result<Vec<Annotation>> {
-        let mut annotations = Vec::new();
-        loop {
-            let next = self.api.search_annotations(query).await?;
-            if next.is_empty() {
-                break;
-            }
-            query.search_after = next[next.len() - 1].updated.to_rfc3339();
-            annotations.extend_from_slice(&next);
-        }
-        Ok(annotations)
     }
 }
