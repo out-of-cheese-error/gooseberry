@@ -15,8 +15,8 @@ You'll also need to install [mdBook](https://rust-lang.github.io/mdBook/index.ht
 
 To run gooseberry's test suite you'll need a `.env` file in the main folder (i.e. next to `Cargo.toml`) with the following keys set
 ```text
-DEVELOPER_KEY=<hypothesis API key>
-USERNAME=<hypothesis username>
+HYPOTHESIS_KEY=<hypothesis API key>
+HYPOTHESIS_NAME=<hypothesis username>
 TEST_GROUP_ID=<hypothesis test group ID>
 ```
 Set TEST_GROUP_ID to a **new** Hypothesis group without any annotations in it. The tests will create, update, and delete annotations within this group.
