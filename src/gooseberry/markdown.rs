@@ -19,6 +19,10 @@ use crate::EMPTY_TAG;
 #[derive(Debug)]
 pub struct MarkdownAnnotation<'a>(pub &'a Annotation);
 
+pub fn replace_spaces(astring: String) -> String {
+    astring.replace(" ", "__")
+}
+
 impl<'a> MarkdownAnnotation<'a> {
     fn get_base_uri(&self) -> String {
         if let Ok(uri) = Url::parse(&self.0.uri) {
@@ -62,9 +66,9 @@ impl<'a> MarkdownAnnotation<'a> {
                     .iter()
                     .map(|tag| {
                         if with_links {
-                            format!(" **[{}]({}.md)** ", tag.replace(" ", "__"), tag.replace(" ", "__"))
+                            format!(" **[{}]({}.md)** ", tag, replace_spaces(tag.to_string()))
                         } else {
-                            format!(" **{}** ", tag.replace(" ", "__"))
+                            format!(" **{}** ", tag)
                         }
                     })
                     .collect::<Vec<_>>()
@@ -201,27 +205,27 @@ impl Gooseberry {
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
 
-            let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", tag.replace(" ", "__"))))?;
+            let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", replace_spaces(tag.to_owned()))))?;
             // Counts common annotations to tag; related_tag: count
             let mut related_tags = HashMap::new();
             // Collects formatted annotations
             let mut annotations_string = if tag == EMPTY_TAG {
                 String::new()
             } else {
-                format!("# {}\n", tag.replace(" ", "__"))
+                format!("# {}\n", tag)
             };
-            tag_counts.insert(tag.to_owned().replace(" ", "__"), annotations.len());
+            tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
                 annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
                 // Section divider
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
-                    *related_tags.entry(other_tag.as_str().replace(" ", "__")).or_insert(0_usize) += 1;
+                    *related_tags.entry(other_tag.as_str()).or_insert(0_usize) += 1;
                     if other_tag != &tag
-                        && !tag_graph.contains_key(&(other_tag.to_owned().replace(" ", "__"), tag.to_owned().replace(" ", "__")))
+                        && !tag_graph.contains_key(&(other_tag.to_owned(), tag.to_owned()))
                     {
                         *tag_graph
-                            .entry((tag.to_owned().replace(" ", "__"), other_tag.to_owned().replace(" ", "__")))
+                            .entry((tag.to_owned(), other_tag.to_owned()))
                             .or_insert(0_usize) += 1;
                     }
                 }
@@ -234,7 +238,7 @@ impl Gooseberry {
                 annotations_string.push_str(
                     &related_tags_count
                         .into_iter()
-                        .map(|x| format!("[{}]({}.md)", x.0.replace(" ", "__"), x.0.replace(" ", "__")))
+                        .map(|x| format!("[{}]({}.md)", x.0, replace_spaces(x.0.to_string())))
                         .collect::<Vec<_>>()
                         .join("|"),
                 );
@@ -242,7 +246,7 @@ impl Gooseberry {
             // Make tag.md
             tag_file.write_all(annotations_string.as_bytes())?;
             // Add link to tag page to summary
-            let link_string = format!("- [{}]({}.md)\n", tag.replace(" ", "__"), tag.replace(" ", "__"));
+            let link_string = format!("- [{}]({}.md)\n", tag, replace_spaces(tag.to_owned()));
             summary_links.push(link_string);
         }
 
@@ -268,9 +272,9 @@ impl Gooseberry {
                 .iter()
                 .map(|(t, c)| {
                     if *c == 1 {
-                        format!("    {}[\"{}<br/>1 note\"];\n", t, t)
+                        format!("    {}[\"{}<br/>1 note\"];\n", replace_spaces(t.to_string()), t)
                     } else {
-                        format!("    {}[\"{}<br/>{} notes\"];\n", t, t, c)
+                        format!("    {}[\"{}<br/>{} notes\"];\n", replace_spaces(t.to_string()), t, c)
                     }
                 })
                 .collect::<String>(),
@@ -278,16 +282,16 @@ impl Gooseberry {
         // Edges
         for ((tag_1, tag_2), count) in tag_graph {
             if *count == 1 {
-                graph.push_str(&format!("    {}-- 1 note ---{};\n", tag_1, tag_2));
+                graph.push_str(&format!("    {}-- 1 note ---{};\n", replace_spaces(tag_1.to_string()), replace_spaces(tag_2.to_string())));
             } else {
-                graph.push_str(&format!("    {}-- {} notes ---{};\n", tag_1, count, tag_2));
+                graph.push_str(&format!("    {}-- {} notes ---{};\n", replace_spaces(tag_1.to_string()), count, replace_spaces(tag_2.to_string())));
             }
         }
         // Node links
         graph.push_str(
             &tag_counts
                 .keys()
-                .map(|t| format!("    click {} \"/{}.html\";\n", t, t))
+                .map(|t| format!("    click {} \"/{}.html\";\n", replace_spaces(t.to_string()), replace_spaces(t.to_string())))
                 .collect::<String>(),
         );
         graph.push_str("```\n");
