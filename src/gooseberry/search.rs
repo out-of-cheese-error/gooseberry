@@ -1,11 +1,14 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use console::{strip_ansi_codes, style};
-use skim::prelude::{unbounded, SkimOptionsBuilder};
-use skim::{AnsiString, ItemPreview, Skim, SkimItem, SkimItemReceiver, SkimItemSender};
-
+use console::style;
 use hypothesis::annotations::{Annotation, Selector};
+use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
+use skim::{
+    AnsiString, DisplayContext, ItemPreview, Matches, PreviewContext, Skim, SkimItem,
+    SkimItemReceiver, SkimItemSender,
+};
 
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
@@ -17,25 +20,42 @@ pub struct SearchAnnotation {
     id: String,
     /// Highlighted text, quote, URL, and tag information
     highlight: String,
-    /// Plain text, quote, URL, and tag information
-    plain: String,
 }
 
 impl<'a> SkimItem for SearchAnnotation {
-    fn display(&self) -> Cow<AnsiString> {
-        Cow::Owned(AnsiString::parse(&self.highlight))
-    }
     fn text(&self) -> Cow<str> {
-        Cow::Borrowed(&self.plain)
+        AnsiString::parse(&self.highlight).into_inner()
     }
-    fn preview(&self) -> ItemPreview {
+
+    fn display<'b>(&'b self, context: DisplayContext<'b>) -> AnsiString<'b> {
+        let mut text = AnsiString::parse(&self.highlight);
+        match context.matches {
+            Matches::CharIndices(indices) => {
+                text.override_attrs(
+                    indices
+                        .iter()
+                        .map(|i| (context.highlight_attr, (*i as u32, (*i + 1) as u32)))
+                        .collect(),
+                );
+            }
+            Matches::CharRange(start, end) => {
+                text.override_attrs(vec![(context.highlight_attr, (start as u32, end as u32))]);
+            }
+            Matches::ByteRange(start, end) => {
+                let start = text.stripped()[..start].chars().count();
+                let end = start + text.stripped()[start..end].chars().count();
+                text.override_attrs(vec![(context.highlight_attr, (start as u32, end as u32))]);
+            }
+            Matches::None => (),
+        }
+        text
+    }
+
+    fn preview(&self, _context: PreviewContext) -> ItemPreview {
         ItemPreview::Text(
             "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"
                 .into(),
         )
-    }
-    fn output(&self) -> Cow<str> {
-        Cow::Borrowed(&self.id)
     }
 }
 
@@ -67,10 +87,8 @@ impl From<&Annotation> for SearchAnnotation {
         let tags = style(annotation.tags.join("|")).red();
         let uri = style(&annotation.uri).cyan().italic().underlined();
         let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
-        let plain = strip_ansi_codes(&highlight).to_string();
         Self {
             highlight,
-            plain,
             id: annotation.id.to_owned(),
         }
     }
@@ -80,10 +98,7 @@ impl From<&Annotation> for SearchAnnotation {
 /// `skim` search window functions
 impl Gooseberry {
     /// Makes a skim search window for given annotations
-    pub fn search(
-        annotations: &[Annotation],
-        exact: bool,
-    ) -> color_eyre::Result<impl Iterator<Item = String>> {
+    pub fn search(annotations: &[Annotation], exact: bool) -> color_eyre::Result<HashSet<String>> {
         let options = SkimOptionsBuilder::default()
             .height(Some("70%"))
             .preview(Some(""))
@@ -92,6 +107,7 @@ impl Gooseberry {
                 "ctrl-a:select-all",
                 "left:scroll-left",
                 "right:scroll-right",
+                "ctrl-c:abort",
             ])
             .exact(exact)
             .multi(true)
@@ -105,9 +121,24 @@ impl Gooseberry {
         }
         drop(tx_item); // so that skim could know when to stop waiting for more items.
 
-        Ok(Skim::run_with(&options, Some(rx_item))
-            .map_or_else(Vec::new, |out| out.selected_items)
-            .into_iter()
-            .map(|s| s.output().to_string()))
+        if let Some(output) = Skim::run_with(&options, Some(rx_item)) {
+            let key = output.final_key;
+            match key {
+                Key::Enter => Ok(output
+                    .selected_items
+                    .into_iter()
+                    .map(|s| {
+                        s.as_any()
+                            .downcast_ref::<SearchAnnotation>()
+                            .unwrap()
+                            .id
+                            .to_string()
+                    })
+                    .collect()),
+                _ => Ok(HashSet::new()),
+            }
+        } else {
+            Err(Apologize::SearchError.into())
+        }
     }
 }

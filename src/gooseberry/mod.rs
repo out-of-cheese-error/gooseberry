@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fs;
 
 use color_eyre::Help;
@@ -159,12 +158,13 @@ impl Gooseberry {
             .await?;
         if search || exact {
             // Run a search window.
-            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            let annotation_ids = Self::search(&annotations, exact)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
+        let num = annotations.len();
         // Change the group ID attached to each annotation
         self.api
             .update_annotations(
@@ -177,7 +177,9 @@ impl Gooseberry {
                     .collect::<Vec<_>>(),
             )
             .await?;
-        self.sync().await?;
+        if num > 0 {
+            self.sync().await?;
+        }
         Ok(())
     }
 
@@ -232,12 +234,13 @@ impl Gooseberry {
             .collect();
         if search || exact {
             // Run a search window.
-            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            let annotation_ids = Self::search(&annotations, exact)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
+        let num = annotations.len();
         if delete {
             self.api
                 .update_annotations(
@@ -263,7 +266,9 @@ impl Gooseberry {
                 )
                 .await?;
         }
-        self.sync().await?;
+        if num > 0 {
+            self.sync().await?;
+        }
         Ok(())
     }
 
@@ -279,7 +284,7 @@ impl Gooseberry {
         let mut annotations = self.filter_annotations(filters, None).await?;
         if search || exact {
             // Run a search window.
-            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            let annotation_ids = Self::search(&annotations, exact)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
@@ -355,7 +360,7 @@ impl Gooseberry {
             .collect();
         if search || exact {
             // Run a search window.
-            let annotation_ids: HashSet<String> = Self::search(&annotations, exact)?.collect();
+            let annotation_ids = Self::search(&annotations, exact)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
