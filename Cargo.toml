@@ -51,8 +51,7 @@ skim = "0.9.3"
 
 # Console related
 dialoguer = "0.7.1"
-console = "0.13.0"
-termimad = "0.8.29"
+bat = { version = "0.16.0", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
 indicatif = "0.15.0"

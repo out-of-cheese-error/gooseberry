@@ -10,6 +10,7 @@ Gooseberry combines [Hypothesis](https://web.hypothes.is/) (a tool to annotate t
 * [mdBook](https://rust-lang.github.io/mdBook/index.html) 
 * [mdbook_mermaid](https://docs.rs/mdbook-mermaid/0.4.2/mdbook_mermaid/index.html)
 * A Hypothesis account, and a personal API token obtained as described [here](https://h.readthedocs.io/en/latest/api/authorization/).
+* [bat](https://github.com/sharkdp/bat) to display highlighted markdown in the terminal.
 * clone this repository
 
 ## Contributing

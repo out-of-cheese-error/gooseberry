@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use console::style;
-use hypothesis::annotations::{Annotation, Selector};
+use dialoguer::console::style;
+use hypothesis::annotations::Annotation;
 use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
 use skim::{
     AnsiString, DisplayContext, ItemPreview, Matches, PreviewContext, Skim, SkimItem,
@@ -11,15 +11,19 @@ use skim::{
 };
 
 use crate::errors::Apologize;
+use crate::gooseberry::markdown::MarkdownAnnotation;
 use crate::gooseberry::Gooseberry;
+use crate::utils;
 
 /// searchable annotation information
 #[derive(Debug)]
 pub struct SearchAnnotation {
     /// Annotation ID
     id: String,
-    /// Highlighted text, quote, URL, and tag information
+    /// Highlighted text, quote, URL, and tag information on a single line
     highlight: String,
+    /// text, quote, URL, and tag information in markdown format
+    markdown: String,
 }
 
 impl<'a> SkimItem for SearchAnnotation {
@@ -52,45 +56,10 @@ impl<'a> SkimItem for SearchAnnotation {
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
-        ItemPreview::Text(
-            "Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"
-                .into(),
-        )
-    }
-}
-
-impl From<&Annotation> for SearchAnnotation {
-    /// Write annotation on a single line for searching
-    /// Format: <highlighted quote in green> <comment in white> < '|' separated tags in red> <uri in cyan>  
-    fn from(annotation: &Annotation) -> Self {
-        // Find highlighted text from `TextQuoteSelector`s
-        let quotes: String = annotation
-            .target
-            .iter()
-            .filter_map(|target| {
-                let quotes = target
-                    .selector
-                    .iter()
-                    .filter_map(|selector| match selector {
-                        Selector::TextQuoteSelector(selector) => Some(selector.exact.as_str()),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>();
-                if quotes.is_empty() {
-                    None
-                } else {
-                    Some(format!("{}", style(quotes.join(" ")).green()))
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-        let tags = style(annotation.tags.join("|")).red();
-        let uri = style(&annotation.uri).cyan().italic().underlined();
-        let highlight = format!("{} {} {} {}", quotes, annotation.text, tags, uri);
-        Self {
-            highlight,
-            id: annotation.id.to_owned(),
-        }
+        ItemPreview::Command(format!(
+            "echo {:?} | bat -l markdown --color=always -p",
+            self.markdown
+        ))
     }
 }
 
@@ -100,9 +69,9 @@ impl Gooseberry {
     /// Makes a skim search window for given annotations
     pub fn search(annotations: &[Annotation], exact: bool) -> color_eyre::Result<HashSet<String>> {
         let options = SkimOptionsBuilder::default()
-            .height(Some("70%"))
+            .height(Some("100%"))
             .preview(Some(""))
-            .preview_window(Some("down:10%"))
+            .preview_window(Some("up:40%:wrap"))
             .bind(vec![
                 "ctrl-a:select-all",
                 "left:scroll-left",
@@ -110,6 +79,7 @@ impl Gooseberry {
                 "ctrl-c:abort",
             ])
             .exact(exact)
+            .header(Some("Arrow keys to scroll, TAB to toggle selection, CTRL-A to select all\nCTRL-C to abort, Enter to confirm"))
             .multi(true)
             .reverse(true)
             .build()
@@ -117,7 +87,21 @@ impl Gooseberry {
 
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
         for annotation in annotations {
-            let _ = tx_item.send(Arc::new(SearchAnnotation::from(annotation)));
+            let highlight = format!(
+                "{} | {} |{}| {}",
+                style(&utils::get_quotes(&annotation).join(" ").replace("\n", " ")),
+                annotation.text.replace("\n", " "),
+                style(&annotation.tags.join("|")).fg(dialoguer::console::Color::Red),
+                style(&annotation.uri)
+                    .fg(dialoguer::console::Color::Cyan)
+                    .italic()
+                    .underlined()
+            );
+            let _ = tx_item.send(Arc::new(SearchAnnotation {
+                highlight,
+                markdown: MarkdownAnnotation(annotation).to_md(false),
+                id: annotation.id.to_owned(),
+            }));
         }
         drop(tx_item); // so that skim could know when to stop waiting for more items.
 

@@ -108,11 +108,11 @@ Some specific behavior here:
 Note: this functionality was removed because `bincode` doesn't support "tagged" enums and using raw JSON would be both memory-hungry and slow.
 
 ### `gooseberry/markdown.rs`
-The knowledge base is written out using `mdBook` as a set of flat Markdown files. Annotations can also be printed out in markdown to the terminal, using `termimad`.
+The knowledge base is written out using `mdBook` as a set of flat Markdown files. Annotations can also be printed out in markdown to the terminal, using `bat`.
 
 The format of a single annotation in the terminal is:
 ```
-##### Jun 1 23:53:30 2020 - *annotation ID*
+Jun 1 23:53:30 2020 - *annotation ID*
 
 | tag1 | tag2 |
 > Highlighted quote from the website
@@ -125,7 +125,7 @@ Source - *www.source_url.com*
 ```
 and in the `mdBook` file is:
 ```
-##### Jun 1 23:53:30 2020 - *annotation ID*
+Jun 1 23:53:30 2020 - *annotation ID*
 
 | [tag1](tag1.md) | [tag2](tag2.md) |
 > Highlighted quote from the website

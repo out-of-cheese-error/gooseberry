@@ -14,7 +14,7 @@ use crate::gooseberry::markdown::MarkdownAnnotation;
 pub mod cli;
 /// `sled` database related
 pub mod database;
-/// Convert annotations to markdown for the `mdBook` wiki and for the terminal (via `termimad`)
+/// Convert annotations to markdown for the `mdBook` wiki and for the terminal
 pub mod markdown;
 /// `skim`-based search capabilities
 pub mod search;
@@ -349,7 +349,12 @@ impl Gooseberry {
                 .fetch_annotation(&id)
                 .await
                 .suggestion("Are you sure this is a valid and existing annotation ID?")?;
-            termimad::print_text(&MarkdownAnnotation(&annotation).to_md(false)?);
+            let markdown = MarkdownAnnotation(&annotation).to_md(false);
+            bat::PrettyPrinter::new()
+                .language("markdown")
+                .input_from_bytes(markdown.as_ref())
+                .print()
+                .unwrap();
             return Ok(());
         }
 
@@ -366,14 +371,15 @@ impl Gooseberry {
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
-        let mut text = String::new();
-        for annotation in annotations {
-            text.push_str(&format!(
-                "\n{}\n---\n",
-                MarkdownAnnotation(&annotation).to_md(false)?
-            ));
-        }
-        termimad::print_text(&text);
+        let inputs: Vec<_> = annotations
+            .into_iter()
+            .map(|annotation| format!("\n{}\n---\n", MarkdownAnnotation(&annotation).to_md(false)))
+            .collect();
+        bat::PrettyPrinter::new()
+            .language("markdown")
+            .inputs(inputs.iter().map(|i| bat::Input::from_bytes(i.as_bytes())))
+            .print()
+            .unwrap();
         Ok(())
     }
 
