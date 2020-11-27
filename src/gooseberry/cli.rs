@@ -36,7 +36,7 @@ pub enum GooseberryCLI {
         #[structopt(short, long, conflicts_with = "search")]
         exact: bool,
         /// The tag to add to / remove from the filtered annotations
-        tag: String,
+        tag: Option<String>,
     },
     /// Delete annotations in bulk, using filters and fuzzy search,
     /// either just from gooseberry or from both gooseberry and Hypothesis

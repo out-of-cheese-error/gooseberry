@@ -78,7 +78,7 @@ impl Gooseberry {
                 search,
                 exact,
                 tag,
-            } => self.tag(filters, delete, search, exact, &tag).await,
+            } => self.tag(filters, delete, search, exact, tag).await,
             GooseberryCLI::Delete {
                 filters,
                 search,
@@ -216,22 +216,23 @@ impl Gooseberry {
         delete: bool,
         search: bool,
         exact: bool,
-        tag: &str,
+        tag: Option<String>,
     ) -> color_eyre::Result<()> {
-        let mut annotations: Vec<Annotation> = self
-            .filter_annotations(filters, None)
-            .await?
-            .into_iter()
-            .filter(|a| {
-                if delete {
-                    // only consider annotations with the tag
-                    a.tags.iter().any(|t| t == tag)
-                } else {
-                    // don't consider annotations which already have the tag
-                    a.tags.iter().all(|t| t != tag)
-                }
-            })
-            .collect();
+        let mut annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
+        if let Some(tag) = tag.as_ref() {
+            annotations = annotations
+                .into_iter()
+                .filter(|a| {
+                    if delete {
+                        // only consider annotations with the tag
+                        a.tags.iter().any(|t| t == tag)
+                    } else {
+                        // don't consider annotations which already have the tag
+                        a.tags.iter().all(|t| t != tag)
+                    }
+                })
+                .collect();
+        }
         if search || exact {
             // Run a search window.
             let annotation_ids = Self::search(&annotations, exact)?;
@@ -240,33 +241,40 @@ impl Gooseberry {
                 .filter(|a| annotation_ids.contains(&a.id))
                 .collect();
         }
-        let num = annotations.len();
-        if delete {
-            self.api
-                .update_annotations(
-                    &annotations
-                        .into_iter()
-                        .map(|mut a| {
-                            a.tags.retain(|t| t != tag);
-                            a
-                        })
-                        .collect::<Vec<_>>(),
-                )
-                .await?;
-        } else {
-            self.api
-                .update_annotations(
-                    &annotations
-                        .into_iter()
-                        .map(|mut a| {
-                            a.tags.push(tag.to_owned());
-                            a
-                        })
-                        .collect::<Vec<_>>(),
-                )
-                .await?;
-        }
-        if num > 0 {
+        if annotations.len() > 0 {
+            if delete {
+                let tag = match tag {
+                    Some(tag) => tag,
+                    None => crate::utils::user_input("Tag to delete", None, false, false)?,
+                };
+                self.api
+                    .update_annotations(
+                        &annotations
+                            .into_iter()
+                            .map(|mut a| {
+                                a.tags.retain(|t| t != &tag);
+                                a
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .await?;
+            } else {
+                let tag = match tag {
+                    Some(tag) => tag,
+                    None => crate::utils::user_input("Tag to add", None, false, false)?,
+                };
+                self.api
+                    .update_annotations(
+                        &annotations
+                            .into_iter()
+                            .map(|mut a| {
+                                a.tags.push(tag.to_owned());
+                                a
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .await?;
+            }
             self.sync().await?;
         }
         Ok(())

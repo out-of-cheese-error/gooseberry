@@ -746,11 +746,11 @@ version = "2.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35622eb004c8f0c5e7e2032815f3314a93df0db30a1ce5c94e62c1ecc81e22b9"
 dependencies = [
- "lazy_static",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
+    "lazy_static",
+    "regex",
+    "serde",
+    "serde_derive",
+    "serde_json",
     "strum",
     "strum_macros",
 ]
@@ -2647,13 +2647,13 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "sled"
-version = "0.34.4"
+version = "0.34.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f72c064e63fbca3138ad07f3588c58093f1684f3a99f60dcfa6d46b87e60fde7"
+checksum = "34a9981af2a13b88f562777db36ed6e8695eef9be8bbbfb1c8b1c83762b8c15c"
 dependencies = [
     "crc32fast",
-    "crossbeam-epoch 0.8.2",
-    "crossbeam-utils 0.7.2",
+    "crossbeam-epoch 0.9.0",
+    "crossbeam-utils 0.8.0",
     "fs2",
     "fxhash",
     "libc",
