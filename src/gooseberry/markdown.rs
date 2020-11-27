@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use color_eyre::Help;
-use hypothesis::annotations::{Annotation, Selector};
+use hypothesis::annotations::Annotation;
 use indicatif::{ProgressBar, ProgressIterator};
 use mdbook::MDBook;
 use url::Url;
@@ -34,24 +34,10 @@ impl<'a> MarkdownAnnotation<'a> {
 
     /// Format the highlighted quote as a blockquote
     pub fn format_quote(&self) -> String {
-        self.0
-            .target
-            .iter()
-            .map(|target| {
-                target
-                    .selector
-                    .iter()
-                    .filter_map(|selector| match selector {
-                        Selector::TextQuoteSelector(selector) => {
-                            Some(format!("> {}", selector.exact))
-                        }
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        utils::get_quotes(&self.0)
+            .into_iter()
+            .map(|q| format!("> {}\n", q))
+            .collect()
     }
 
     /// formats tags with '|'s in between
@@ -89,32 +75,32 @@ impl<'a> MarkdownAnnotation<'a> {
     /// with LaTeX math $$\pi = 3.14$$.
     ///
     /// Source - *www.source_url.com*
-    pub fn to_md(&self, with_links: bool) -> color_eyre::Result<String> {
+    pub fn to_md(&self, with_links: bool) -> String {
         let quote = self.format_quote();
         let tags = self.format_tags(with_links);
         let incontext = self.0.links.get("incontext").unwrap_or(&self.0.uri);
+        let date = self.0.created.format("%c");
+        let mut formatted = format!("{} - *{}*\n", date, self.0.id);
+        if !tags.is_empty() {
+            formatted.push_str(&tags);
+        }
+        if !quote.trim().is_empty() {
+            formatted.push_str(&format!("\n\n{}\n", quote));
+        }
+        if !self.0.text.is_empty() {
+            formatted.push_str(&format!("\n{}\n\n", self.0.text));
+        }
         let incontext = if with_links {
             format!(
-                "[[*see in context at {}*]({})]",
+                "[[*see in context at {}*]({})]\n",
                 self.get_base_uri(),
                 incontext
             )
         } else {
-            format!("Source - *{}*", self.0.uri)
+            format!("Source - *{}*\n", self.0.uri)
         };
-        let date = self.0.created.format("%c");
-        let formatted = if quote.trim().is_empty() {
-            format!(
-                "##### {} - *{}*\n\n{}\n{}\n\n{}\n",
-                date, self.0.id, tags, self.0.text, incontext
-            )
-        } else {
-            format!(
-                "##### {} - *{}*\n\n{}\n{}\n\n{}\n\n{}\n",
-                date, self.0.id, tags, quote, self.0.text, incontext
-            )
-        };
-        Ok(formatted)
+        formatted.push_str(&incontext);
+        formatted
     }
 }
 
@@ -148,8 +134,10 @@ impl Gooseberry {
             .map_err(|e| Apologize::MdBookError {
                 message: format!("Couldn't build book: {:?}", e),
             })?;
-        termimad::print_text(&format!("\n**Finished building knowledge base.**\nRun `mdbook serve {:?}` and go to localhost:3000 to view it.",
-                                      kb_dir));
+        println!(
+            "Done!\nRun `mdbook serve {:?}` and go to localhost:3000 to view it.",
+            kb_dir
+        );
         Ok(())
     }
 
@@ -180,6 +168,7 @@ impl Gooseberry {
     /// Write markdown files for wiki
     async fn make_book(&self, src_dir: &PathBuf) -> color_eyre::Result<()> {
         let pb = ProgressBar::new(self.tag_to_annotations()?.iter().count() as u64);
+        pb.println("Building knowledge base...");
         let summary = src_dir.join("SUMMARY.md");
         if summary.exists() {
             // Initialize
@@ -205,7 +194,8 @@ impl Gooseberry {
             let mut annotations = self.api.fetch_annotations(&annotation_ids).await?;
             annotations.sort_by(|a, b| a.created.cmp(&b.created));
 
-            let mut tag_file = fs::File::create(src_dir.join(format!("{}.md", replace_spaces(&tag))))?;
+            let mut tag_file =
+                fs::File::create(src_dir.join(format!("{}.md", replace_spaces(&tag))))?;
             // Counts common annotations to tag; related_tag: count
             let mut related_tags = HashMap::new();
             // Collects formatted annotations
@@ -216,7 +206,7 @@ impl Gooseberry {
             };
             tag_counts.insert(tag.to_owned(), annotations.len());
             for annotation in &annotations {
-                annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true)?);
+                annotations_string.push_str(&MarkdownAnnotation(annotation).to_md(true));
                 // Section divider
                 annotations_string.push_str("\n---\n");
                 for other_tag in &annotation.tags {
@@ -282,16 +272,31 @@ impl Gooseberry {
         // Edges
         for ((tag_1, tag_2), count) in tag_graph {
             if *count == 1 {
-                graph.push_str(&format!("    {}-- 1 note ---{};\n", replace_spaces(tag_1), replace_spaces(tag_2)));
+                graph.push_str(&format!(
+                    "    {}-- 1 note ---{};\n",
+                    replace_spaces(tag_1),
+                    replace_spaces(tag_2)
+                ));
             } else {
-                graph.push_str(&format!("    {}-- {} notes ---{};\n", replace_spaces(tag_1), count, replace_spaces(tag_2)));
+                graph.push_str(&format!(
+                    "    {}-- {} notes ---{};\n",
+                    replace_spaces(tag_1),
+                    count,
+                    replace_spaces(tag_2)
+                ));
             }
         }
         // Node links
         graph.push_str(
             &tag_counts
                 .keys()
-                .map(|t| format!("    click {} \"/{}.html\";\n", replace_spaces(t), replace_spaces(t)))
+                .map(|t| {
+                    format!(
+                        "    click {} \"/{}.html\";\n",
+                        replace_spaces(t),
+                        replace_spaces(t)
+                    )
+                })
                 .collect::<String>(),
         );
         graph.push_str("```\n");
