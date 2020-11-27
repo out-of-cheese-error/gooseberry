@@ -157,11 +157,11 @@ This would also help integrate Gooseberry into existing Markdown-based PKB tools
 * If annotation-annotation direct links are added, show the linked annotations in footnote style or in a margin on the right (this would require making a custom `mdBook` template, something like [Tufte CSS](https://edwardtufte.github.io/tufte-css/) or [Astrochelys](https://github.com/out-of-cheese-error/astrochelys)). ([Issue #2](https://github.com/out-of-cheese-error/gooseberry/issues/2))
 
 ### `gooseberry/search.rs`
-This handles opening a fuzzy/exact search window in the terminal using [skim](https://github.com/lotabout/skim). 
-Each annotation's quote, text, tags, and URI are displayed as a single (very long) line which the user can then search against.
+This handles the `gooseberry search` and `gooseberry move -s` commands which open a fuzzy/exact search window in the terminal using [skim](https://github.com/lotabout/skim). 
+Each annotation's markdown is displayed in the preview wndow and the quote, text, tags, and URI are displayed as a single (very long) line which the user can search against.
 There are options to scroll (arrow keys), select multiple hits (TAB) and select all (CTRL-A).
-
-Search is called by the `gooseberry tag -s`, `gooseberry delete -s` and `gooseberry view -s` options. Adding `--exact` switches from fuzzy search to exact search which works better for small words.
+In `gooseberry search` there are options to add a tag to the selected annotations (Enter), delete a tag from the selected annotations (Shift-Left), 
+and delete the selected annotations (Shift-Right). Adding `--fuzzy` switches to fuzzy search.
 
 #### Possible improvements
 * skim has a crazy number of options, this is a matter of checking them out and seeing which would improve user experience.
