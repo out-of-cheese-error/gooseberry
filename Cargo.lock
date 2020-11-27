@@ -1159,11 +1159,11 @@ dependencies = [
     "itoa",
     "pin-project",
     "socket2",
- "time",
- "tokio",
- "tower-service",
- "tracing",
- "want",
+    "time",
+    "tokio",
+    "tower-service",
+    "tracing",
+    "want",
 ]
 
 [[package]]
