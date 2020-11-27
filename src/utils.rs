@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
 use dialoguer::{theme, Input};
+use hypothesis::annotations::Selector;
 
 /// ASCII code of semicolon
 /// TODO: Tag cannot have semicolon in it, remember to add this to the README
@@ -66,4 +67,27 @@ pub fn get_spinner(message: &str) -> indicatif::ProgressBar {
     );
     spinner.set_message(message);
     spinner
+}
+
+pub fn get_quotes(annotation: &hypothesis::annotations::Annotation) -> Vec<&str> {
+    annotation
+        .target
+        .iter()
+        .filter_map(|target| {
+            let quotes = target
+                .selector
+                .iter()
+                .filter_map(|selector| match selector {
+                    Selector::TextQuoteSelector(selector) => Some(selector.exact.as_str()),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            if quotes.is_empty() {
+                None
+            } else {
+                Some(quotes)
+            }
+        })
+        .flat_map(|v| v.into_iter())
+        .collect::<Vec<_>>()
 }
