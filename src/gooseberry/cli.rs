@@ -22,6 +22,14 @@ global_settings = & [AppSettings::DeriveDisplayOrder, AppSettings::ColoredHelp]
 pub enum GooseberryCLI {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
+    /// Opens a search buffer to see, filter, delete, add tags to and delete tags from annotations
+    Search {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Toggle fuzzy search
+        #[structopt(short, long)]
+        fuzzy: bool,
+    },
     /// Tag annotations according to topic.
     Tag {
         #[structopt(flatten)]
@@ -29,26 +37,14 @@ pub enum GooseberryCLI {
         /// Use this flag to remove the given tag from the filtered annotations instead of adding it
         #[structopt(short, long)]
         delete: bool,
-        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
-        #[structopt(short, long)]
-        search: bool,
-        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
-        #[structopt(short, long, conflicts_with = "search")]
-        exact: bool,
         /// The tag to add to / remove from the filtered annotations
         tag: Option<String>,
     },
-    /// Delete annotations in bulk, using filters and fuzzy search,
+    /// Delete annotations in bulk
     /// either just from gooseberry or from both gooseberry and Hypothesis
     Delete {
         #[structopt(flatten)]
         filters: Filters,
-        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
-        #[structopt(short, long)]
-        search: bool,
-        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
-        #[structopt(short, long, conflicts_with = "search")]
-        exact: bool,
         /// Also delete from Hypothesis.
         /// Without this flag, the "gooseberry_ignore" flag is added to the selected annotations to ensure that they are not synced by gooseberry in the future.
         /// If the flag is given then the annotations are also deleted from Hypothesis.
@@ -62,12 +58,6 @@ pub enum GooseberryCLI {
     View {
         #[structopt(flatten)]
         filters: Filters,
-        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
-        #[structopt(short, long, conflicts_with = "id")]
-        search: bool,
-        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
-        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
-        exact: bool,
         /// View annotation by ID
         #[structopt(conflicts_with = "filters")]
         id: Option<String>,
@@ -101,12 +91,12 @@ pub enum GooseberryCLI {
         group_id: String,
         #[structopt(flatten)]
         filters: Filters,
-        /// Open a search buffer to see and fuzzy search filtered annotations to further filter them
+        /// Open a search buffer to see and search filtered annotations to further filter them
         #[structopt(short, long)]
         search: bool,
-        /// Exact search (not fuzzy) - this works better for short (<4 letter) search terms
-        #[structopt(short, long, conflicts_with = "search", conflicts_with = "id")]
-        exact: bool,
+        /// Toggle fuzzy search
+        #[structopt(short, long, conflicts_with = "search")]
+        fuzzy: bool,
     },
 }
 
