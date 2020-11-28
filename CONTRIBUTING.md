@@ -105,8 +105,6 @@ The general idea behind Gooseberry is to pull annotations from Hypothesis (via t
 and write them out as markdown files (in an [mdBook](https://rust-lang.github.io/mdBook/index.html) format) to form a personal knowledge base (PKB). 
 Tags are used to interlink different annotations to have a more explorable and organized PKB.
 
-NOTE: The [hypothesis](https://github.com/out-of-cheese-error/rust-hypothesis) crate is sort of being developed in parallel with this so it uses the Git master branch instead of the crates.io crate.
-
 Here's the current code structure:
 ```
 .

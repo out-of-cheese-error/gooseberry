@@ -13,8 +13,7 @@ include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
-# TODO: Uses the git version of hypothesis for now to make debugging quicker, remember to change this in the end
-hypothesis = { default-features = false, git = "https://github.com/out-of-cheese-error/rust-hypothesis" }
+hypothesis = { version = "0.7.2", default-features = false }
 tokio = { version = "0.2.22", features = ["macros"] }
 
 # mdBook
@@ -25,15 +24,15 @@ url = "2.2.0"
 structopt = "0.3.20"
 
 # Database
-sled = "0.34.5"
+sled = "0.34.6"
 
 # Configuration management
 confy = "0.4.0"
 directories-next = "1.0.1"
 
 # Error handling
-eyre = "0.6.2"
-color-eyre = "0.5.7"
+eyre = "0.6.3"
+color-eyre = "0.5.8"
 thiserror = "1.0.22"
 
 # Serializing
@@ -51,13 +50,13 @@ skim = "0.9.3"
 
 # Console related
 dialoguer = "0.7.1"
-bat = { version = "0.16.0", default-features = false, features = ["regex-fancy"] }
+bat = { version = "0.17.1", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
 indicatif = "0.15.0"
 
 [dev-dependencies]
-assert_cmd = "1.0.1"
+assert_cmd = "1.0.2"
 predicates = "1.0.5"
 tempfile = "3.1.0"
 dotenv = "0.15.0"
