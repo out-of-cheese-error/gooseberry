@@ -1,11 +1,45 @@
 # Contributing to Gooseberry
 
+First off, thank you for considering contributing to gooseberry.
+
 The following document explains how Gooseberry works and lists some potential improvements (usually with an issue number attached). 
 Pick one that seems interesting to work on, or make an issue if you want something added to the list!
 If you have any questions about contributing or need help with anything, my nick is ninjani on the [official](https://discord.gg/rust-lang) and [community](https://discord.gg/aVESxV8) Discord servers.
 Also, if you don't feel like contributing code but you're interested in the idea, another way to help is to just use Gooseberry and file feature requests (over [here](https://github.com/out-of-cheese-error/gooseberry/issues/11) or in a separate issue) and bug reports.
 
 Gooseberry welcomes contributions from everyone. All contributors are expected to follow the [Rust Code of Conduct](http://www.rust-lang.org/conduct.html).
+
+## Reporting issues
+
+Before reporting an issue on the
+[issue tracker](https://github.com/out-of-cheese-error/gooseberry/issues),
+please check that it has not already been reported by searching for some related
+keywords.
+
+## Pull requests
+
+Try to do one pull request per change.
+
+### Updating the changelog
+
+Update the changes you have made in
+[CHANGELOG](https://github.com/out-of-cheese-error/gooseberry/blob/master/CHANGELOG.md)
+file under the **Unreleased** section.
+
+Add the changes of your pull request to one of the following subsections,
+depending on the types of changes defined by
+[Keep a changelog](https://keepachangelog.com/en/1.0.0/):
+
+- `Added` for new features.
+- `Changed` for changes in existing functionality.
+- `Deprecated` for soon-to-be removed features.
+- `Removed` for now removed features.
+- `Fixed` for any bug fixes.
+- `Security` in case of vulnerabilities.
+
+If the required subsection does not exist yet under **Unreleased**, create it!
+
+## Developing
 
 ## Getting started
 Clone this repository and explore the code via `cargo doc --open --no-deps`. 
@@ -34,6 +68,37 @@ Make sure this is done on the test group as this deletes annotations from Hypoth
 
 When creating new tests, make sure to tag each created annotation with "test_tag" to make cleanup easier.
 
+### Useful Commands
+
+- Build and run release version:
+
+  ```shell
+  cargo build --release && cargo run --release
+  ```
+
+- Run Clippy:
+
+  ```shell
+  cargo clippy --all
+  ```
+
+- Run all tests:
+
+  ```shell
+  cargo test --all -- --test-threads=1
+  ```
+
+- Check to see if there are code formatting issues
+
+  ```shell
+  cargo fmt --all -- --check
+  ```
+
+- Format the code in the project
+
+  ```shell
+  cargo fmt --all
+  ```
 
 ## How Gooseberry works
 The general idea behind Gooseberry is to pull annotations from Hypothesis (via the [hypothesis](https://github.com/out-of-cheese-error/rust-hypothesis) crate) 
@@ -175,4 +240,4 @@ be reviewed by me (Ninjani) and either landed in the main tree or given feedback
 All code in this repository is under the [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0>)
 or the [MIT](http://opensource.org/licenses/MIT) license.
 
-<!-- adapted from https://github.com/servo/servo/blob/master/CONTRIBUTING.md -->
+<!-- adapted from https://github.com/servo/servo/blob/master/CONTRIBUTING.md and https://github.com/rust-github/template/blob/master/CONTRIBUTING.md -->
