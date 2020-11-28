@@ -1,6 +1,6 @@
 [package]
 name = "gooseberry"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Ninjani"]
 edition = "2018"
 description = "a knowledge base tool combining Hypothesis web annotations with an mdBook wiki"

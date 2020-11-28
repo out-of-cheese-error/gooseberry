@@ -1,4 +1,9 @@
 # Gooseberry - a Knowledge Base for the Lazy
+[![Crates.io](https://img.shields.io/crates/v/gooseberry.svg)](https://crates.io/crates/gooseberry)
+[![Docs.rs](https://docs.rs/gooseberry/badge.svg)](https://docs.rs/gooseberry)
+[![CI](https://github.com/out-of-cheese-error/gooseberry/workflows/Continuous%20Integration/badge.svg)](https://github.com/out-of-cheese-error/gooseberry/actions)
+[![GitHub release](https://img.shields.io/github/release/out-of-cheese-error/gooseberry.svg)](https://GitHub.com/out-of-cheese-error/gooseberry/releases/)
+[![dependency status](https://deps.rs/repo/github/out-of-cheese-error/gooseberry/status.svg)](https://deps.rs/repo/github/out-of-cheese-error/gooseberry)
 
 **WIP**
 
@@ -11,7 +16,13 @@ Gooseberry combines [Hypothesis](https://web.hypothes.is/) (a tool to annotate t
 * [mdbook_mermaid](https://docs.rs/mdbook-mermaid/0.4.2/mdbook_mermaid/index.html)
 * A Hypothesis account, and a personal API token obtained as described [here](https://h.readthedocs.io/en/latest/api/authorization/).
 * [bat](https://github.com/sharkdp/bat) to display highlighted markdown in the terminal.
-* clone this repository
+
+## Binaries
+See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/latest)
+
+* OSX - allow `gooseberry` via System Preferences (necessary in Catalina at least)
+* Linux - `chmod +x gooseberry` 
+* Currently doesn't work on Windows (waiting on [this issue](https://github.com/lotabout/skim/issues/293))
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for an in-depth explanation of how Gooseberry works and what could be improved. 
