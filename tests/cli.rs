@@ -239,7 +239,6 @@ async fn tag() -> color_eyre::Result<()> {
         .tags
         .contains(&"test_tag4".to_owned()));
 
-
     // check tags contains space characters are replaced with "__" after `make`
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -265,14 +264,16 @@ async fn tag() -> color_eyre::Result<()> {
 
     // scan the tmp folder after `make`
     let paths = fs::read_dir(temp_dir.path().join("kb").join("book").as_os_str()).unwrap();
-    let names = paths.map(|entry| {
-        let entry = entry.unwrap();
-        let entry_path = entry.path();
-        let file_name = entry_path.file_name().unwrap();
-        let file_name_as_str = file_name.to_str().unwrap();
-        let file_name_as_string = String::from(file_name_as_str);
-        file_name_as_string
-    }).collect::<Vec<String>>();
+    let names = paths
+        .map(|entry| {
+            let entry = entry.unwrap();
+            let entry_path = entry.path();
+            let file_name = entry_path.file_name().unwrap();
+            let file_name_as_str = file_name.to_str().unwrap();
+            let file_name_as_string = String::from(file_name_as_str);
+            file_name_as_string
+        })
+        .collect::<Vec<String>>();
     assert!(names
         .iter()
         .any(|x| x.find(&"test__tag5.html".to_owned()) != None));
