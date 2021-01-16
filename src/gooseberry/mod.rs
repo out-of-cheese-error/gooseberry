@@ -8,14 +8,14 @@ use hypothesis::Hypothesis;
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
-use crate::gooseberry::markdown::MarkdownAnnotation;
+use crate::gooseberry::knowledge_base::{get_handlebars, AnnotationTemplate};
 
 /// Command-line interface with `structopt`
 pub mod cli;
 /// `sled` database related
 pub mod database;
 /// Convert annotations to markdown for the `mdBook` wiki and for the terminal
-pub mod markdown;
+pub mod knowledge_base;
 /// `skim`-based search capabilities
 pub mod search;
 
@@ -58,7 +58,7 @@ impl Gooseberry {
                     message: "Hypothesis developer API key isn't stored".into(),
                 })?,
         )?;
-        let gooseberry = Self {
+        let mut gooseberry = Self {
             db: Self::get_db(&config.db_dir)?,
             api,
             config,
@@ -69,12 +69,16 @@ impl Gooseberry {
     }
 
     /// Run knowledge-base related functions
-    pub async fn run(&self, cli: GooseberryCLI) -> color_eyre::Result<()> {
+    pub async fn run(&mut self, cli: GooseberryCLI) -> color_eyre::Result<()> {
         match cli {
             GooseberryCLI::Sync => self.sync().await,
             GooseberryCLI::Search { filters, fuzzy } => {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
-                self.search(annotations, fuzzy).await
+                let hbs = get_handlebars(
+                    self.config.annotation_template.as_ref().unwrap(),
+                    self.config.index_link_template.as_ref().unwrap(),
+                )?;
+                self.search(annotations, &hbs, fuzzy).await
             }
             GooseberryCLI::Tag {
                 filters,
@@ -159,7 +163,11 @@ impl Gooseberry {
             .await?;
         if search || fuzzy {
             // Run a search window.
-            let annotation_ids = Self::search_group(&annotations, fuzzy)?;
+            let hbs = get_handlebars(
+                self.config.annotation_template.as_ref().unwrap(),
+                self.config.index_link_template.as_ref().unwrap(),
+            )?;
+            let annotation_ids = Self::search_group(&annotations, &hbs, fuzzy)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
@@ -337,13 +345,20 @@ impl Gooseberry {
 
     /// View optionally filtered annotations in the terminal
     pub async fn view(&self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
+        let hbs = get_handlebars(
+            self.config.annotation_template.as_ref().unwrap(),
+            self.config.index_link_template.as_ref().unwrap(),
+        )?;
         if let Some(id) = id {
             let annotation = self
                 .api
                 .fetch_annotation(&id)
                 .await
                 .suggestion("Are you sure this is a valid and existing annotation ID?")?;
-            let markdown = MarkdownAnnotation(&annotation).to_md(false);
+            let markdown = hbs.render(
+                "annotation",
+                &AnnotationTemplate::from_annotation(annotation),
+            )?;
             bat::PrettyPrinter::new()
                 .language("markdown")
                 .input_from_bytes(markdown.as_ref())
@@ -358,8 +373,13 @@ impl Gooseberry {
             .collect();
         let inputs: Vec<_> = annotations
             .into_iter()
-            .map(|annotation| format!("\n{}\n---\n", MarkdownAnnotation(&annotation).to_md(false)))
-            .collect();
+            .map(|annotation| {
+                hbs.render(
+                    "annotation",
+                    &AnnotationTemplate::from_annotation(annotation),
+                )
+            })
+            .collect::<Result<_, _>>()?;
         bat::PrettyPrinter::new()
             .language("markdown")
             .inputs(inputs.iter().map(|i| bat::Input::from_bytes(i.as_bytes())))

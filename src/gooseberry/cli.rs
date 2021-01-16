@@ -101,7 +101,7 @@ pub enum GooseberryCLI {
 }
 
 /// CLI options for filtering annotations
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, Default)]
 pub struct Filters {
     /// Only annotations created after this date and time
     /// Can be colloquial, e.g. "last Friday 8pm"
@@ -126,24 +126,24 @@ pub struct Filters {
     pub tags: Vec<String>,
 }
 
-impl Into<SearchQuery> for Filters {
-    fn into(self) -> SearchQuery {
+impl From<Filters> for SearchQuery {
+    fn from(filters: Filters) -> SearchQuery {
         SearchQuery {
             limit: 200,
-            search_after: match (self.from, self.before) {
+            search_after: match (filters.from, filters.before) {
                 (Some(date), None) | (None, Some(date)) => date.to_rfc3339(),
                 (None, None) => crate::MIN_DATE.to_string(),
                 _ => panic!("can't use both --from and --before"),
             },
-            uri_parts: self.uri,
-            any: self.any,
-            tags: self.tags,
-            order: if self.before.is_some() {
+            uri_parts: filters.uri,
+            any: filters.any,
+            tags: filters.tags,
+            order: if filters.before.is_some() {
                 Order::Desc
             } else {
                 Order::Asc
             },
-            sort: if self.include_updated {
+            sort: if filters.include_updated {
                 Sort::Updated
             } else {
                 Sort::Created
@@ -178,8 +178,28 @@ pub enum ConfigCommand {
     Authorize,
     /// Change the group used for Hypothesis annotations
     Group,
+    /// Change options related to generated knowledge base
+    Kb(KbConfigCommand),
+}
+
+#[derive(StructOpt, Debug)]
+pub enum KbConfigCommand {
+    /// Change everything related to the knowledge base
+    ///
+    /// This gives a series of interactive prompts
+    All,
     /// Change knowledge base directory
     Directory,
+    /// Change annotation handlebars template
+    Annotation,
+    /// Change index link handlebars template
+    Link,
+    /// Change index file name
+    Index,
+    /// Change knowledge base file extension
+    Extension,
+    /// Change folder hierarchy
+    Hierarchy,
 }
 
 impl ConfigCommand {
@@ -204,9 +224,17 @@ impl ConfigCommand {
                 let mut config = GooseberryConfig::load().await?;
                 config.set_group().await?;
             }
-            Self::Directory => {
+            Self::Kb(cmd) => {
                 let mut config = GooseberryConfig::load().await?;
-                config.set_kb_dir()?;
+                match cmd {
+                    KbConfigCommand::All => config.set_kb_all()?,
+                    KbConfigCommand::Directory => config.set_kb_dir()?,
+                    KbConfigCommand::Annotation => config.set_annotation_template()?,
+                    KbConfigCommand::Link => config.set_index_link_template()?,
+                    KbConfigCommand::Index => config.set_index_name()?,
+                    KbConfigCommand::Extension => config.set_file_extension()?,
+                    KbConfigCommand::Hierarchy => config.set_hierarchy()?,
+                };
             }
         }
         Ok(())

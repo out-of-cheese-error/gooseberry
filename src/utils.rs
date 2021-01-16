@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use chrono_english::{parse_date_string, Dialect};
-use dialoguer::{theme, Input};
+use color_eyre::Section;
+use dialoguer::{theme, Editor, Input};
 use hypothesis::annotations::Selector;
+
+use crate::errors::Apologize;
 
 /// ASCII code of semicolon
 /// TODO: Tag cannot have semicolon in it, remember to add this to the README
@@ -57,6 +60,17 @@ pub fn user_input(
     }
 }
 
+/// Gets input from external editor, optionally displays default text in editor
+pub fn external_editor_input(default: Option<&str>, extension: &str) -> color_eyre::Result<String> {
+    Ok(Editor::new()
+        .trim_newlines(false)
+        .extension(extension)
+        .edit(default.unwrap_or(""))
+        .suggestion("Set your default editor using the $EDITOR or $VISUAL environment variables")?
+        .ok_or(Apologize::EditorError)
+        .suggestion("Make sure to save next time!")?)
+}
+
 pub fn get_spinner(message: &str) -> indicatif::ProgressBar {
     let spinner = indicatif::ProgressBar::new_spinner();
     spinner.enable_steady_tick(200);
@@ -90,4 +104,12 @@ pub fn get_quotes(annotation: &hypothesis::annotations::Annotation) -> Vec<&str>
         })
         .flat_map(|v| v.into_iter())
         .collect::<Vec<_>>()
+}
+
+/// Converts a URI into something that can be used as a folder/filename
+pub fn uri_to_filename(uri: &str) -> String {
+    uri.replace("://", "_")
+        .replace(".", "_")
+        .replace("/", "_")
+        .replace(":", "_")
 }

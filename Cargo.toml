@@ -16,8 +16,7 @@ include = ["src/**/*", "README.md"]
 hypothesis = { version = "0.7.2", default-features = false }
 tokio = { version = "0.2.22", features = ["macros"] }
 
-# mdBook
-mdbook = "0.4.4"
+# To extract the base URI
 url = "2.2.0"
 
 # CLI
@@ -54,6 +53,9 @@ bat = { version = "0.17.1", default-features = false, features = ["regex-fancy"]
 
 # Indicator bar
 indicatif = "0.15.0"
+
+# Templating markdown
+handlebars = "3.5.2"
 
 [dev-dependencies]
 assert_cmd = "1.0.2"

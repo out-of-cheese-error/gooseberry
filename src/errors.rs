@@ -25,9 +25,12 @@ pub enum Apologize {
     /// Errors related to changing the configuration file
     #[error("ConfigError: {message:?}")]
     ConfigError { message: String },
-    /// Errors related to making the mdBook wiki
-    #[error("mdBookError: {message:?}")]
-    MdBookError { message: String },
+    /// Errors related to making the knowledge base
+    #[error("KBError: {message:?}")]
+    KBError { message: String },
+    /// Thrown when no text is returned from an external editor
+    #[error("EditorError")]
+    EditorError,
     /// Catch-all for stuff that should never happen
     #[error("OutOfCheeseError: {message:?}\nRedo from start.")]
     OutOfCheeseError { message: String },
