@@ -164,7 +164,7 @@ impl Gooseberry {
         &self,
         order: OrderBy,
         annotations: Vec<AnnotationTemplate>,
-    ) -> color_eyre::Result<HashMap<String, Vec<AnnotationTemplate>>> {
+    ) -> HashMap<String, Vec<AnnotationTemplate>> {
         let mut order_to_annotations = HashMap::new();
         match order {
             OrderBy::Tag => {
@@ -210,65 +210,17 @@ impl Gooseberry {
             }
             OrderBy::Empty => panic!("Shouldn't happen"),
         }
-        Ok(order_to_annotations)
-    }
-
-    fn recurse_folder(
-        &self,
-        src_dir: &Path,
-        hbs: &Handlebars<'_>,
-        order: &[OrderBy],
-        annotations: Vec<AnnotationTemplate>,
-        folder: PathBuf,
-        depth: usize,
-        index_links: &mut Vec<String>,
-        extension: &str,
-    ) -> color_eyre::Result<()> {
-        if depth == order.len() {
-            let path = PathBuf::from(format!(
-                "{}.{}",
-                folder.to_str().ok_or(Apologize::KBError {
-                    message: format!("{:?} has non-unicode characters", folder)
-                })?,
-                extension
-            ));
-            index_links.push(hbs.render("index_link", &get_index_link_data(&path, &src_dir)?)?);
-            fs::File::create(&path)?.write_all(
-                annotations
-                    .into_iter()
-                    .map(|a| hbs.render("annotation", &a))
-                    .collect::<Result<String, _>>()?
-                    .as_bytes(),
-            )?;
-        } else {
-            if !folder.exists() {
-                fs::create_dir(&folder)?;
-            }
-            for (new_folder, annotations) in
-                self.group_annotations_by_order(order[depth], annotations)?
-            {
-                self.recurse_folder(
-                    src_dir,
-                    hbs,
-                    &order,
-                    annotations,
-                    folder.join(new_folder),
-                    depth + 1,
-                    index_links,
-                    extension,
-                )?;
-            }
-        }
-        Ok(())
+        order_to_annotations
     }
 
     /// Write markdown files for wiki
     async fn make_book(&self, src_dir: &Path, hbs: &Handlebars<'_>) -> color_eyre::Result<()> {
         let pb = utils::get_spinner("Building knowledge base...");
+        let extension = self.config.file_extension.as_ref().unwrap();
         let index_file = src_dir.join(format!(
             "{}.{}",
             self.config.index_name.as_ref().unwrap(),
-            self.config.file_extension.as_ref().unwrap()
+            extension
         ));
         if index_file.exists() {
             // Initialize
@@ -283,8 +235,8 @@ impl Gooseberry {
             .map(AnnotationTemplate::from_annotation)
             .collect();
 
-        let hierarchy_order = self.config.hierarchy.as_ref().unwrap();
-        if hierarchy_order.is_empty() {
+        let order = self.config.hierarchy.as_ref().unwrap();
+        if order.is_empty() {
             // Index file has all annotations
             fs::File::create(&index_file)?.write_all(
                 annotations
@@ -296,16 +248,62 @@ impl Gooseberry {
         } else {
             // Index file has links to each page
             let mut index_links = vec![];
+            struct RecurseFolder<'s> {
+                f: &'s dyn Fn(
+                    &RecurseFolder,
+                    Vec<AnnotationTemplate>,
+                    PathBuf,
+                    usize,
+                    &mut Vec<String>,
+                ) -> color_eyre::Result<()>,
+            }
+            let recurse_folder = RecurseFolder {
+                f: &|recurse_folder, inner_annotations, folder, depth, index_links| {
+                    if depth == order.len() {
+                        let path = PathBuf::from(format!(
+                            "{}.{}",
+                            folder.to_str().ok_or(Apologize::KBError {
+                                message: format!("{:?} has non-unicode characters", folder)
+                            })?,
+                            extension
+                        ));
+                        index_links.push(
+                            hbs.render("index_link", &get_index_link_data(&path, &src_dir)?)?,
+                        );
+                        fs::File::create(&path)?.write_all(
+                            inner_annotations
+                                .into_iter()
+                                .map(|a| hbs.render("annotation", &a))
+                                .collect::<Result<String, _>>()?
+                                .as_bytes(),
+                        )?;
+                    } else {
+                        if !folder.exists() {
+                            fs::create_dir(&folder)?;
+                        }
+                        for (new_folder, annotations) in
+                            self.group_annotations_by_order(order[depth], inner_annotations)
+                        {
+                            (recurse_folder.f)(
+                                recurse_folder,
+                                annotations,
+                                folder.join(new_folder),
+                                depth + 1,
+                                index_links,
+                            )?;
+                        }
+                    }
+                    Ok(())
+                },
+            };
+
             // Make directory structure
-            self.recurse_folder(
-                src_dir,
-                hbs,
-                hierarchy_order,
+            (recurse_folder.f)(
+                &recurse_folder,
                 annotations,
                 PathBuf::from(src_dir),
                 0,
                 &mut index_links,
-                self.config.file_extension.as_ref().unwrap(),
             )?;
             // Make Index file
             fs::File::create(index_file)?
