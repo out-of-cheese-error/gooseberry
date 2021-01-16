@@ -99,10 +99,10 @@ version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2baad346b2d4e94a24347adeee9c7a93f412ee94b9cc26e5b59dea23848e9f28"
 dependencies = [
- "addr2line",
- "cfg-if 1.0.0",
- "libc",
- "miniz_oxide",
+    "addr2line",
+    "cfg-if 1.0.0",
+    "libc",
+    "miniz_oxide",
     "object",
     "rustc-demangle",
 ]
@@ -128,16 +128,16 @@ dependencies = [
     "ansi_colours",
     "ansi_term 0.12.1",
     "console",
- "content_inspector",
- "encoding",
- "error-chain",
- "globset",
- "path_abs",
- "semver 0.11.0",
- "serde",
- "serde_yaml",
- "syntect",
- "unicode-width",
+    "content_inspector",
+    "encoding",
+    "error-chain",
+    "globset",
+    "path_abs",
+    "semver 0.11.0",
+    "serde",
+    "serde_yaml",
+    "syntect",
+    "unicode-width",
 ]
 
 [[package]]
@@ -1089,7 +1089,7 @@ dependencies = [
     "tokio",
     "tokio-util",
     "tracing",
- "tracing-futures",
+    "tracing-futures",
 ]
 
 [[package]]
@@ -1189,11 +1189,11 @@ dependencies = [
     "httpdate",
     "itoa",
     "pin-project 1.0.1",
- "socket2",
- "tokio",
- "tower-service",
- "tracing",
- "want",
+    "socket2",
+    "tokio",
+    "tower-service",
+    "tracing",
+    "want",
 ]
 
 [[package]]
@@ -1445,9 +1445,9 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c722bee1037d430d0f8e687bbdbf222f27cc6e4e68d5caf630857bb2b6dbdce"
 dependencies = [
- "bitflags",
- "cc",
- "cfg-if 0.1.10",
+    "bitflags",
+    "cc",
+    "cfg-if 0.1.10",
     "libc",
     "void",
 ]
@@ -1645,7 +1645,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81a4ffa594b66bff340084d4081df649a7dc049ac8d7fc458d8e628bfbbb2f86"
 dependencies = [
- "proc-macro2",
+    "proc-macro2",
     "quote",
     "syn",
 ]
@@ -1841,9 +1841,9 @@ version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ab346ac5921dc62ffa9f89b7a773907511cdfa5490c572ae9be1be33e8afa4a"
 dependencies = [
- "crossbeam-channel 0.5.0",
- "crossbeam-deque 0.8.0",
- "crossbeam-utils 0.8.0",
+    "crossbeam-channel 0.5.0",
+    "crossbeam-deque 0.8.0",
+    "crossbeam-utils 0.8.0",
     "lazy_static",
     "num_cpus",
 ]
@@ -1933,8 +1933,8 @@ dependencies = [
     "wasm-bindgen",
     "wasm-bindgen-futures",
     "web-sys",
- "webpki-roots",
- "winreg",
+    "webpki-roots",
+    "winreg",
 ]
 
 [[package]]

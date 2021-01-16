@@ -156,16 +156,6 @@ impl GooseberryConfig {
                 ),
             })?;
         }
-        if let Some(kb_dir) = &self.kb_dir {
-            if !kb_dir.exists() {
-                fs::create_dir(kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
-                    message: format!(
-                        "Couldn't create knowledge base directory {:?}, {}",
-                        kb_dir, e
-                    ),
-                })?;
-            }
-        }
         Ok(())
     }
 
@@ -256,10 +246,6 @@ impl GooseberryConfig {
                 })?)
             },
         }?;
-
-        if config.kb_dir.is_none() {
-            config.set_kb_dir()?;
-        }
 
         if config.hypothesis_username.is_none()
             || config.hypothesis_key.is_none()
