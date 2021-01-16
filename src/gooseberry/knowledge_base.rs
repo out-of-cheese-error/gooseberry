@@ -82,6 +82,7 @@ pub(crate) fn get_handlebars<'a>(
     index_link_template: &'a str,
 ) -> color_eyre::Result<Handlebars<'a>> {
     let mut hbs = Handlebars::new();
+    hbs.register_escape_fn(handlebars::no_escape);
     hbs.register_helper("date_format", Box::new(date_format));
     hbs.register_template_string("annotation", annotation_template)?;
     hbs.register_template_string("index_link", index_link_template)?;
