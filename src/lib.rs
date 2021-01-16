@@ -1,4 +1,8 @@
 //! # Gooseberry - A Knowledge Base for the Lazy
+#[macro_use]
+extern crate handlebars;
+#[macro_use]
+extern crate serde_derive;
 
 /// Configuration of data directories and Hypothesis authorization
 pub mod configuration;

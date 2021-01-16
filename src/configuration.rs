@@ -1,29 +1,83 @@
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::{env, fs, io};
+use std::{env, fmt, fs, io};
 
+use chrono::Utc;
 use color_eyre::Help;
-use dialoguer::{theme, Select};
+use dialoguer::{theme, Confirm, Select};
 use directories_next::{ProjectDirs, UserDirs};
+use hypothesis::annotations::{Annotation, Permissions, Selector, Target, UserInfo};
 use hypothesis::Hypothesis;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Apologize;
+use crate::gooseberry::knowledge_base::{get_handlebars, AnnotationTemplate};
 use crate::{utils, NAME};
+
+pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
+
+### {{id}}
+Created: {{date_format "%c" (created)}}
+Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+
+{{#each highlight}}> {{this}}{{/each}}
+
+{{text}}
+
+[See in context]({{incontext}})
+
+"#;
+
+pub static DEFAULT_INDEX_LINK_TEMPLATE: &str = r#"- [{{name}}]({{relative_path}})"#;
+pub static DEFAULT_INDEX_FILENAME: &str = "INDEX";
+pub static DEFAULT_FILE_EXTENSION: &str = "md";
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum OrderBy {
+    Tag,
+    URI,
+    BaseURI,
+    ID,
+    Empty,
+}
+
+impl fmt::Display for OrderBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OrderBy::Tag => write!(f, "tag"),
+            OrderBy::URI => write!(f, "uri"),
+            OrderBy::BaseURI => write!(f, "base_uri"),
+            OrderBy::ID => write!(f, "id"),
+            OrderBy::Empty => write!(f, "empty"),
+        }
+    }
+}
 
 /// Configuration struct, asks for user input to fill in the optional values the first time gooseberry is run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
     /// Directory to store `sled` database files
     pub(crate) db_dir: PathBuf,
-    /// Directory to write out knowledge base markdown files
-    pub(crate) kb_dir: Option<PathBuf>,
     /// Hypothesis username
     pub(crate) hypothesis_username: Option<String>,
     /// Hypothesis personal API key
     pub(crate) hypothesis_key: Option<String>,
     /// Hypothesis group with knowledge base annotations
     pub(crate) hypothesis_group: Option<String>,
+
+    /// Relating to the generated markdown knowledge base:
+    /// Directory to write out knowledge base markdown files
+    pub(crate) kb_dir: Option<PathBuf>,
+    /// Handlebars annotation template
+    pub(crate) annotation_template: Option<String>,
+    /// Handlebars index link template
+    pub(crate) index_link_template: Option<String>,
+    /// Handlebars index file name
+    pub(crate) index_name: Option<String>,
+    /// Wiki file extension
+    pub(crate) file_extension: Option<String>,
+    /// Define the hierarchy of folders
+    pub(crate) hierarchy: Option<Vec<OrderBy>>,
 }
 
 /// Main project directory, cross-platform
@@ -43,10 +97,15 @@ impl Default for GooseberryConfig {
         };
         let config = Self {
             db_dir,
-            kb_dir: None,
             hypothesis_username: None,
             hypothesis_key: None,
             hypothesis_group: None,
+            kb_dir: None,
+            annotation_template: None,
+            index_link_template: None,
+            index_name: None,
+            file_extension: None,
+            hierarchy: None,
         };
         config.make_dirs().unwrap();
         config
@@ -60,11 +119,23 @@ impl GooseberryConfig {
             None => Box::new(io::stdout()),
         };
         let mut buffered = io::BufWriter::new(writer);
-        let contents = "db_dir = '<full path to database directory>'\n\
-                             kb_dir = '<knowledge-base directory>'\n\
-                             hypothesis_username = '<Hypothesis username>'\n\
-                             hypothesis_key = '<Hypothesis personal API key>'\n\
-                             hypothesis_group = '<Hypothesis group ID to take annotations from>";
+        let contents = format!(
+            r#"db_dir = '<full path to database directory>'
+        hypothesis_username = '<Hypothesis username>'
+        hypothesis_key = '<Hypothesis personal API key>'
+        hypothesis_group = '<Hypothesis group ID to take annotations from>'
+        kb_dir = '<knowledge-base directory>'
+        hierarchy = ['tag']
+        annotation_template = '''{}'''
+        index_link_template = '''{}'''
+        index_name = {}
+        file_extension = {}
+        "#,
+            DEFAULT_ANNOTATION_TEMPLATE,
+            DEFAULT_INDEX_LINK_TEMPLATE,
+            DEFAULT_INDEX_FILENAME,
+            DEFAULT_FILE_EXTENSION
+        );
         write!(&mut buffered, "{}", contents)?;
         Ok(())
     }
@@ -207,6 +278,17 @@ impl GooseberryConfig {
         Ok(config)
     }
 
+    /// Queries and sets all knowledge base related configuration options
+    pub fn set_kb_all(&mut self) -> color_eyre::Result<()> {
+        self.set_kb_dir()?;
+        self.set_annotation_template()?;
+        self.set_index_link_template()?;
+        self.set_index_name()?;
+        self.set_file_extension()?;
+        self.set_hierarchy()?;
+        Ok(())
+    }
+
     /// Sets the knowledge base directory
     pub fn set_kb_dir(&mut self) -> color_eyre::Result<()> {
         let default = UserDirs::new()
@@ -229,6 +311,214 @@ impl GooseberryConfig {
                 )
             }
         };
+        self.store()?;
+        Ok(())
+    }
+
+    /// Sets the hierarchy fields which determines the folder hierarchy
+    pub fn set_hierarchy(&mut self) -> color_eyre::Result<()> {
+        println!("Set folder hierarchy order");
+        let mut order = Vec::new();
+        let mut selections = vec![
+            OrderBy::Empty,
+            OrderBy::Tag,
+            OrderBy::URI,
+            OrderBy::BaseURI,
+            OrderBy::ID,
+        ];
+        let selection = Select::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("Field 1")
+            .items(&selections[..])
+            .interact()?;
+
+        if selection != 0 {
+            order.push(selections[selection]);
+            selections.remove(selection);
+            selections.remove(0);
+            let mut number = 2;
+            loop {
+                if selections.is_empty() {
+                    break;
+                }
+                if Confirm::with_theme(&theme::ColorfulTheme::default())
+                    .with_prompt("Add more fields?")
+                    .interact()?
+                {
+                    let selection = Select::with_theme(&theme::ColorfulTheme::default())
+                        .with_prompt(&format!("Field {}", number))
+                        .items(&selections[..])
+                        .interact()?;
+                    order.push(selections[selection]);
+                    selections.remove(selection);
+                    number += 1
+                } else {
+                    break;
+                }
+            }
+        }
+        if order.is_empty() {
+            println!(
+                "Single file: {}.{}",
+                self.index_name.as_ref().unwrap(),
+                self.file_extension.as_ref().unwrap()
+            );
+        } else {
+            println!(
+                "Folder structure: {}.{}",
+                order
+                    .iter()
+                    .map(|o| o.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/"),
+                self.file_extension.as_ref().unwrap()
+            );
+        }
+        self.hierarchy = Some(order);
+        self.store()?;
+        Ok(())
+    }
+
+    /// Sets the annotation template in Handlebars format.
+    pub fn set_annotation_template(&mut self) -> color_eyre::Result<()> {
+        let selections = &[
+            "Use default annotation template",
+            "Edit annotation template",
+        ];
+
+        let selection = Select::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("How should gooseberry format annotations?")
+            .items(&selections[..])
+            .interact()?;
+        if selection == 0 {
+            self.annotation_template = Some(DEFAULT_ANNOTATION_TEMPLATE.to_string());
+        } else {
+            let test_annotation = Annotation {
+                id: "test".to_string(),
+                created: Utc::now(),
+                updated: Utc::now(),
+                user: Default::default(),
+                uri: "https://github.com/out-of-cheese-error/gooseberry".to_string(),
+                text: "testing annotation".to_string(),
+                tags: vec!["tag1".to_string(), "tag2".to_string()],
+                group: "group_id".to_string(),
+                permissions: Permissions {
+                    read: vec![],
+                    delete: vec![],
+                    admin: vec![],
+                    update: vec![],
+                },
+                target: vec![Target::builder()
+                    .source("https://www.example.com")
+                    .selector(vec![Selector::new_quote(
+                        "exact text in website to highlight",
+                        "prefix of text",
+                        "suffix of text",
+                    )])
+                    .build()?],
+                links: vec![(
+                    "incontext".to_string(),
+                    "https://incontext_link.com".to_string(),
+                )]
+                .into_iter()
+                .collect(),
+                hidden: false,
+                flagged: false,
+                references: vec![],
+                user_info: Some(UserInfo {
+                    display_name: Some("test_display_name".to_string()),
+                }),
+            };
+            let test_markdown_annotation = AnnotationTemplate::from_annotation(test_annotation);
+
+            self.annotation_template = loop {
+                let template = utils::external_editor_input(
+                    Some(
+                        self.annotation_template
+                            .as_deref()
+                            .unwrap_or(DEFAULT_ANNOTATION_TEMPLATE),
+                    ),
+                    ".hbs",
+                )?;
+                match get_handlebars(&template, "")
+                    .map(|hbs| hbs.render("annotation", &test_markdown_annotation))
+                {
+                    Err(e) => {
+                        eprintln!("TemplateRenderError: {}\n Try again.", e);
+                        continue;
+                    }
+                    Ok(Err(e)) => {
+                        eprintln!("TemplateRenderError: {}\n Try again.", e);
+                        continue;
+                    }
+                    Ok(Ok(md)) => {
+                        println!("Template looks like this:");
+                        println!();
+                        println!("{}", md)
+                    }
+                }
+                break Some(template);
+            };
+        }
+        self.store()?;
+        Ok(())
+    }
+
+    /// Sets the annotation template in Handlebars format.
+    pub fn set_index_link_template(&mut self) -> color_eyre::Result<()> {
+        let selections = &[
+            "Use default index link template",
+            "Edit index link template",
+        ];
+
+        let selection = Select::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("How should gooseberry format the link in the Index file?")
+            .items(&selections[..])
+            .interact()?;
+        if selection == 0 {
+            self.index_link_template = Some(DEFAULT_INDEX_LINK_TEMPLATE.to_string());
+        } else {
+            self.index_link_template = loop {
+                let template = utils::external_editor_input(
+                    Some(
+                        self.index_link_template
+                            .as_deref()
+                            .unwrap_or(DEFAULT_INDEX_LINK_TEMPLATE),
+                    ),
+                    ".hbs",
+                )?;
+                if let Err(e) = get_handlebars("", &template) {
+                    eprintln!("TemplateRenderError: {}\n Try again.", e);
+                    continue;
+                }
+                break Some(template);
+            };
+        }
+        self.store()?;
+        Ok(())
+    }
+
+    pub fn set_index_name(&mut self) -> color_eyre::Result<()> {
+        self.index_name = Some(utils::user_input(
+            "What name should gooseberry use for the index file",
+            Some(self.index_name.as_deref().unwrap_or(DEFAULT_INDEX_FILENAME)),
+            true,
+            false,
+        )?);
+        self.store()?;
+        Ok(())
+    }
+
+    pub fn set_file_extension(&mut self) -> color_eyre::Result<()> {
+        self.file_extension = Some(utils::user_input(
+            "What extension should gooseberry use for wiki files",
+            Some(
+                self.file_extension
+                    .as_deref()
+                    .unwrap_or(DEFAULT_FILE_EXTENSION),
+            ),
+            true,
+            false,
+        )?);
         self.store()?;
         Ok(())
     }

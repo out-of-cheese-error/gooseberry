@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use dialoguer::console::style;
 use dialoguer::Select;
+use handlebars::Handlebars;
 use hypothesis::annotations::Annotation;
 use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
 use skim::{
@@ -12,7 +13,7 @@ use skim::{
 };
 
 use crate::errors::Apologize;
-use crate::gooseberry::markdown::MarkdownAnnotation;
+use crate::gooseberry::knowledge_base::AnnotationTemplate;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
 
@@ -71,6 +72,7 @@ impl Gooseberry {
     pub async fn search(
         &self,
         annotations: Vec<Annotation>,
+        hbs: &Handlebars<'_>,
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = annotations;
@@ -109,7 +111,10 @@ impl Gooseberry {
             );
             let _ = tx_item.send(Arc::new(SearchAnnotation {
                 highlight,
-                markdown: MarkdownAnnotation(annotation).to_md(false),
+                markdown: hbs.render(
+                    "annotation",
+                    &AnnotationTemplate::from_annotation(annotation.clone()),
+                )?,
                 id: annotation.id.to_owned(),
             }));
         }
@@ -166,6 +171,7 @@ impl Gooseberry {
     /// Makes a skim search window for given annotations from an external group
     pub fn search_group(
         annotations: &[Annotation],
+        hbs: &Handlebars,
         fuzzy: bool,
     ) -> color_eyre::Result<HashSet<String>> {
         let options = SkimOptionsBuilder::default()
@@ -201,7 +207,10 @@ impl Gooseberry {
             );
             let _ = tx_item.send(Arc::new(SearchAnnotation {
                 highlight,
-                markdown: MarkdownAnnotation(annotation).to_md(false),
+                markdown: hbs.render(
+                    "annotation",
+                    &AnnotationTemplate::from_annotation(annotation.clone()),
+                )?,
                 id: annotation.id.to_owned(),
             }));
         }
