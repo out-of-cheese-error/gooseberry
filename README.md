@@ -91,6 +91,13 @@ you got it from, if ever you feel like you're missing context.
 You can set all the below options at once by running `gooseberry config kb all` or changing the corresponding keys in the config file (found
 at `gooseberry config location`)
 
+### `gooseberry config kb directory` - Knowledge base directory
+
+The directory to save the generated knowledge base files.
+
+**IMPORTANT:** This directory is cleared at every sync so if you're storing Hypothesis annotations alongside other notes, make sure to make a separate
+folder.
+
 ### `gooseberry config kb annotation` - Annotation template
 
 Change the template used for rendering the annotation.
@@ -104,7 +111,7 @@ The following keys can be used inside the template
 * `{{ uri }}` - Annotation URI
 * `{{ base_uri }}` - Base website of URI, i.e just the protocol and domain.
     * e.g. https://github.com/rust-lang/cargo?asdf becomes https://github.com/
-* `{{ incontext }}` - Link to annotation in context
+* `{{ incontext }}` - Link to annotation in context (opens the Hypothesis sidebar and focuses on the annotation)
 * `highlight` - List of selected/highlighted lines from document (split by newline)
 * `{{ text }}` - The text content of the annotation body
 * `tags` - A list of tags associated with the annotation.
@@ -112,15 +119,15 @@ The following keys can be used inside the template
 * `references` - List of annotation IDs for any annotations this annotation references (e.g. is a reply to)
 * `{{ display_name }}` - Display name of annotation creator. This may not be set.
 
-See the [Handlebars Language Guide](https://handlebarsjs.com/guide/#what-is-handlebars) for more on templating. Some examples for using the list type
-keys and for formatting dates are shown below for different systems:
+See the [Handlebars Language Guide](https://handlebarsjs.com/guide/#what-is-handlebars) for more on templating. Some examples for using the list keys
+and for formatting dates are shown below for different systems:
 
 * mdBook
 
 ```markdown
 ##### {{date_format "%c" (created)}} - *{{id}}*
 
-{{#each tags}}| {{this}} {{#if @last}}|{{/if}}{{/each}}
+{{#each tags}}| [{{this}}]({{this}}.md) {{#if @last}}|{{/if}}{{/each}}
 
 {{#each highlight}}> {{this}}{{/each}}
 
@@ -134,7 +141,7 @@ Renders as:
 ```markdown
 ##### Sat Jan 16 11:12:49 2021 - *test*
 
-| tag1 | tag2 |
+| [tag1](tag1.md) | [tag2](tag2.md) |
 
 > exact text highlighted in website
 
@@ -143,14 +150,16 @@ testing annotation
 [See in context](https://incontext_link.com)
 ```
 
-This makes each tag a link to a dedicated page consisting of annotations with that tag - you can set this up below by configuring the hierarchy.
+This makes each tag a link to a dedicated page consisting of annotations with that tag - you can set this up by configuring the
+hierarchy (`hierarchy = ["tag"]`).
 
 * Obsidian
 
 ```markdown
 ### {{id}}
 
-Created: {{date_format "%c" (created)}} Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+Created: {{date_format "%c" (created)}} 
+Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
 {{#each highlight}}> {{this}}{{/each}}
 
@@ -164,7 +173,8 @@ Renders as:
 ```markdown
 ### test
 
-Created: Sat Jan 16 10:22:20 2021 Tags: #tag1, #tag2
+Created: Sat Jan 16 10:22:20 2021 
+Tags: #tag1, #tag2
 
 > exact text highlighted in website
 
@@ -175,10 +185,33 @@ This uses #tags b/c Obsidian likes those.
 
 TODO add org-mode example
 
-### `gooseberry config kb link` - Index link template
+### Grouping annotations into folders and pages - `gooseberry config kb hierarchy`
 
-This configures the index file, which generally contains links to all other pages in the generated knowledge base. The template controls how each of
-these links are rendered.
+The hierarchy defines how the folder structure of the knowledge base looks and which annotations are on what pages.
+
+The available options are:
+
+* Empty - Set `hierarchy = []` to have all annotations rendered on the index page.
+* Tag - Groups annotations by tag
+* URI - Groups annotations by their URI
+* BaseURI - Groups annotations by their base URI
+* ID - Groups annotations by annotation ID.
+
+Multiple hierarchies combined make folders and sub-folders.
+
+e.g.
+
+`hierarchy = ["BaseURI", "Tag"]` would make a separate folder for each base_uri. Within each folder would be a page for each tag consisting of
+annotations marked with that tag.
+
+`hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. a page for each tag.
+
+Annotations within a page are sorted by their date of creation.
+
+### Index link template - `gooseberry config kb link`
+
+This configures the index file, which generally contains links to all other pages in the generated knowledge base
+(unless `hierarchy=[]` in which case all annotations are rendered on the index page). The template controls how each of these links are rendered.
 
 Available keys:
 
@@ -192,18 +225,21 @@ Examples:
 
 ```markdown
 - [{{name}}]({{relative_path}})
+
 ```
 
 * Obsidian
 
 ```markdown
 - [[{{name}}]]
+
 ```
 
 to make internal links, or
 
 ```markdown
 - ![[{{name}}]]
+
 ```
 
 to transclude files
@@ -212,46 +248,16 @@ to transclude files
 
 ```org
 - [[{{relative_path}}][{{name}}]]
+
 ```
 
 ### Index filename - `gooseberry config kb index`
 
-The name of the Index file. For instance, `mdBook` needs this to be called `SUMMARY`.
+The name of the Index file. For instance, `mdbook` needs this to be called `SUMMARY`.
 
 ### File extensions - `gooseberry config kb extension`
 
 e.g. "md", "org", "txt" etc. (**Don't include the .**)
-
-### Grouping annotations into folders and pages - `gooseberry config kb hierarchy`
-
-The hierarchy defines how the folder structure of the knowledge base looks and which annotations are on what pages. This is useful for KB systems
-where folders correspond to topics.
-
-The available options are:
-
-* empty - Set `hierarchy = ["empty"]` to have all annotations rendered on the index page.
-* tag - Groups annotations by tag
-* uri - Groups annotations by their URI
-* base_uri - Groups annotations by their base URI
-* id - Groups annotations by annotation ID.
-
-Multiple hierarchies make folders and sub-folders.
-
-e.g.
-
-```toml
-hierarchy = ["base_uri", "tag"] 
-```
-
-would make a separate folder for each base_uri. Within each folder would be a page for each tag consisting of annotations marked with that tag.
-
-```toml
-hierarchy = ["tag"]
-```
-
-gives the structure in the `mdBook` figure above, i.e. a page for each tag.
-
-Annotations within a page are sorted by their date of creation.
 
 # Why "Gooseberry"?
 
