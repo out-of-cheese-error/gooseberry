@@ -1035,17 +1035,17 @@ dependencies = [
 
 [[package]]
 name = "gooseberry"
-version = "0.1.1"
+version = "0.2.0-alpha"
 dependencies = [
- "assert_cmd",
- "bat",
- "bincode",
- "chrono",
- "chrono-english",
- "color-eyre",
- "confy",
- "dialoguer",
- "directories-next",
+    "assert_cmd",
+    "bat",
+    "bincode",
+    "chrono",
+    "chrono-english",
+    "color-eyre",
+    "confy",
+    "dialoguer",
+    "directories-next",
  "dotenv",
  "eyre",
  "handlebars",
