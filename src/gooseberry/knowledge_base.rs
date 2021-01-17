@@ -108,7 +108,8 @@ fn get_index_link_data(
             .ok_or(Apologize::KBError {
                 message: format!("{:?} has non-unicode characters", path),
             })?
-            .to_string(),
+            .to_string()
+            .replace(' ', "+"),
     );
     map.insert(
         "absolute_path".to_string(),
@@ -116,7 +117,8 @@ fn get_index_link_data(
             .ok_or(Apologize::KBError {
                 message: format!("{:?} has non-unicode characters", path),
             })?
-            .to_string(),
+            .to_string()
+            .replace(' ', "+"),
     );
     Ok(map)
 }
