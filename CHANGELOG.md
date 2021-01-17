@@ -5,11 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.2.0] - 2021-01-17
+
+### Changed:
 
 * tokio 1.0 update
+* Fixed some bugs
+* Added a make test
 
-## [0.2.0-alpha] - 2021-16-01
+## [0.2.0-alpha] - 2021-01-16
 
 Switching to Handlebars templates instead of restricting to mdBook-style wiki (Major change). Tests don't work right now.
 

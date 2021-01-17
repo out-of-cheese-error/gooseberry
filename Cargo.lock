@@ -1043,9 +1043,9 @@ dependencies = [
 
 [[package]]
 name = "gooseberry"
-version = "0.2.0-alpha"
+version = "0.2.0"
 dependencies = [
- "assert_cmd",
+    "assert_cmd",
     "bat",
     "bincode",
     "chrono",
@@ -1067,10 +1067,10 @@ dependencies = [
     "skim",
     "sled",
     "structopt",
- "tempfile",
- "thiserror",
- "tokio",
- "url",
+    "tempfile",
+    "thiserror",
+    "tokio",
+    "url",
 ]
 
 [[package]]
