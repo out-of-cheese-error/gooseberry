@@ -533,8 +533,7 @@ file_extension = '{}'
             let selection = Select::with_theme(&theme::ColorfulTheme::default())
                 .with_prompt("Where should gooseberry take annotations from?")
                 .items(&selections[..])
-                .interact()
-                .unwrap();
+                .interact()?;
 
             if selection == 0 {
                 let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
@@ -547,27 +546,28 @@ file_extension = '{}'
                 .id;
                 break group_id;
             } else {
-                let group_id = utils::user_input(
-                    "Enter an existing group's ID (from the group URL)",
-                    None,
-                    false,
-                    false,
-                )?;
-                if Hypothesis::new(
+                let api = Hypothesis::new(
                     self.hypothesis_username.as_deref().unwrap(),
                     self.hypothesis_key.as_deref().unwrap(),
-                )?
-                .fetch_group(&group_id, Vec::new())
-                .await
-                .is_ok()
-                {
+                )?;
+                let groups = api
+                    .get_groups(&hypothesis::groups::GroupFilters::default())
+                    .await?;
+                let group_selection: Vec<_> = groups
+                    .iter()
+                    .map(|g| format!("{}: {}", g.id, g.name))
+                    .collect();
+                let group_index = Select::with_theme(&theme::ColorfulTheme::default())
+                    .with_prompt("Which group should gooseberry use?")
+                    .items(&group_selection[..])
+                    .interact()?;
+                let group_id = groups[group_index].id.to_owned();
+                if api.fetch_group(&group_id, Vec::new()).await.is_ok() {
                     break group_id;
                 } else {
                     println!(
-                        "\nGroup ID could not be found or authorized, try again.\n\
-                          You can find the group ID in the URL of the Hypothesis group:\n \
-                          e.g. https://hypothes.is/groups/<group_id>/<group_name>.\n\
-                          Make sure you are authorized to access the group.\n\n"
+                        "\nGroup could not be loaded, please try again.\n\
+                          Make sure the group exists and you are authorized to access it.\n\n"
                     )
                 }
             }
