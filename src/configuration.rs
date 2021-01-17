@@ -29,7 +29,7 @@ Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 "#;
 
 pub static DEFAULT_INDEX_LINK_TEMPLATE: &str = r#"- [{{name}}]({{relative_path}})"#;
-pub static DEFAULT_INDEX_FILENAME: &str = "INDEX";
+pub static DEFAULT_INDEX_FILENAME: &str = "SUMMARY";
 pub static DEFAULT_FILE_EXTENSION: &str = "md";
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -120,17 +120,18 @@ impl GooseberryConfig {
         };
         let mut buffered = io::BufWriter::new(writer);
         let contents = format!(
-            r#"db_dir = '<full path to database directory>'
-        hypothesis_username = '<Hypothesis username>'
-        hypothesis_key = '<Hypothesis personal API key>'
-        hypothesis_group = '<Hypothesis group ID to take annotations from>'
-        kb_dir = '<knowledge-base directory>'
-        hierarchy = ['tag']
-        annotation_template = '''{}'''
-        index_link_template = '''{}'''
-        index_name = {}
-        file_extension = {}
-        "#,
+            r#"
+db_dir = '<full path to database directory>'
+hypothesis_username = '<Hypothesis username>'
+hypothesis_key = '<Hypothesis personal API key>'
+hypothesis_group = '<Hypothesis group ID to take annotations from>'
+kb_dir = '<knowledge-base directory>'
+hierarchy = ['Tag']
+annotation_template = '''{}'''
+index_link_template = '''{}'''
+index_name = '{}'
+file_extension = '{}'
+"#,
             DEFAULT_ANNOTATION_TEMPLATE,
             DEFAULT_INDEX_LINK_TEMPLATE,
             DEFAULT_INDEX_FILENAME,
@@ -155,6 +156,16 @@ impl GooseberryConfig {
                     self.db_dir, e
                 ),
             })?;
+        }
+        if let Some(kb_dir) = &self.kb_dir {
+            if !kb_dir.exists() {
+                fs::create_dir(&kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
+                    message: format!(
+                        "Couldn't create knowledge base directory {:?}, {}",
+                        kb_dir, e
+                    ),
+                })?;
+            }
         }
         Ok(())
     }

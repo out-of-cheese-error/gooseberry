@@ -140,14 +140,15 @@ impl Gooseberry {
     }
 
     /// Make mdBook wiki
-    pub async fn make(&mut self) -> color_eyre::Result<()> {
+    pub async fn make(&mut self, force: bool) -> color_eyre::Result<()> {
         self.configure_kb()?;
         let kb_dir = self.config.kb_dir.as_ref().unwrap();
         if kb_dir.exists()
-            && Confirm::with_theme(&ColorfulTheme::default())
-                .with_prompt("Clear knowledge base directory?")
-                .default(true)
-                .interact()?
+            && (force
+                || Confirm::with_theme(&ColorfulTheme::default())
+                    .with_prompt("Clear knowledge base directory?")
+                    .default(true)
+                    .interact()?)
         {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;

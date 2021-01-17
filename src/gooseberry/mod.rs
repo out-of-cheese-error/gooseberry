@@ -103,7 +103,7 @@ impl Gooseberry {
                 search,
                 fuzzy,
             } => self.sync_group(group_id, filters, search, fuzzy).await,
-            GooseberryCLI::Make => self.make().await,
+            GooseberryCLI::Make { force } => self.make(force).await,
             GooseberryCLI::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
         }

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::ffi::OsStr;
 /// Tests for the CLI
 /// Annotations for testing have the "test_tag" tag
 /// This is used to delete and clear created annotations after each test
@@ -7,6 +9,9 @@ use std::path::PathBuf;
 use std::{thread, time};
 
 use assert_cmd::Command;
+use color_eyre::eyre::WrapErr;
+use eyre::eyre;
+use futures::future::{join_all, try_join_all};
 use tempfile::{tempdir, TempDir};
 
 fn make_config_file(
@@ -19,16 +24,26 @@ fn make_config_file(
     let kb_dir = temp_dir.path().join("kb");
 
     let config_contents = format!(
-        "db_dir = \"{}\"\n\
-kb_dir = \"{}\"\n\
-hypothesis_username = \"{}\"\n\
-hypothesis_key = \"{}\"\n\
-hypothesis_group = \"{}\"",
+        r#"
+db_dir = '{}'
+hypothesis_username = '{}'
+hypothesis_key = '{}'
+hypothesis_group = '{}'
+kb_dir = '{}'
+hierarchy = ['Tag']
+annotation_template = '''{}'''
+index_link_template = '''{}'''
+index_name = '{}'
+file_extension = '{}'"#,
         db_dir.to_str().unwrap(),
-        kb_dir.to_str().unwrap(),
         username,
         key,
-        group_id
+        group_id,
+        kb_dir.to_str().unwrap(),
+        gooseberry::configuration::DEFAULT_ANNOTATION_TEMPLATE,
+        gooseberry::configuration::DEFAULT_INDEX_LINK_TEMPLATE,
+        gooseberry::configuration::DEFAULT_INDEX_FILENAME,
+        gooseberry::configuration::DEFAULT_FILE_EXTENSION
     );
     let config_file = temp_dir.path().join("gooseberry.toml");
     fs::write(&config_file, config_contents)?;
@@ -52,174 +67,183 @@ fn it_works() -> color_eyre::Result<()> {
     Ok(())
 }
 
+struct TestData {
+    temp_dir: TempDir,
+    config_file: PathBuf,
+    hypothesis_client: hypothesis::Hypothesis,
+    annotations: Vec<hypothesis::annotations::Annotation>,
+}
+
+impl TestData {
+    async fn populate() -> color_eyre::Result<Self> {
+        dotenv::dotenv()?;
+        let temp_dir = tempdir()?;
+        let username = dotenv::var("HYPOTHESIS_NAME")?;
+        let key = dotenv::var("HYPOTHESIS_KEY")?;
+        let group_id = dotenv::var("TEST_GROUP_ID")?;
+        let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
+
+        // make hypothesis client
+        let hypothesis_client = hypothesis::Hypothesis::new(&username, &key);
+        assert!(hypothesis_client.is_ok(), "Couldn't authorize");
+        let hypothesis_client = hypothesis_client?;
+
+        // make annotations
+        let annotation_1 = hypothesis::annotations::InputAnnotation::builder()
+            .uri("https://www.example.com")
+            .text("this is a test comment")
+            .tags(vec!["test_tag".into(), "test_tag1".into()])
+            .group(&group_id)
+            .build()?;
+        let annotation_2 = hypothesis::annotations::InputAnnotation::builder()
+            .uri("https://www.example.com")
+            .text("this is another test comment")
+            .tags(vec![
+                "test_tag".into(),
+                "test_tag1".into(),
+                "test_tag2".into(),
+            ])
+            .group(&group_id)
+            .build()?;
+        let a1 = hypothesis_client.create_annotation(&annotation_1).await?;
+        let a2 = hypothesis_client.create_annotation(&annotation_2).await?;
+        Ok(TestData {
+            temp_dir,
+            config_file,
+            hypothesis_client,
+            annotations: vec![a1, a2],
+        })
+    }
+
+    async fn clear(self) -> color_eyre::Result<()> {
+        // delete annotations
+        let mut cmd = Command::cargo_bin("gooseberry")?;
+        cmd.env("GOOSEBERRY_CONFIG", &self.config_file)
+            .arg("delete")
+            .arg("--tags=test_tag")
+            .arg("-a") // also from hypothesis
+            .arg("-f")
+            .assert()
+            .success();
+
+        let futures: Vec<_> = self
+            .annotations
+            .iter()
+            .map(|a| self.hypothesis_client.fetch_annotation(&a.id))
+            .collect();
+        assert!(async { join_all(futures).await }
+            .await
+            .into_iter()
+            .all(|x| x.is_err()));
+
+        // clear
+        let mut cmd = Command::cargo_bin("gooseberry")?;
+        cmd.env("GOOSEBERRY_CONFIG", &self.config_file)
+            .arg("clear")
+            .arg("-f")
+            .assert()
+            .success();
+        self.temp_dir.close()?;
+        Ok(())
+    }
+}
+
 #[tokio::test]
 async fn sync() -> color_eyre::Result<()> {
-    // config file
-    let temp_dir = tempdir()?;
-    dotenv::dotenv()?;
-    let username = dotenv::var("HYPOTHESIS_NAME")?;
-    let key = dotenv::var("HYPOTHESIS_KEY")?;
-    let group_id = dotenv::var("TEST_GROUP_ID")?;
-    let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
-
-    // make hypothesis client
-    let hypothesis_client = hypothesis::Hypothesis::new(&username, &key);
-    assert!(hypothesis_client.is_ok(), "Couldn't authorize");
-    let hypothesis_client = hypothesis_client?;
-
-    // make annotations
-    let annotation_1 = hypothesis::annotations::InputAnnotation::builder()
-        .uri("https://www.example.com")
-        .text("this is a test comment")
-        .tags(vec!["test_tag".into(), "test_tag1".into()])
-        .group(&group_id)
-        .build()?;
-    let annotation_2 = hypothesis::annotations::InputAnnotation::builder()
-        .uri("https://www.example.com")
-        .text("this is another test comment")
-        .tags(vec![
-            "test_tag".into(),
-            "test_tag1".into(),
-            "test_tag2".into(),
-        ])
-        .group(&group_id)
-        .build()?;
-    let mut a1 = hypothesis_client.create_annotation(&annotation_1).await?;
-    let a2 = hypothesis_client.create_annotation(&annotation_2).await?;
+    // get test_data
+    let test_data = TestData::populate().await;
+    assert!(test_data.is_ok());
+    let mut test_data = test_data?;
 
     let duration = time::Duration::from_millis(500);
-    thread::sleep(duration);
 
     // check sync add
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
         .stdout(predicates::str::contains("Added 2 notes\n"));
 
     // update annotation
-    a1.text = "Updated test annotation".into();
-    hypothesis_client.update_annotation(&a1).await?;
-
-    thread::sleep(duration);
+    test_data.annotations[0].text = "Updated test annotation".into();
+    test_data
+        .hypothesis_client
+        .update_annotation(&test_data.annotations[0])
+        .await?;
 
     // check sync update
+    thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
         .stdout(predicates::str::contains("Updated 1 note"));
 
-    // delete annotations
-    let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
-        .arg("delete")
-        .arg("--tags=test_tag")
-        .arg("-a") //also from hypothesis
-        .arg("-f")
-        .assert()
-        .success();
-    assert!(hypothesis_client.fetch_annotation(&a1.id).await.is_err());
-    assert!(hypothesis_client.fetch_annotation(&a2.id).await.is_err());
-
     // clear
-    let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
-        .arg("clear")
-        .arg("-f")
-        .assert()
-        .success();
-    temp_dir.close()?;
+    test_data.clear().await?;
     Ok(())
 }
 
 #[tokio::test]
 async fn tag() -> color_eyre::Result<()> {
-    // config file
-    let temp_dir = tempdir()?;
-    dotenv::dotenv()?;
-    let username = dotenv::var("HYPOTHESIS_NAME")?;
-    let key = dotenv::var("HYPOTHESIS_KEY")?;
-    let group_id = dotenv::var("TEST_GROUP_ID")?;
-    let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
+    // get test_data
+    let test_data = TestData::populate().await;
+    assert!(test_data.is_ok());
+    let test_data = test_data?;
     let duration = time::Duration::from_millis(500);
-
-    // make hypothesis client
-    let hypothesis_client = hypothesis::Hypothesis::new(&username, &key);
-    assert!(hypothesis_client.is_ok(), "Couldn't authorize");
-    let hypothesis_client = hypothesis_client?;
-
-    // make annotations
-    let annotation_1 = hypothesis::annotations::InputAnnotation::builder()
-        .uri("https://www.example.com")
-        .text("this is a test comment")
-        .tags(vec!["test_tag".into(), "test_tag1".into()])
-        .group(&group_id)
-        .build()?;
-    let annotation_2 = hypothesis::annotations::InputAnnotation::builder()
-        .uri("https://www.example.com")
-        .text("this is another test comment")
-        .tags(vec![
-            "test_tag".into(),
-            "test_tag1".into(),
-            "test_tag2".into(),
-        ])
-        .group(&group_id)
-        .build()?;
-    let a1 = hypothesis_client.create_annotation(&annotation_1).await?;
-    let a2 = hypothesis_client.create_annotation(&annotation_2).await?;
 
     // check sync
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
         .stdout(predicates::str::contains("Added 2 notes"));
-    // tag
+
+    // add a tag
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("tag")
         .arg("--tags=test_tag")
         .arg("test_tag3")
         .assert()
         .success();
-    assert!(hypothesis_client
-        .fetch_annotation(&a1.id)
+    let futures: Vec<_> = test_data
+        .annotations
+        .iter()
+        .map(|a| test_data.hypothesis_client.fetch_annotation(&a.id))
+        .collect();
+    assert!(async { try_join_all(futures).await }
         .await?
-        .tags
-        .contains(&"test_tag3".to_owned()));
-    assert!(hypothesis_client
-        .fetch_annotation(&a2.id)
-        .await?
-        .tags
-        .contains(&"test_tag3".to_owned()));
+        .iter()
+        .all(|x| x.tags.contains(&"test_tag3".to_owned())));
 
-    // delete tags
+    // delete a tag
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("tag")
         .arg("--delete")
         .arg("test_tag3")
         .assert()
         .success();
-    assert!(!hypothesis_client
-        .fetch_annotation(&a1.id)
+
+    let futures: Vec<_> = test_data
+        .annotations
+        .iter()
+        .map(|a| test_data.hypothesis_client.fetch_annotation(&a.id))
+        .collect();
+    assert!(!async { try_join_all(futures).await }
         .await?
-        .tags
-        .contains(&"test_tag3".to_owned()));
-    assert!(!hypothesis_client
-        .fetch_annotation(&a2.id)
-        .await?
-        .tags
-        .contains(&"test_tag3".to_owned()));
+        .into_iter()
+        .any(|x| x.tags.contains(&"test_tag3".to_owned())));
 
     // check tags filtered
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("tag")
         .arg("--tags=test_tag2")
         .arg("test_tag4")
@@ -227,29 +251,53 @@ async fn tag() -> color_eyre::Result<()> {
         .success();
 
     // NOT in a1
-    assert!(!hypothesis_client
-        .fetch_annotation(&a1.id)
+    assert!(!test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
         .await?
         .tags
         .contains(&"test_tag4".to_owned()));
     // in a2
-    assert!(hypothesis_client
-        .fetch_annotation(&a2.id)
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[1].id)
         .await?
         .tags
         .contains(&"test_tag4".to_owned()));
 
-    // check tags contains space characters are replaced with "__" after `make`
+    // clear data
+    test_data.clear().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn make() -> color_eyre::Result<()> {
+    // get test_data
+    let test_data = TestData::populate().await;
+    assert!(test_data.is_ok());
+    let test_data = test_data?;
+    let duration = time::Duration::from_millis(500);
+
+    // sync
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("sync")
+        .assert()
+        .stdout(predicates::str::contains("Added 2 notes"));
+
+    // add a tag with spaces
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("tag")
         .arg("--tags=test_tag")
         .arg("test tag5")
         .assert()
         .success();
-    assert!(hypothesis_client
-        .fetch_annotation(&a1.id)
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
         .await?
         .tags
         .contains(&"test tag5".to_owned()));
@@ -257,46 +305,35 @@ async fn tag() -> color_eyre::Result<()> {
     // make
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("make")
-        .assert()
-        .success();
-
-    // scan the tmp folder after `make`
-    let paths = fs::read_dir(temp_dir.path().join("kb").join("book").as_os_str()).unwrap();
-    let names = paths
-        .map(|entry| {
-            let entry = entry.unwrap();
-            let entry_path = entry.path();
-            let file_name = entry_path.file_name().unwrap();
-            let file_name_as_str = file_name.to_str().unwrap();
-            let file_name_as_string = String::from(file_name_as_str);
-            file_name_as_string
-        })
-        .collect::<Vec<String>>();
-    assert!(names
-        .iter()
-        .any(|x| x.find(&"test__tag5.html".to_owned()) != None));
-
-    // delete annotations
-    let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
-        .arg("delete")
-        .arg("--tags=test_tag") // only test annotations
-        .arg("-a") // also from hypothesis
-        .arg("-f") // force
-        .assert()
-        .success();
-    assert!(hypothesis_client.fetch_annotation(&a1.id).await.is_err());
-    assert!(hypothesis_client.fetch_annotation(&a2.id).await.is_err());
-
-    // clear gooseberry db
-    let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", &config_file)
-        .arg("clear")
         .arg("-f")
         .assert()
         .success();
-    temp_dir.close()?;
+
+    // check that the kb folder has tag files and an index file
+    let file_names = fs::read_dir(test_data.temp_dir.path().join("kb").as_os_str())?
+        .map(|entry| {
+            entry.wrap_err("File I/O error").and_then(|e| {
+                e.path()
+                    .file_name()
+                    .ok_or(eyre!("filename ends in ."))
+                    .and_then(|f: &OsStr| {
+                        f.to_str()
+                            .map(String::from)
+                            .ok_or(eyre!("non-unicode characters in filename"))
+                    })
+            })
+        })
+        .collect::<Result<HashSet<String>, _>>()?;
+    // index file
+    assert!(file_names.contains("SUMMARY.md"));
+
+    // check all tag files
+    assert!(["test_tag", "test_tag1", "test_tag2", "test tag5"]
+        .iter()
+        .all(|t| file_names.contains(&format!("{}.md", t))));
+
+    test_data.clear().await?;
     Ok(())
 }

@@ -63,7 +63,11 @@ pub enum GooseberryCLI {
         id: Option<String>,
     },
     /// Create and update your knowledge-base markdown files
-    Make,
+    Make {
+        /// Don't ask for confirmation before clearing knowledge base directory
+        #[structopt(short, long)]
+        force: bool,
+    },
     /// Generate shell completions
     Complete {
         /// type of shell
