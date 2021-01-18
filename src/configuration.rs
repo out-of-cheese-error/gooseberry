@@ -56,14 +56,16 @@ impl fmt::Display for OrderBy {
 /// Configuration struct, asks for user input to fill in the optional values the first time gooseberry is run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GooseberryConfig {
-    /// Directory to store `sled` database files
-    pub(crate) db_dir: PathBuf,
     /// Hypothesis username
     pub(crate) hypothesis_username: Option<String>,
     /// Hypothesis personal API key
     pub(crate) hypothesis_key: Option<String>,
     /// Hypothesis group with knowledge base annotations
     pub(crate) hypothesis_group: Option<String>,
+
+    /// Related to tagging and editing
+    /// Directory to store `sled` database files
+    pub(crate) db_dir: PathBuf,
 
     /// Relating to the generated markdown knowledge base:
     /// Directory to write out knowledge base markdown files
@@ -87,19 +89,13 @@ pub fn get_project_dir() -> color_eyre::Result<ProjectDirs> {
 
 impl Default for GooseberryConfig {
     fn default() -> Self {
-        let db_dir = {
-            let dir = get_project_dir().expect("Couldn't get project dir");
-            let data_dir = dir.data_dir();
-            if !data_dir.exists() {
-                fs::create_dir_all(data_dir).expect("Couldn't create data dir");
-            }
-            data_dir.join("gooseberry_db")
-        };
         let config = Self {
-            db_dir,
             hypothesis_username: None,
             hypothesis_key: None,
             hypothesis_group: None,
+            db_dir: get_project_dir()
+                .map(|dir| dir.data_dir().join("gooseberry_db"))
+                .expect("Couldn't make database directory"),
             kb_dir: None,
             annotation_template: None,
             index_link_template: None,
@@ -121,11 +117,11 @@ impl GooseberryConfig {
         let mut buffered = io::BufWriter::new(writer);
         let contents = format!(
             r#"
-db_dir = '<full path to database directory>'
 hypothesis_username = '<Hypothesis username>'
 hypothesis_key = '<Hypothesis personal API key>'
 hypothesis_group = '<Hypothesis group ID to take annotations from>'
-kb_dir = '<knowledge-base directory>'
+db_dir = '<full path to database folder>'
+kb_dir = '<knowledge-base folder>'
 hierarchy = ['Tag']
 annotation_template = '''{}'''
 index_link_template = '''{}'''
@@ -192,7 +188,7 @@ file_extension = '{}'
                     }
                     .into());
                     error.suggestion(format!(
-                        "Use `gooseberry config default {}` to write out the default configuration",
+                        "Use `gooseberry config default {}` to write out the default configuration and modify the generated file",
                         file
                     ))
                 }
@@ -244,7 +240,7 @@ file_extension = '{}'
                     }
                         .into());
                     error.suggestion(format!(
-                        "Use `gooseberry config default {}` to write out the default configuration",
+                        "Use `gooseberry config default {}` to write out the default configuration and modify the generated file",
                         file
                     ))
                 }
@@ -293,6 +289,7 @@ file_extension = '{}'
             .home_dir()
             .join(crate::NAME);
         self.kb_dir = loop {
+            println!("NOTE: the directory will be deleted and regenerated on each make!");
             let input = utils::user_input(
                 "Directory to build knowledge base",
                 Some(default.to_str().unwrap()),
@@ -304,7 +301,7 @@ file_extension = '{}'
                 break Some(path.to_owned());
             } else {
                 println!(
-                    "\nFolder could not be created, make sure all parent folders exist and you have the right permissions.\n"
+                    "\nDirectory could not be created, make sure all parent folders exist and you have the right permissions.\n"
                 )
             }
         };
