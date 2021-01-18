@@ -7,7 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
-* escape spaces in links with "+". See https://github.com/rust-lang/mdBook/issues/527
+* escape spaces in links with "%20". See https://github.com/rust-lang/mdBook/issues/527
+* remove IGNORE_TAG business, delete always deletes from hypothesis
+* list available groups on running `gooseberry config group` with the "use existing" option
 
 ## [0.3.0] - 2021-01-17
 

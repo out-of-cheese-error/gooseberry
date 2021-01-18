@@ -41,15 +41,9 @@ pub enum GooseberryCLI {
         tag: Option<String>,
     },
     /// Delete annotations in bulk
-    /// either just from gooseberry or from both gooseberry and Hypothesis
     Delete {
         #[structopt(flatten)]
         filters: Filters,
-        /// Also delete from Hypothesis.
-        /// Without this flag, the "gooseberry_ignore" flag is added to the selected annotations to ensure that they are not synced by gooseberry in the future.
-        /// If the flag is given then the annotations are also deleted from Hypothesis.
-        #[structopt(short = "a", long)]
-        hypothesis: bool,
         /// Don't ask for confirmation
         #[structopt(short, long)]
         force: bool,
@@ -62,7 +56,7 @@ pub enum GooseberryCLI {
         #[structopt(conflicts_with = "filters")]
         id: Option<String>,
     },
-    /// Create and update your knowledge-base markdown files
+    /// Create your knowledge-base text files
     Make {
         /// Don't ask for confirmation before clearing knowledge base directory
         #[structopt(short, long)]
@@ -74,14 +68,13 @@ pub enum GooseberryCLI {
         #[structopt(possible_values = & Shell::variants())]
         shell: Shell,
     },
-    /// Manage data locations.
-    /// Controlled by $GOOSEBERRY_CONFIG env variable,
-    /// Use this to have independent knowledge bases for different projects.
+    /// Manage configuration (file stored at $GOOSEBERRY_CONFIG)
     Config {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
     },
     /// Clear all gooseberry data
+    ///
     /// "ob oggle sobble obble"
     Clear {
         /// Don't ask for confirmation
@@ -89,6 +82,7 @@ pub enum GooseberryCLI {
         force: bool,
     },
     /// Move (optionally filtered) annotations from a different hypothesis group to Gooseberry's
+    ///
     /// Only moves annotations created by the current user
     Move {
         /// Group ID to move from
@@ -108,10 +102,12 @@ pub enum GooseberryCLI {
 #[derive(StructOpt, Debug, Default)]
 pub struct Filters {
     /// Only annotations created after this date and time
+    ///
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime))]
     pub from: Option<DateTime<Utc>>,
     /// Only annotations created before this date and time
+    ///
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
     pub before: Option<DateTime<Utc>>,
@@ -119,6 +115,7 @@ pub struct Filters {
     #[structopt(short, long)]
     pub include_updated: bool,
     /// Only annotations with this pattern in their URL
+    ///
     /// Doesn't have to be the full URL, e.g. "wikipedia"
     #[structopt(default_value, long)]
     pub uri: String,

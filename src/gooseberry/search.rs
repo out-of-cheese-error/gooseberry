@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use dialoguer::console::style;
-use dialoguer::Select;
 use handlebars::Handlebars;
 use hypothesis::annotations::Annotation;
 use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
@@ -151,14 +150,7 @@ impl Gooseberry {
                     self.tag(annotations, true, Some(tag)).await?;
                 }
                 Key::ShiftRight => {
-                    let choices = ["from Hypothesis", "only from Gooseberry"];
-                    let choice_index =
-                        Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
-                            .with_prompt(&format!("Delete {} annotations:", annotations.len()))
-                            .items(&choices[..])
-                            .interact()?;
-                    let hypothesis = choice_index == 0;
-                    self.delete(annotations, hypothesis, true).await?;
+                    self.delete(annotations, false).await?;
                 }
                 _ => (),
             }

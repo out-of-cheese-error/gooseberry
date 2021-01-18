@@ -88,13 +88,9 @@ impl Gooseberry {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
                 self.tag(annotations, delete, tag).await
             }
-            GooseberryCLI::Delete {
-                filters,
-                hypothesis,
-                force,
-            } => {
+            GooseberryCLI::Delete { filters, force } => {
                 let annotations = self.filter_annotations(filters, None).await?;
-                self.delete(annotations, hypothesis, force).await
+                self.delete(annotations, force).await
             }
             GooseberryCLI::View { filters, id } => self.view(filters, id).await,
             GooseberryCLI::Move {
@@ -119,7 +115,7 @@ impl Gooseberry {
             .user(&self.api.user.0)
             .group(self.config.hypothesis_group.as_deref().unwrap())
             .build()?;
-        let (added, updated, ignored) =
+        let (added, updated) =
             self.sync_annotations(&self.api.search_annotations_return_all(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
         spinner.finish_with_message("Done!");
@@ -137,14 +133,7 @@ impl Gooseberry {
                 println!("Updated {} notes", updated);
             }
         }
-        if ignored > 0 {
-            if ignored == 1 {
-                println!("Ignored 1 note");
-            } else {
-                println!("Ignored {} notes", ignored);
-            }
-        }
-        if added == 0 && updated == 0 && ignored == 0 {
+        if added == 0 && updated == 0 {
             println!("Everything up to date!")
         }
         Ok(())
@@ -294,10 +283,8 @@ impl Gooseberry {
     pub async fn delete(
         &self,
         annotations: Vec<Annotation>,
-        hypothesis: bool,
         force: bool,
     ) -> color_eyre::Result<()> {
-        let mut annotations = annotations;
         let num_annotations = annotations.len();
         if !annotations.is_empty()
             && (force
@@ -314,31 +301,11 @@ impl Gooseberry {
                 .map(|a| a.id.to_owned())
                 .collect::<Vec<_>>();
             self.delete_annotations(&ids)?;
-            if hypothesis
-                && (force
-                    || Confirm::new()
-                        .with_prompt("Also delete from Hypothesis?")
-                        .default(false)
-                        .interact()?)
-            {
-                self.api.delete_annotations(&ids).await?;
-                println!(
-                    "{} notes deleted from gooseberry and Hypothesis",
-                    num_annotations
-                );
-            } else {
-                annotations = annotations
-                    .into_iter()
-                    .map(|mut a| {
-                        a.tags.push(crate::IGNORE_TAG.to_owned());
-                        a
-                    })
-                    .collect();
-                self.api.update_annotations(&annotations).await?;
-                println!("{} notes deleted from gooseberry.\n\
-                 These still exist in Hypothesis but will be ignored in future `gooseberry sync` calls \
-                 unless the \"gooseberry_ignore\" tag is removed.", num_annotations);
-            }
+            self.api.delete_annotations(&ids).await?;
+            println!(
+                "{} notes deleted from gooseberry and Hypothesis",
+                num_annotations
+            );
         }
         Ok(())
     }

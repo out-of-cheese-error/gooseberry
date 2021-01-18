@@ -163,12 +163,9 @@ The database has two `sled` Trees (which behave like `BTreeMap`s) and one entry:
   are then added to the two trees and the sync time is updated.
 * Calling `gooseberry tag` (with optional filters) gets a set of annotations from Hypothesis and then adds (/ deletes) a user-specified tag to (/
   from) each one. This modification is uploaded back to Hypothesis and the database is re-synced. Some specific behavior here:
-  * Adding the `IGNORE_TAG` (found in `lib.rs`) removes a particular annotation from Gooseberry's consideration: i.e. it's removed from the database
-    and never synced unless the tag is removed.
-  * An annotation without any tags is stored in the database trees under the `EMPTY_TAG` key. This is not reflected in Hypothesis.
+    * An annotation without any tags is stored in the database trees under the `EMPTY_TAG` key. This is not reflected in Hypothesis.
 
-* Calling `gooseberry delete` (with optional filters) deletes a set of annotations from Gooseberry and optionally also from Hypothesis. If it's just
-  from Gooseberry then the `IGNORE_TAG` is added to each.
+* Calling `gooseberry delete` (with optional filters) deletes a set of annotations from Hypothesis.
 * Calling `gooseberry move <group_id>` (with optional filters) moves a set of annotations from the Hypothesis group corresponding to `group_id` to the
   configured Gooseberry group and then re-syncs the database to add these.
 
@@ -176,8 +173,8 @@ The database has two `sled` Trees (which behave like `BTreeMap`s) and one entry:
 
 * More flexible tagging behavior. Now the user has to specify each tag one at a time for a set of filtered annotations. May make sense to have an
   interactive window with multiple selections and tagging on the fly. (Hard)
-* Have a fixed set of Gooseberry-specific tags (in an enum or a separate module). Currently there's the `IGNORE_TAG` and `EMPTY_TAG` but it could be
-  possible to have a more flexible linking system with `gooseberry_from:id_to:id`
+* Have a fixed set of Gooseberry-specific tags (in an enum or a separate module). Currently there's the `EMPTY_TAG` but it could be possible to have a
+  more flexible linking system with `gooseberry_from:id_to:id`
   etc. ([Issue #2](https://github.com/out-of-cheese-error/gooseberry/issues/2): question)
 * Thoroughly test tagging functionality on edge-cases (no tags, tag exists, tag doesn't exist, tag is changed on Hypothesis but not synced
   etc.) ([Issue #1](https://github.com/out-of-cheese-error/gooseberry/issues/1): medium)

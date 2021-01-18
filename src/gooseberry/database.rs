@@ -5,7 +5,7 @@ use hypothesis::annotations::Annotation;
 use crate::errors::Apologize;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::{EMPTY_TAG, IGNORE_TAG, MIN_DATE};
+use crate::{EMPTY_TAG, MIN_DATE};
 
 /// If key exists, add value to existing values - join with a semicolon
 pub fn merge_index(_key: &[u8], old_indices: Option<&[u8]>, new_index: &[u8]) -> Option<Vec<u8>> {
@@ -105,19 +105,10 @@ impl Gooseberry {
     pub fn sync_annotations(
         &self,
         annotations: &[Annotation],
-    ) -> color_eyre::Result<(usize, usize, usize)> {
-        let mut added = 0;
-        let mut updated = 0;
-        let mut ignored = 0;
+    ) -> color_eyre::Result<(usize, usize)> {
+        let (mut added, mut updated) = (0, 0);
         let mut annotation_batch = sled::Batch::default();
         for annotation in annotations {
-            if annotation.tags.iter().any(|t| t == IGNORE_TAG) {
-                if self.annotation_to_tags()?.contains_key(&annotation.id)? {
-                    self.delete_annotation(&annotation.id)?;
-                }
-                ignored += 1;
-                continue;
-            }
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
                 self.delete_annotation(&annotation.id)?;
@@ -129,7 +120,7 @@ impl Gooseberry {
             }
         }
         self.annotation_to_tags()?.apply_batch(annotation_batch)?;
-        Ok((added, updated, ignored))
+        Ok((added, updated))
     }
 
     /// Delete an annotation index from the tag tree
