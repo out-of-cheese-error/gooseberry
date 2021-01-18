@@ -1,4 +1,5 @@
 # Gooseberry - a Knowledge Base for the Lazy
+
 [![Crates.io](https://img.shields.io/crates/v/gooseberry.svg)](https://crates.io/crates/gooseberry)
 [![Docs.rs](https://docs.rs/gooseberry/badge.svg)](https://docs.rs/gooseberry)
 [![CI](https://github.com/out-of-cheese-error/gooseberry/workflows/Continuous%20Integration/badge.svg)](https://github.com/out-of-cheese-error/gooseberry/actions)
@@ -10,11 +11,32 @@
 Gooseberry provides a command-line interface for [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web) and lets you generate a
 knowledge-base wiki without you having to actually type your knowledge out.
 
+## Table of Contents
+
+* [Installation requirements](#installation-requirements)
+* [Binaries](#binaries)
+* [Contributing](#contributing)
+* [Motivation](#motivation)
+* [A typical workflow](#a-typical-workflow)
+* [Some advantages](#some-advantages)
+* [Customization](#customization)
+* [Hypothesis](#hypothesis)
+* [Knowledge base](#knowledge-base)
+    * [Knowledge base directory](#knowledge-base-directory)
+    * [Annotation template](#annotation-template)
+    * [Grouping annotations into folders and pages](#grouping-annotations-into-folders-and-pages)
+    * [Index link template](#index-link-template)
+    * [Index filename](#index-filename)
+    * [File extensions](#file-extensions)
+* [Why "Gooseberry"?](#why-gooseberry)
+
 ## Installation requirements
+
 * A Hypothesis account, and a personal API token obtained as described [here](https://h.readthedocs.io/en/latest/api/authorization/).
 * [bat](https://github.com/sharkdp/bat) to display highlighted markdown in the terminal.
 
 ## Binaries
+
 See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/latest)
 
 * OSX - allow `gooseberry` via System Preferences (necessary in Catalina at least)
@@ -35,7 +57,7 @@ In comes Gooseberry - a tool to build a knowledge base from highlighting and ann
 have you. Gooseberry combines the ease of annotation offered by [Hypothesis](https://web.hypothes.is/), bulk tagging and organization support in the
 command line, and a customizable plaintext wiki with HandleBars templating.
 
-## A Typical Workflow
+## A typical workflow
 
 1. Find an article, blog post, paper etc. to read.
 2. Highlight lines and facts you'd like to remember later. You can add comments and tags already if you're up for it but the focus can also be just on
@@ -82,23 +104,42 @@ you got it from, if ever you feel like you're missing context.
 * Even without using the wiki functionality you end up with a CLI to quickly tag your Hypothesis annotations.
 * Even without using the tagging functionality you end up with a pretty cool wiki listing all your annotations.
 * Since it's just plaintext, and the template can be customized, you can integrate it with any knowledge base system accepting plaintext files
-  (like Obsidian, mdBook, org-mode, etc.)
+  (like Obsidian, mdBook, org-mode, vim-wiki, etc.)
 
-# Customization
+## Customization
 
-## Knowledge base customization
+The default config TOML file is located in
+
+* Linux: `/home/<username>/.config`
+* Mac: `/Users/<username>/Library/Preferences`
+
+Change this by creating a config file with `gooseberry config default > config.toml`, modifying the contents, and then setting the environment
+variable `$GOOSEBERRY_CONFIG` to point to this file.
+
+### Hypothesis
+
+Authorize Hypothesis either by setting the `$HYPOTHESIS_NAME` and `$HYPOTHESIS_KEY` environment variables to your username and developer API token or
+by running `gooseberry config authorize`.
+
+Gooseberry takes annotations from a given Hypothesis group which you can create/set with `gooseberry config group`.
+
+### Knowledge base
 
 You can set all the below options at once by running `gooseberry config kb all` or changing the corresponding keys in the config file (found
 at `gooseberry config location`)
 
-### `gooseberry config kb directory` - Knowledge base directory
+#### Knowledge base directory
+
+`gooseberry config kb directory`
 
 The directory to save the generated knowledge base files.
 
 **IMPORTANT:** This directory is cleared at every sync so if you're storing Hypothesis annotations alongside other notes, make sure to make a separate
 folder.
 
-### `gooseberry config kb annotation` - Annotation template
+#### Annotation template
+
+`gooseberry config kb annotation`
 
 Change the template used for rendering the annotation.
 
@@ -158,8 +199,7 @@ hierarchy (`hierarchy = ["tag"]`).
 ```markdown
 ### {{id}}
 
-Created: {{date_format "%c" (created)}} 
-Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+Created: {{date_format "%c" (created)}} Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
 {{#each highlight}}> {{this}}{{/each}}
 
@@ -173,8 +213,7 @@ Renders as:
 ```markdown
 ### test
 
-Created: Sat Jan 16 10:22:20 2021 
-Tags: #tag1, #tag2
+Created: Sat Jan 16 10:22:20 2021 Tags: #tag1, #tag2
 
 > exact text highlighted in website
 
@@ -185,7 +224,9 @@ This uses #tags b/c Obsidian likes those.
 
 TODO add org-mode example
 
-### Grouping annotations into folders and pages - `gooseberry config kb hierarchy`
+#### Grouping annotations into folders and pages
+
+`gooseberry config kb hierarchy`
 
 The hierarchy defines how the folder structure of the knowledge base looks and which annotations are on what pages.
 
@@ -206,9 +247,11 @@ annotations marked with that tag.
 
 `hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. a page for each tag.
 
-Annotations within a page are sorted by their date of creation.
+Annotations within a page are sorted by their date of creation (TODO: add `sort` configuration)
 
-### Index link template - `gooseberry config kb link`
+#### Index link template
+
+`gooseberry config kb link`
 
 This configures the index file, which generally contains links to all other pages in the generated knowledge base
 (unless `hierarchy=[]` in which case all annotations are rendered on the index page). The template controls how each of these links are rendered.
@@ -251,15 +294,20 @@ to transclude files
 
 ```
 
-### Index filename - `gooseberry config kb index`
+#### Index filename
 
-The name of the Index file. For instance, `mdbook` needs this to be called `SUMMARY`.
+`gooseberry config kb index`
 
-### File extensions - `gooseberry config kb extension`
+The name of the Index file, e.g. `mdbook` needs this to be called "SUMMARY" and in Obisidan you could use "00INDEX" to make it show up first in the
+file explorer.
+
+#### File extensions
+
+`gooseberry config kb extension`
 
 e.g. "md", "org", "txt" etc. (**Don't include the .**)
 
-# Why "Gooseberry"?
+## Why "Gooseberry"?
 
 Because Discworld will never let me down when it comes to names:
 [Dis-organizer Mark 5, the Gooseberry](https://wiki.lspace.org/mediawiki/Dis-organiser)

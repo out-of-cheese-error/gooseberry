@@ -165,7 +165,9 @@ impl GooseberryCLI {
 #[derive(StructOpt, Debug)]
 pub enum ConfigCommand {
     /// Prints / writes the default configuration options.
-    /// Set the generated config file as default by setting the $GOOSEBERRY_CONFIG environment variable
+    ///
+    /// Set the generated config file as default by setting the $GOOSEBERRY_CONFIG
+    /// environment variable
     Default {
         /// Write to (TOML-formatted) file
         #[structopt(parse(from_os_str))]
@@ -179,15 +181,13 @@ pub enum ConfigCommand {
     Authorize,
     /// Change the group used for Hypothesis annotations
     Group,
-    /// Change options related to generated knowledge base
+    /// Change options related to the knowledge base
     Kb(KbConfigCommand),
 }
 
 #[derive(StructOpt, Debug)]
 pub enum KbConfigCommand {
     /// Change everything related to the knowledge base
-    ///
-    /// This gives a series of interactive prompts
     All,
     /// Change knowledge base directory
     Directory,
