@@ -109,7 +109,7 @@ fn get_index_link_data(
                 message: format!("{:?} has non-unicode characters", path),
             })?
             .to_string()
-            .replace(' ', "+"),
+            .replace(' ', "%20"),
     );
     map.insert(
         "absolute_path".to_string(),
@@ -118,7 +118,7 @@ fn get_index_link_data(
                 message: format!("{:?} has non-unicode characters", path),
             })?
             .to_string()
-            .replace(' ', "+"),
+            .replace(' ', "%20"),
     );
     Ok(map)
 }
