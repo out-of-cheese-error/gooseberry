@@ -227,7 +227,7 @@ TODO add org-mode example
 
 `gooseberry config kb hierarchy`
 
-The hierarchy defines how the folder structure of the knowledge base looks and which annotations are on what pages.
+The hierarchy defines how the folder and file structure of the knowledge base looks and which annotations are on what pages.
 
 The available options are:
 
@@ -237,14 +237,14 @@ The available options are:
 * BaseURI - Groups annotations by their base URI
 * ID - Groups annotations by annotation ID.
 
-Multiple hierarchies combined make folders and sub-folders.
+Multiple hierarchies combined make folders and sub-folders, with the last entry defining pages.
 
 e.g.
 
 `hierarchy = ["BaseURI", "Tag"]` would make a separate folder for each base_uri. Within each folder would be a page for each tag consisting of
 annotations marked with that tag.
 
-`hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. a page for each tag.
+`hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. no folders, a page for each tag.
 
 Annotations within a page are sorted by their date of creation (TODO: add `sort` configuration)
 
