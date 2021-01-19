@@ -14,7 +14,7 @@ use crate::gooseberry::knowledge_base::{get_handlebars, AnnotationTemplate};
 pub mod cli;
 /// `sled` database related
 pub mod database;
-/// Convert annotations to markdown for the `mdBook` wiki and for the terminal
+/// Convert annotations to text for the wiki and for the terminal
 pub mod knowledge_base;
 /// `skim`-based search capabilities
 pub mod search;

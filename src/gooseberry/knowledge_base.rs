@@ -21,7 +21,7 @@ use crate::utils;
 use crate::utils::uri_to_filename;
 use crate::EMPTY_TAG;
 
-/// To convert an annotation to markdown
+/// To convert an annotation to text
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnnotationTemplate {
     #[serde(flatten)]
