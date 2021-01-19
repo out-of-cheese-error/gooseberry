@@ -121,16 +121,16 @@ impl Gooseberry {
         spinner.finish_with_message("Done!");
         if added > 0 {
             if added == 1 {
-                println!("Added 1 note");
+                println!("Added 1 annotation");
             } else {
-                println!("Added {} notes", added);
+                println!("Added {} annotations", added);
             }
         }
         if updated > 0 {
             if updated == 1 {
-                println!("Updated 1 note");
+                println!("Updated 1 annotation");
             } else {
-                println!("Updated {} notes", updated);
+                println!("Updated {} annotations", updated);
             }
         }
         if added == 0 && updated == 0 {
@@ -289,10 +289,7 @@ impl Gooseberry {
         if !annotations.is_empty()
             && (force
                 || Confirm::new()
-                    .with_prompt(&format!(
-                        "Delete {} notes from gooseberry?",
-                        num_annotations
-                    ))
+                    .with_prompt(&format!("Delete {} annotations?", num_annotations))
                     .default(false)
                     .interact()?)
         {
@@ -302,10 +299,7 @@ impl Gooseberry {
                 .collect::<Vec<_>>();
             self.delete_annotations(&ids)?;
             self.api.delete_annotations(&ids).await?;
-            println!(
-                "{} notes deleted from gooseberry and Hypothesis",
-                num_annotations
-            );
+            println!("{} annotations deleted", num_annotations);
         }
         Ok(())
     }

@@ -121,7 +121,6 @@ impl TestData {
         cmd.env("GOOSEBERRY_CONFIG", &self.config_file)
             .arg("delete")
             .arg("--tags=test_tag")
-            .arg("-a") // also from hypothesis
             .arg("-f")
             .assert()
             .success();
@@ -163,7 +162,7 @@ async fn sync() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Added 2 notes\n"));
+        .stdout(predicates::str::contains("Added 2 annotations\n"));
 
     // update annotation
     test_data.annotations[0].text = "Updated test annotation".into();
@@ -178,7 +177,7 @@ async fn sync() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Updated 1 note"));
+        .stdout(predicates::str::contains("Updated 1 annotation"));
 
     // clear
     test_data.clear().await?;
@@ -199,7 +198,7 @@ async fn tag() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Added 2 notes"));
+        .stdout(predicates::str::contains("Added 2 annotations"));
 
     // add a tag
     thread::sleep(duration);
@@ -284,7 +283,7 @@ async fn make() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("sync")
         .assert()
-        .stdout(predicates::str::contains("Added 2 notes"));
+        .stdout(predicates::str::contains("Added 2 annotations"));
 
     // add a tag with spaces
     thread::sleep(duration);
