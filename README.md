@@ -12,29 +12,35 @@ knowledge-base wiki without you having to actually type your knowledge out.
 
 ## Table of Contents
 
-* [Installation requirements](#installation-requirements)
-* [Binaries](#binaries)
+* [Install](#install)
+    * [Installation requirements](#installation-requirements)
+    * [Binaries](#binaries)
+    * [With brew (OSX)](#with-brew-osx)
 * [Contributing](#contributing)
 * [Motivation](#motivation)
 * [A typical workflow](#a-typical-workflow)
 * [Some advantages](#some-advantages)
 * [Customization](#customization)
-    * [Hypothesis](#hypothesis)
-    * [Knowledge base](#knowledge-base)
-        * [Knowledge base directory](#knowledge-base-directory)
-        * [Annotation template](#annotation-template)
-        * [Grouping annotations into folders and pages](#grouping-annotations-into-folders-and-pages)
-        * [Index link template](#index-link-template)
-        * [Index filename](#index-filename)
-        * [File extensions](#file-extensions)
+* [Hypothesis](#hypothesis)
+* [Knowledge base](#knowledge-base)
+    * [Knowledge base directory](#knowledge-base-directory)
+    * [Annotation template](#annotation-template)
+    * [Page template](#page-template)
+    * [Grouping annotations into folders and pages](#grouping-annotations-into-folders-and-pages)
+    * [Sorting annotations within a page](#sorting-annotations-within-a-page)
+    * [Index link template](#index-link-template)
+    * [Index filename](#index-filename)
+    * [File extensions](#file-extensions)
 * [Why "Gooseberry"?](#why-gooseberry)
 
-## Installation requirements
+## Install
+
+### Installation requirements
 
 * A Hypothesis account, and a personal API token obtained as described [here](https://h.readthedocs.io/en/latest/api/authorization/).
 * [bat](https://github.com/sharkdp/bat) to display highlighted markdown in the terminal.
 
-## Binaries
+### Binaries
 
 See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/latest)
 
@@ -42,7 +48,7 @@ See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/la
 * Linux - `chmod +x gooseberry`
 * Currently, doesn't work on Windows (waiting on [this issue](https://github.com/lotabout/skim/issues/293))
 
-## With brew (OSX)
+### With brew (OSX)
 
 ```bash
 brew tap out-of-cheese-error/gooseberry && brew install gooseberry
