@@ -42,6 +42,12 @@ See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/la
 * Linux - `chmod +x gooseberry`
 * Currently, doesn't work on Windows (waiting on [this issue](https://github.com/lotabout/skim/issues/293))
 
+## With brew (OSX)
+
+```bash
+brew tap out-of-cheese-error/gooseberry && brew install gooseberry
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for an in-depth explanation of how Gooseberry works and what could be improved.
