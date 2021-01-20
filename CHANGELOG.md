@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.5.0] - 2020-01-20
 
 ### Fixed
 
 * Fixed Issue [#49](https://github.com/out-of-cheese-error/gooseberry/issues/49) - recursively creates db_dir and kb_dir
+* Fixed `search` and `view` without annotation_template set
 
 ### Added
 
@@ -66,6 +67,8 @@ Main commands:
 * `gooseberry config` - manages configuration, view and edit Hypothesis credentials, the Hypothesis group, and the location of the knowledge base
 * `gooseberry move` - move annotations from one group to another (**move** not copy). Useful if you have a bunch of annotations scattered around and
   want to move them into one group for gooseberry.
+
+[0.5.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.4.0...0.5.0
 
 [0.4.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.3.0...0.4.0
 
