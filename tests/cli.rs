@@ -31,7 +31,9 @@ hypothesis_key = '{}'
 hypothesis_group = '{}'
 kb_dir = '{}'
 hierarchy = ['Tag']
+sort = ['Created']
 annotation_template = '''{}'''
+page_template = '''{}'''
 index_link_template = '''{}'''
 index_name = '{}'
 file_extension = '{}'"#,
@@ -41,6 +43,7 @@ file_extension = '{}'"#,
         group_id,
         kb_dir.to_str().unwrap(),
         gooseberry::configuration::DEFAULT_ANNOTATION_TEMPLATE,
+        gooseberry::configuration::DEFAULT_PAGE_TEMPLATE,
         gooseberry::configuration::DEFAULT_INDEX_LINK_TEMPLATE,
         gooseberry::configuration::DEFAULT_INDEX_FILENAME,
         gooseberry::configuration::DEFAULT_FILE_EXTENSION

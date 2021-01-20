@@ -8,7 +8,7 @@ use hypothesis::Hypothesis;
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
-use crate::gooseberry::knowledge_base::{get_handlebars, AnnotationTemplate};
+use crate::gooseberry::knowledge_base::AnnotationTemplate;
 
 /// Command-line interface with `structopt`
 pub mod cli;
@@ -74,11 +74,7 @@ impl Gooseberry {
             GooseberryCLI::Sync => self.sync().await,
             GooseberryCLI::Search { filters, fuzzy } => {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
-                let hbs = get_handlebars(
-                    self.config.annotation_template.as_ref().unwrap(),
-                    self.config.index_link_template.as_ref().unwrap(),
-                )?;
-                self.search(annotations, &hbs, fuzzy).await
+                self.search(annotations, fuzzy).await
             }
             GooseberryCLI::Tag {
                 filters,
@@ -141,7 +137,7 @@ impl Gooseberry {
 
     /// Move (optionally filtered) annotations from a different group to the group gooseberry looks at (set in config)
     pub async fn sync_group(
-        &self,
+        &mut self,
         group_id: String,
         filters: Filters,
         search: bool,
@@ -152,11 +148,7 @@ impl Gooseberry {
             .await?;
         if search || fuzzy {
             // Run a search window.
-            let hbs = get_handlebars(
-                self.config.annotation_template.as_ref().unwrap(),
-                self.config.index_link_template.as_ref().unwrap(),
-            )?;
-            let annotation_ids = Self::search_group(&annotations, &hbs, fuzzy)?;
+            let annotation_ids = self.search_group(&annotations, fuzzy)?;
             annotations = annotations
                 .into_iter()
                 .filter(|a| annotation_ids.contains(&a.id))
@@ -305,11 +297,11 @@ impl Gooseberry {
     }
 
     /// View optionally filtered annotations in the terminal
-    pub async fn view(&self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
-        let hbs = get_handlebars(
-            self.config.annotation_template.as_ref().unwrap(),
-            self.config.index_link_template.as_ref().unwrap(),
-        )?;
+    pub async fn view(&mut self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
+        if self.config.annotation_template.is_none() {
+            self.config.set_annotation_template()?;
+        }
+        let hbs = self.get_handlebars()?;
         if let Some(id) = id {
             let annotation = self
                 .api
