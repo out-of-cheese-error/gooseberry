@@ -113,7 +113,7 @@ pub fn clean_uri(uri: &str) -> String {
             if parsed_uri.scheme() == "urn" {
                 uri.to_owned()
             } else {
-                parsed_uri[url::Position::AfterScheme..url::Position::BeforePath]
+                parsed_uri[url::Position::AfterScheme..]
                     .trim_start_matches("://")
                     .to_owned()
             }
