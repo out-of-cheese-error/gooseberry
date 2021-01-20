@@ -146,7 +146,7 @@ file_extension = '{}'
     /// Make db and kb directories
     pub fn make_dirs(&self) -> color_eyre::Result<()> {
         if !self.db_dir.exists() {
-            fs::create_dir(&self.db_dir).map_err(|e: io::Error| Apologize::ConfigError {
+            fs::create_dir_all(&self.db_dir).map_err(|e: io::Error| Apologize::ConfigError {
                 message: format!(
                     "Couldn't create database directory {:?}, {}",
                     self.db_dir, e
@@ -155,7 +155,7 @@ file_extension = '{}'
         }
         if let Some(kb_dir) = &self.kb_dir {
             if !kb_dir.exists() {
-                fs::create_dir(&kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
+                fs::create_dir_all(&kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
                     message: format!(
                         "Couldn't create knowledge base directory {:?}, {}",
                         kb_dir, e
