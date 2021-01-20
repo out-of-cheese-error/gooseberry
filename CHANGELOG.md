@@ -7,7 +7,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
-* Fixed Issue #49
+### Fixed
+
+* Fixed Issue [#49](https://github.com/out-of-cheese-error/gooseberry/issues/49) - recursively creates db_dir and kb_dir
+
+### Added
+
+* Sort option `gooseberry config kb sort` (Issue [#48](https://github.com/out-of-cheese-error/gooseberry/issues/48))
+* Page template option `gooseberry config kb page` (Issue [#52](https://github.com/out-of-cheese-error/gooseberry/issues/52))
+
+### Changed
+
+* URI/BaseURI options don't have "http" and "https" in folder/file name anymore (these are also not used when sorting)
 
 ## [0.4.0] - 2021-01-19
 

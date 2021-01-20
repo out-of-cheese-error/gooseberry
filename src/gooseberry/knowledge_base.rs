@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -13,12 +14,14 @@ use serde::Serialize;
 use serde_json::Value as Json;
 use url::Url;
 
-use crate::configuration::OrderBy;
+use crate::configuration::{
+    OrderBy, DEFAULT_ANNOTATION_TEMPLATE, DEFAULT_INDEX_LINK_TEMPLATE, DEFAULT_PAGE_TEMPLATE,
+};
 use crate::errors::Apologize;
 use crate::gooseberry::cli::Filters;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
-use crate::utils::uri_to_filename;
+use crate::utils::{clean_uri, uri_to_filename};
 use crate::EMPTY_TAG;
 
 /// To convert an annotation to text
@@ -77,55 +80,80 @@ pub(crate) fn format_date<E: AsRef<str>>(
 
 handlebars_helper!(date_format: |format: str, date: Json| format_date(format, date).map_err(|e| RenderError::from_error("serde_json", e))?);
 
-pub(crate) fn get_handlebars<'a>(
-    annotation_template: &'a str,
-    index_link_template: &'a str,
-) -> color_eyre::Result<Handlebars<'a>> {
+pub(crate) struct Templates<'a> {
+    pub(crate) annotation_template: &'a str,
+    pub(crate) page_template: &'a str,
+    pub(crate) index_link_template: &'a str,
+}
+
+impl<'a> Default for Templates<'a> {
+    fn default() -> Self {
+        Templates {
+            annotation_template: DEFAULT_ANNOTATION_TEMPLATE,
+            page_template: DEFAULT_PAGE_TEMPLATE,
+            index_link_template: DEFAULT_INDEX_LINK_TEMPLATE,
+        }
+    }
+}
+
+pub(crate) fn get_handlebars(templates: Templates) -> color_eyre::Result<Handlebars> {
     let mut hbs = Handlebars::new();
     hbs.register_escape_fn(handlebars::no_escape);
     hbs.register_helper("date_format", Box::new(date_format));
-    hbs.register_template_string("annotation", annotation_template)?;
-    hbs.register_template_string("index_link", index_link_template)?;
+    hbs.register_template_string("annotation", templates.annotation_template)?;
+    hbs.register_template_string("page", templates.page_template)?;
+    hbs.register_template_string("index_link", templates.index_link_template)?;
     Ok(hbs)
 }
 
-fn get_index_link_data(
-    path: &Path,
-    src_dir: &Path,
-) -> color_eyre::Result<BTreeMap<String, String>> {
-    let mut map = BTreeMap::new();
-    map.insert(
-        "name".to_string(),
-        path.file_stem()
+/// To convert an annotation to text
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LinkTemplate {
+    pub name: String,
+    pub relative_path: String,
+    pub absolute_path: String,
+}
+
+fn get_link_data(path: &Path, src_dir: &Path) -> color_eyre::Result<LinkTemplate> {
+    Ok(LinkTemplate {
+        name: path
+            .file_stem()
             .unwrap_or_else(|| "EMPTY".as_ref())
             .to_string_lossy()
             .to_string(),
-    );
-    map.insert(
-        "relative_path".to_string(),
-        path.strip_prefix(&src_dir)?
+        relative_path: path
+            .strip_prefix(&src_dir)?
             .to_str()
             .ok_or(Apologize::KBError {
                 message: format!("{:?} has non-unicode characters", path),
             })?
             .to_string()
             .replace(' ', "%20"),
-    );
-    map.insert(
-        "absolute_path".to_string(),
-        path.to_str()
+        absolute_path: path
+            .to_str()
             .ok_or(Apologize::KBError {
                 message: format!("{:?} has non-unicode characters", path),
             })?
             .to_string()
             .replace(' ', "%20"),
-    );
-    Ok(map)
+    })
+}
+
+/// To convert an annotation to text
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PageTemplate {
+    #[serde(flatten)]
+    pub link_data: LinkTemplate,
+    pub annotations: Vec<String>,
 }
 
 /// ## Markdown generation
 /// functions related to generating the `mdBook` wiki
 impl Gooseberry {
+    pub(crate) fn get_handlebars(&self) -> color_eyre::Result<Handlebars> {
+        Ok(get_handlebars(self.config.get_templates())?)
+    }
+
     fn configure_kb(&mut self) -> color_eyre::Result<()> {
         if self.config.kb_dir.is_none() {
             self.config.set_kb_all()?;
@@ -155,12 +183,7 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-
-        let hbs = get_handlebars(
-            self.config.annotation_template.as_ref().unwrap(),
-            self.config.index_link_template.as_ref().unwrap(),
-        )?;
-        self.make_book(&kb_dir, &hbs).await?;
+        self.make_book(&kb_dir).await?;
         Ok(())
     }
 
@@ -213,12 +236,41 @@ impl Gooseberry {
                 }
             }
             OrderBy::Empty => panic!("Shouldn't happen"),
+            _ => panic!("{} shouldn't occur in hierarchy", order),
         }
         order_to_annotations
     }
 
+    fn sort_annotations(&self, annotations: &mut Vec<AnnotationTemplate>) {
+        annotations.sort_by(|a, b| {
+            self.config
+                .sort
+                .as_ref()
+                .unwrap_or(&vec![OrderBy::Created])
+                .iter()
+                .fold(Ordering::Equal, |acc, &field| {
+                    acc.then_with(|| match field {
+                        OrderBy::Tag => a
+                            .annotation
+                            .tags
+                            .join(",")
+                            .cmp(&b.annotation.tags.join(",")),
+                        OrderBy::URI => {
+                            clean_uri(&a.annotation.uri).cmp(&clean_uri(&b.annotation.uri))
+                        }
+                        OrderBy::BaseURI => clean_uri(&a.base_uri).cmp(&clean_uri(&b.base_uri)),
+                        OrderBy::ID => a.annotation.id.cmp(&b.annotation.id),
+                        OrderBy::Created => format!("{}", a.annotation.created.format("%+"))
+                            .cmp(&format!("{}", b.annotation.created.format("%+"))),
+                        OrderBy::Updated => format!("{}", a.annotation.updated.format("%+"))
+                            .cmp(&format!("{}", b.annotation.updated.format("%+"))),
+                        OrderBy::Empty => panic!("Shouldn't happen"),
+                    })
+                })
+        });
+    }
     /// Write markdown files for wiki
-    async fn make_book(&self, src_dir: &Path, hbs: &Handlebars<'_>) -> color_eyre::Result<()> {
+    async fn make_book(&self, src_dir: &Path) -> color_eyre::Result<()> {
         let pb = utils::get_spinner("Building knowledge base...");
         let extension = self.config.file_extension.as_ref().unwrap();
         let index_file = src_dir.join(format!(
@@ -231,13 +283,17 @@ impl Gooseberry {
             fs::remove_file(&index_file)?;
         }
 
+        // Register templates
+        let hbs = self.get_handlebars()?;
+
         // Get all annotations
-        let mut annotations = self.filter_annotations(Filters::default(), None).await?;
-        annotations.sort_by(|a, b| a.created.cmp(&b.created));
-        let annotations: Vec<_> = annotations
+        let mut annotations: Vec<_> = self
+            .filter_annotations(Filters::default(), None)
+            .await?
             .into_iter()
             .map(AnnotationTemplate::from_annotation)
             .collect();
+        self.sort_annotations(&mut annotations);
 
         let order = self.config.hierarchy.as_ref().unwrap();
         if order.is_empty() {
@@ -271,16 +327,17 @@ impl Gooseberry {
                             })?,
                             extension
                         ));
-                        index_links.push(
-                            hbs.render("index_link", &get_index_link_data(&path, &src_dir)?)?,
-                        );
-                        fs::File::create(&path)?.write_all(
-                            inner_annotations
+                        let link_data = get_link_data(&path, &src_dir)?;
+                        index_links.push(hbs.render("index_link", &link_data)?);
+                        let page_data = PageTemplate {
+                            link_data,
+                            annotations: inner_annotations
                                 .into_iter()
                                 .map(|a| hbs.render("annotation", &a))
-                                .collect::<Result<String, _>>()?
-                                .as_bytes(),
-                        )?;
+                                .collect::<Result<Vec<String>, _>>()?,
+                        };
+                        fs::File::create(&path)?
+                            .write_all(hbs.render("page", &page_data)?.as_bytes())?;
                     } else {
                         if !folder.exists() {
                             fs::create_dir(&folder)?;

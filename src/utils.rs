@@ -3,6 +3,7 @@ use chrono_english::{parse_date_string, Dialect};
 use color_eyre::Section;
 use dialoguer::{theme, Editor, Input};
 use hypothesis::annotations::Selector;
+use url::Url;
 
 use crate::errors::Apologize;
 
@@ -106,9 +107,25 @@ pub fn get_quotes(annotation: &hypothesis::annotations::Annotation) -> Vec<&str>
         .collect::<Vec<_>>()
 }
 
+pub fn clean_uri(uri: &str) -> String {
+    match Url::parse(uri) {
+        Ok(parsed_uri) => {
+            if parsed_uri.scheme() == "urn" {
+                uri.to_owned()
+            } else {
+                parsed_uri[url::Position::AfterScheme..url::Position::BeforePath]
+                    .trim_start_matches("://")
+                    .to_owned()
+            }
+        }
+        Err(_) => uri.to_owned(),
+    }
+}
+
 /// Converts a URI into something that can be used as a folder/filename
 pub fn uri_to_filename(uri: &str) -> String {
-    uri.replace("://", "_")
+    clean_uri(uri)
+        .replace("://", "_")
         .replace(".", "_")
         .replace("/", "_")
         .replace(":", "_")

@@ -193,14 +193,18 @@ pub enum KbConfigCommand {
     Directory,
     /// Change annotation handlebars template
     Annotation,
+    /// Change page handlebars template
+    Page,
     /// Change index link handlebars template
     Link,
     /// Change index file name
     Index,
     /// Change knowledge base file extension
     Extension,
-    /// Change folder hierarchy
+    /// Change folder & file hierarchy
     Hierarchy,
+    /// Change sort order of annotations within a page
+    Sort,
 }
 
 impl ConfigCommand {
@@ -231,10 +235,12 @@ impl ConfigCommand {
                     KbConfigCommand::All => config.set_kb_all()?,
                     KbConfigCommand::Directory => config.set_kb_dir()?,
                     KbConfigCommand::Annotation => config.set_annotation_template()?,
+                    KbConfigCommand::Page => config.set_page_template()?,
                     KbConfigCommand::Link => config.set_index_link_template()?,
                     KbConfigCommand::Index => config.set_index_name()?,
                     KbConfigCommand::Extension => config.set_file_extension()?,
                     KbConfigCommand::Hierarchy => config.set_hierarchy()?,
+                    KbConfigCommand::Sort => config.set_sort()?,
                 };
             }
         }

@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use dialoguer::console::style;
-use handlebars::Handlebars;
 use hypothesis::annotations::Annotation;
 use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
 use skim::{
@@ -69,12 +68,12 @@ impl<'a> SkimItem for SearchAnnotation {
 impl Gooseberry {
     /// Makes a skim search window for given annotations
     pub async fn search(
-        &self,
+        &mut self,
         annotations: Vec<Annotation>,
-        hbs: &Handlebars<'_>,
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = annotations;
+        let hbs = self.get_handlebars()?;
         let options = SkimOptionsBuilder::default()
             .height(Some("100%"))
             .preview(Some(""))
@@ -162,10 +161,11 @@ impl Gooseberry {
 
     /// Makes a skim search window for given annotations from an external group
     pub fn search_group(
+        &self,
         annotations: &[Annotation],
-        hbs: &Handlebars,
         fuzzy: bool,
     ) -> color_eyre::Result<HashSet<String>> {
+        let hbs = self.get_handlebars()?;
         let options = SkimOptionsBuilder::default()
             .height(Some("100%"))
             .preview(Some(""))

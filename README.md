@@ -223,6 +223,28 @@ This uses #tags b/c Obsidian likes those.
 
 TODO add org-mode example
 
+#### Page template
+
+`gooseberry config kb page`
+
+Change the template used for rendering a single page (NOT the Index page).
+
+The following keys can be used inside the template:
+
+* `{{ name }}` - file stem
+* `{{ relative_path }}` - path relative to KB directory
+* `{{ absolute_path }}` - full path on filesystem
+* `annotations` - a list of *rendered* annotations (according to the annotation template)
+
+The default template is:
+
+```markdown
+# {{name}}
+
+{{#each annotations}}{{this}}{{/each}}
+
+```
+
 #### Grouping annotations into folders and pages
 
 `gooseberry config kb hierarchy`
@@ -246,7 +268,22 @@ annotations marked with that tag.
 
 `hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. no folders, a page for each tag.
 
-Annotations within a page are sorted by their date of creation (TODO: add `sort` configuration)
+#### Sorting annotations within a page
+
+`gooseberry config kb sort`
+
+This defines how annotations are sorted within each page.
+
+The available options are:
+
+* Tag - Sorts by tag (multiple tags are considered as "tag1,tag2,tag3" for sorting)
+* URI
+* BaseURI
+* ID
+* Created
+* Updated
+
+Multiple sort options can be combined in order of priority e.g. `sort = ["Tag", "Created"]` sorts by tags, then by the date of creation.
 
 #### Index link template
 

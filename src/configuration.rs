@@ -11,7 +11,9 @@ use hypothesis::Hypothesis;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Apologize;
-use crate::gooseberry::knowledge_base::{get_handlebars, AnnotationTemplate};
+use crate::gooseberry::knowledge_base::{
+    get_handlebars, AnnotationTemplate, LinkTemplate, PageTemplate, Templates,
+};
 use crate::{utils, NAME};
 
 pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
@@ -27,7 +29,11 @@ Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 [See in context]({{incontext}})
 
 "#;
+pub static DEFAULT_PAGE_TEMPLATE: &str = r#"
+# {{name}}
+{{#each annotations}}{{this}}{{/each}}
 
+"#;
 pub static DEFAULT_INDEX_LINK_TEMPLATE: &str = r#"- [{{name}}]({{relative_path}})"#;
 pub static DEFAULT_INDEX_FILENAME: &str = "SUMMARY";
 pub static DEFAULT_FILE_EXTENSION: &str = "md";
@@ -39,6 +45,8 @@ pub enum OrderBy {
     BaseURI,
     ID,
     Empty,
+    Created,
+    Updated,
 }
 
 impl fmt::Display for OrderBy {
@@ -49,6 +57,8 @@ impl fmt::Display for OrderBy {
             OrderBy::BaseURI => write!(f, "base_uri"),
             OrderBy::ID => write!(f, "id"),
             OrderBy::Empty => write!(f, "empty"),
+            OrderBy::Created => write!(f, "created"),
+            OrderBy::Updated => write!(f, "updated"),
         }
     }
 }
@@ -74,12 +84,16 @@ pub struct GooseberryConfig {
     pub(crate) annotation_template: Option<String>,
     /// Handlebars index link template
     pub(crate) index_link_template: Option<String>,
+    /// Handlebars page template
+    pub(crate) page_template: Option<String>,
     /// Handlebars index file name
     pub(crate) index_name: Option<String>,
     /// Wiki file extension
     pub(crate) file_extension: Option<String>,
     /// Define the hierarchy of folders
     pub(crate) hierarchy: Option<Vec<OrderBy>>,
+    /// Define how annotations on a page are sorted
+    pub(crate) sort: Option<Vec<OrderBy>>,
 }
 
 /// Main project directory, cross-platform
@@ -98,10 +112,12 @@ impl Default for GooseberryConfig {
                 .expect("Couldn't make database directory"),
             kb_dir: None,
             annotation_template: None,
+            page_template: None,
             index_link_template: None,
             index_name: None,
             file_extension: None,
             hierarchy: None,
+            sort: None,
         };
         config.make_dirs().unwrap();
         config
@@ -123,12 +139,15 @@ hypothesis_group = '<Hypothesis group ID to take annotations from>'
 db_dir = '<full path to database folder>'
 kb_dir = '<knowledge-base folder>'
 hierarchy = ['Tag']
+sort = ['Created']
 annotation_template = '''{}'''
+page_template = '''{}'''
 index_link_template = '''{}'''
 index_name = '{}'
 file_extension = '{}'
 "#,
             DEFAULT_ANNOTATION_TEMPLATE,
+            DEFAULT_PAGE_TEMPLATE,
             DEFAULT_INDEX_LINK_TEMPLATE,
             DEFAULT_INDEX_FILENAME,
             DEFAULT_FILE_EXTENSION
@@ -275,10 +294,12 @@ file_extension = '{}'
     pub fn set_kb_all(&mut self) -> color_eyre::Result<()> {
         self.set_kb_dir()?;
         self.set_annotation_template()?;
+        self.set_page_template()?;
         self.set_index_link_template()?;
         self.set_index_name()?;
         self.set_file_extension()?;
         self.set_hierarchy()?;
+        self.set_sort()?;
         Ok(())
     }
 
@@ -309,26 +330,17 @@ file_extension = '{}'
         Ok(())
     }
 
-    /// Sets the hierarchy fields which determines the folder hierarchy
-    pub fn set_hierarchy(&mut self) -> color_eyre::Result<()> {
-        println!("Set folder hierarchy order");
-        let mut order = Vec::new();
-        let mut selections = vec![
-            OrderBy::Empty,
-            OrderBy::Tag,
-            OrderBy::URI,
-            OrderBy::BaseURI,
-            OrderBy::ID,
-        ];
+    fn get_order_bys(selections: Vec<OrderBy>) -> color_eyre::Result<Vec<OrderBy>> {
+        let mut selections = selections;
         let selection = Select::with_theme(&theme::ColorfulTheme::default())
             .with_prompt("Field 1")
             .items(&selections[..])
             .interact()?;
-
-        if selection != 0 {
+        let mut order = Vec::new();
+        if selections[selection] != OrderBy::Empty {
             order.push(selections[selection]);
             selections.remove(selection);
-            selections.remove(0);
+            selections.retain(|&x| x != OrderBy::Empty);
             let mut number = 2;
             loop {
                 if selections.is_empty() {
@@ -350,6 +362,20 @@ file_extension = '{}'
                 }
             }
         }
+        Ok(order)
+    }
+
+    /// Sets the hierarchy fields which determines the folder hierarchy
+    pub fn set_hierarchy(&mut self) -> color_eyre::Result<()> {
+        println!("Set folder hierarchy order");
+        let selections = vec![
+            OrderBy::Empty,
+            OrderBy::Tag,
+            OrderBy::URI,
+            OrderBy::BaseURI,
+            OrderBy::ID,
+        ];
+        let order = Self::get_order_bys(selections)?;
         if order.is_empty() {
             println!(
                 "Single file: {}.{}",
@@ -372,6 +398,40 @@ file_extension = '{}'
         Ok(())
     }
 
+    /// Sets the sort order for annotations within a page
+    pub fn set_sort(&mut self) -> color_eyre::Result<()> {
+        println!("Set sort order for annotations within a page");
+        let selections = vec![
+            OrderBy::Tag,
+            OrderBy::URI,
+            OrderBy::BaseURI,
+            OrderBy::ID,
+            OrderBy::Created,
+            OrderBy::Updated,
+        ];
+        let order = Self::get_order_bys(selections)?;
+
+        println!(
+            "Sort order: {}",
+            order
+                .iter()
+                .map(|o| o.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
+        );
+
+        self.sort = Some(order);
+        self.store()?;
+        Ok(())
+    }
+
+    pub(crate) fn get_templates(&self) -> Templates {
+        Templates {
+            annotation_template: self.annotation_template.as_ref().unwrap(),
+            page_template: self.page_template.as_ref().unwrap(),
+            index_link_template: self.index_link_template.as_ref().unwrap(),
+        }
+    }
     /// Sets the annotation template in Handlebars format.
     pub fn set_annotation_template(&mut self) -> color_eyre::Result<()> {
         let selections = &[
@@ -423,7 +483,6 @@ file_extension = '{}'
                 }),
             };
             let test_markdown_annotation = AnnotationTemplate::from_annotation(test_annotation);
-
             self.annotation_template = loop {
                 let template = utils::external_editor_input(
                     Some(
@@ -433,9 +492,116 @@ file_extension = '{}'
                     ),
                     ".hbs",
                 )?;
-                match get_handlebars(&template, "")
+                let templates = Templates {
+                    annotation_template: &template,
+                    ..Default::default()
+                };
+                match get_handlebars(templates)
                     .map(|hbs| hbs.render("annotation", &test_markdown_annotation))
                 {
+                    Err(e) => {
+                        eprintln!("TemplateRenderError: {}\n Try again.", e);
+                        continue;
+                    }
+                    Ok(Err(e)) => {
+                        eprintln!("TemplateRenderError: {}\n Try again.", e);
+                        continue;
+                    }
+                    Ok(Ok(md)) => {
+                        println!("Template looks like this:");
+                        println!();
+                        println!("{}", md)
+                    }
+                }
+                break Some(template);
+            };
+        }
+        self.store()?;
+        Ok(())
+    }
+
+    /// Sets the annotation template in Handlebars format.
+    pub fn set_page_template(&mut self) -> color_eyre::Result<()> {
+        let selections = &["Use default page template", "Edit page template"];
+
+        let selection = Select::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("How should gooseberry format pages?")
+            .items(&selections[..])
+            .interact()?;
+        if selection == 0 {
+            self.page_template = Some(DEFAULT_PAGE_TEMPLATE.to_string());
+        } else {
+            let test_annotation_1 = Annotation {
+                id: "test".to_string(),
+                created: Utc::now(),
+                updated: Utc::now(),
+                user: Default::default(),
+                uri: "https://github.com/out-of-cheese-error/gooseberry".to_string(),
+                text: "testing annotation".to_string(),
+                tags: vec!["tag1".to_string(), "tag2".to_string()],
+                group: "group_id".to_string(),
+                permissions: Permissions {
+                    read: vec![],
+                    delete: vec![],
+                    admin: vec![],
+                    update: vec![],
+                },
+                target: vec![Target::builder()
+                    .source("https://www.example.com")
+                    .selector(vec![Selector::new_quote(
+                        "exact text in website to highlight\nmore text",
+                        "prefix of text",
+                        "suffix of text",
+                    )])
+                    .build()?],
+                links: vec![(
+                    "incontext".to_string(),
+                    "https://incontext_link.com".to_string(),
+                )]
+                .into_iter()
+                .collect(),
+                hidden: false,
+                flagged: false,
+                references: vec![],
+                user_info: Some(UserInfo {
+                    display_name: Some("test_display_name".to_string()),
+                }),
+            };
+            let mut test_annotation_2 = test_annotation_1.clone();
+            test_annotation_2.text = "Another annotation".to_string();
+
+            let templates = Templates {
+                annotation_template: self.annotation_template.as_ref().unwrap(),
+                ..Default::default()
+            };
+            let hbs = get_handlebars(templates)?;
+
+            let page_data = PageTemplate {
+                link_data: LinkTemplate {
+                    name: "page_name".to_string(),
+                    relative_path: "relative/path/to/page.md".to_string(),
+                    absolute_path: "absolute/path/to/page.md".to_string(),
+                },
+                annotations: vec![test_annotation_1, test_annotation_2]
+                    .into_iter()
+                    .map(|a| hbs.render("annotation", &AnnotationTemplate::from_annotation(a)))
+                    .collect::<Result<Vec<String>, _>>()?,
+            };
+
+            self.page_template = loop {
+                let template = utils::external_editor_input(
+                    Some(
+                        self.page_template
+                            .as_deref()
+                            .unwrap_or(DEFAULT_ANNOTATION_TEMPLATE),
+                    ),
+                    ".hbs",
+                )?;
+                let templates = Templates {
+                    page_template: &template,
+                    ..Default::default()
+                };
+                match get_handlebars(templates).map(|hbs| hbs.render("page", &page_data)) {
                     Err(e) => {
                         eprintln!("TemplateRenderError: {}\n Try again.", e);
                         continue;
@@ -480,7 +646,11 @@ file_extension = '{}'
                     ),
                     ".hbs",
                 )?;
-                if let Err(e) = get_handlebars("", &template) {
+                let templates = Templates {
+                    index_link_template: &template,
+                    ..Default::default()
+                };
+                if let Err(e) = get_handlebars(templates) {
                     eprintln!("TemplateRenderError: {}\n Try again.", e);
                     continue;
                 }
