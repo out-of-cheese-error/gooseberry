@@ -602,7 +602,7 @@ file_extension = '{}'
                     Some(
                         self.page_template
                             .as_deref()
-                            .unwrap_or(DEFAULT_ANNOTATION_TEMPLATE),
+                            .unwrap_or(DEFAULT_PAGE_TEMPLATE),
                     ),
                     ".hbs",
                 )?;
