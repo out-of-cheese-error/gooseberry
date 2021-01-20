@@ -73,6 +73,9 @@ impl Gooseberry {
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = annotations;
+        if self.config.annotation_template.is_none() {
+            self.config.set_annotation_template()?;
+        }
         let hbs = self.get_handlebars()?;
         let options = SkimOptionsBuilder::default()
             .height(Some("100%"))

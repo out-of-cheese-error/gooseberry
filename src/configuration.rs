@@ -427,9 +427,18 @@ file_extension = '{}'
 
     pub(crate) fn get_templates(&self) -> Templates {
         Templates {
-            annotation_template: self.annotation_template.as_ref().unwrap(),
-            page_template: self.page_template.as_ref().unwrap(),
-            index_link_template: self.index_link_template.as_ref().unwrap(),
+            annotation_template: self
+                .annotation_template
+                .as_deref()
+                .unwrap_or(DEFAULT_ANNOTATION_TEMPLATE),
+            page_template: self
+                .page_template
+                .as_deref()
+                .unwrap_or(DEFAULT_PAGE_TEMPLATE),
+            index_link_template: self
+                .index_link_template
+                .as_deref()
+                .unwrap_or(DEFAULT_INDEX_LINK_TEMPLATE),
         }
     }
     /// Sets the annotation template in Handlebars format.

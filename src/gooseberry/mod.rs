@@ -297,7 +297,10 @@ impl Gooseberry {
     }
 
     /// View optionally filtered annotations in the terminal
-    pub async fn view(&self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
+    pub async fn view(&mut self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
+        if self.config.annotation_template.is_none() {
+            self.config.set_annotation_template()?;
+        }
         let hbs = self.get_handlebars()?;
         if let Some(id) = id {
             let annotation = self
