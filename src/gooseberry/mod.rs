@@ -7,7 +7,7 @@ use hypothesis::Hypothesis;
 
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
-use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI};
+use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI, GooseberrySubcommand};
 use crate::gooseberry::knowledge_base::AnnotationTemplate;
 
 /// Command-line interface with `structopt`
@@ -36,14 +36,15 @@ impl Gooseberry {
     /// Reads `sled` trees and metadata file from the locations specified in config.
     /// (makes new ones the first time).
     pub async fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
-        if let GooseberryCLI::Config { cmd } = &cli {
-            return Ok(ConfigCommand::run(cmd).await?);
+        if let GooseberrySubcommand::Config { cmd } = &cli.cmd {
+            return Ok(ConfigCommand::run(cmd, cli.config.clone()).await?);
         }
-        if let GooseberryCLI::Complete { shell } = &cli {
+        if let GooseberrySubcommand::Complete { shell } = &cli.cmd {
             GooseberryCLI::complete(*shell);
             return Ok(());
         }
-        let config = GooseberryConfig::load().await?;
+        // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
+        let config = GooseberryConfig::load(cli.config.clone()).await?;
         let api = Hypothesis::new(
             config
                 .hypothesis_username
@@ -70,13 +71,13 @@ impl Gooseberry {
 
     /// Run knowledge-base related functions
     pub async fn run(&mut self, cli: GooseberryCLI) -> color_eyre::Result<()> {
-        match cli {
-            GooseberryCLI::Sync => self.sync().await,
-            GooseberryCLI::Search { filters, fuzzy } => {
+        match cli.cmd {
+            GooseberrySubcommand::Sync => self.sync().await,
+            GooseberrySubcommand::Search { filters, fuzzy } => {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
                 self.search(annotations, fuzzy).await
             }
-            GooseberryCLI::Tag {
+            GooseberrySubcommand::Tag {
                 filters,
                 delete,
                 tag,
@@ -84,19 +85,19 @@ impl Gooseberry {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
                 self.tag(annotations, delete, tag).await
             }
-            GooseberryCLI::Delete { filters, force } => {
+            GooseberrySubcommand::Delete { filters, force } => {
                 let annotations = self.filter_annotations(filters, None).await?;
                 self.delete(annotations, force).await
             }
-            GooseberryCLI::View { filters, id } => self.view(filters, id).await,
-            GooseberryCLI::Move {
+            GooseberrySubcommand::View { filters, id } => self.view(filters, id).await,
+            GooseberrySubcommand::Move {
                 group_id,
                 filters,
                 search,
                 fuzzy,
             } => self.sync_group(group_id, filters, search, fuzzy).await,
-            GooseberryCLI::Make { force } => self.make(force).await,
-            GooseberryCLI::Clear { force } => self.clear(force),
+            GooseberrySubcommand::Make { force } => self.make(force).await,
+            GooseberrySubcommand::Clear { force } => self.clear(force),
             _ => Ok(()), // Already handled
         }
     }

@@ -19,7 +19,16 @@ rename_all = "kebab-case",
 global_settings = & [AppSettings::DeriveDisplayOrder, AppSettings::ColoredHelp]
 )]
 /// Create and manage your Hypothesis knowledge-base
-pub enum GooseberryCLI {
+pub struct GooseberryCLI {
+    /// Location of config file (uses default XDG location or environment variable if not given)
+    #[structopt(short, long, env = "GOOSEBERRY_CONFIG")]
+    pub(crate) config: Option<String>,
+    #[structopt(subcommand)]
+    pub(crate) cmd: GooseberrySubcommand,
+}
+
+#[derive(StructOpt, Debug)]
+pub enum GooseberrySubcommand {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
     /// Opens a search buffer to see, filter, delete, add tags to and delete tags from annotations
@@ -68,7 +77,7 @@ pub enum GooseberryCLI {
         #[structopt(possible_values = & Shell::variants())]
         shell: Shell,
     },
-    /// Manage configuration (file stored at $GOOSEBERRY_CONFIG)
+    /// Manage configuration
     Config {
         #[structopt(subcommand)]
         cmd: ConfigCommand,
@@ -209,28 +218,28 @@ pub enum KbConfigCommand {
 
 impl ConfigCommand {
     /// Handle config related commands
-    pub async fn run(&self) -> color_eyre::Result<()> {
+    pub async fn run(&self, config_file: Option<String>) -> color_eyre::Result<()> {
         match self {
             Self::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
             }
             Self::Get => {
-                GooseberryConfig::load().await?;
-                println!("{}", GooseberryConfig::get()?);
+                GooseberryConfig::load(config_file.clone()).await?;
+                println!("{}", GooseberryConfig::get(config_file)?);
             }
             Self::Where => {
-                GooseberryConfig::print_location()?;
+                GooseberryConfig::print_location(config_file)?;
             }
             Self::Authorize => {
-                let mut config = GooseberryConfig::load().await?;
+                let mut config = GooseberryConfig::load(config_file).await?;
                 config.request_credentials().await?;
             }
             Self::Group => {
-                let mut config = GooseberryConfig::load().await?;
+                let mut config = GooseberryConfig::load(config_file).await?;
                 config.set_group().await?;
             }
             Self::Kb(cmd) => {
-                let mut config = GooseberryConfig::load().await?;
+                let mut config = GooseberryConfig::load(config_file).await?;
                 match cmd {
                     KbConfigCommand::All => config.set_kb_all()?,
                     KbConfigCommand::Directory => config.set_kb_dir()?,

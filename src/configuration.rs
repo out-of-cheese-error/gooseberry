@@ -7,7 +7,7 @@ use color_eyre::Help;
 use dialoguer::{theme, Confirm, Select};
 use directories_next::{ProjectDirs, UserDirs};
 use hypothesis::annotations::{Annotation, Permissions, Selector, Target, UserInfo};
-use hypothesis::Hypothesis;
+use hypothesis::{Hypothesis, UserAccountID};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::Apologize;
@@ -157,8 +157,8 @@ file_extension = '{}'
     }
 
     /// Print location of config.toml file
-    pub fn print_location() -> color_eyre::Result<()> {
-        println!("{}", Self::location()?.to_string_lossy());
+    pub fn print_location(config_file: Option<String>) -> color_eyre::Result<()> {
+        println!("{}", Self::location(config_file)?.to_string_lossy());
         Ok(())
     }
 
@@ -194,8 +194,7 @@ file_extension = '{}'
     }
 
     /// Gets the current config file location
-    pub fn location() -> color_eyre::Result<PathBuf> {
-        let config_file = env::var("GOOSEBERRY_CONFIG").ok();
+    pub fn location(config_file: Option<String>) -> color_eyre::Result<PathBuf> {
         match config_file {
             Some(file) => {
                 let path = Path::new(&file).to_owned();
@@ -218,8 +217,8 @@ file_extension = '{}'
 
     /// Get current configuration
     /// Hides the developer key (except last three digits)
-    pub fn get() -> color_eyre::Result<String> {
-        let mut file = fs::File::open(Self::location()?)?;
+    pub fn get(config_file: Option<String>) -> color_eyre::Result<String> {
+        let mut file = fs::File::open(Self::location(config_file)?)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(contents
@@ -243,9 +242,8 @@ file_extension = '{}'
     }
 
     /// Read config from default location
-    pub async fn load() -> color_eyre::Result<Self> {
+    pub async fn load(config_file: Option<String>) -> color_eyre::Result<Self> {
         // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
-        let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         let mut config = match config_file {
             Some(file) => {
                 let path = Path::new(&file).to_owned();
@@ -760,7 +758,7 @@ file_extension = '{}'
             .fetch_user_profile()
             .await?
             .userid
-            .is_some())
+            == Some(UserAccountID(format!("acct:{}@hypothes.is", name))))
     }
 
     /// Asks user for Hypothesis credentials and sets them in the config

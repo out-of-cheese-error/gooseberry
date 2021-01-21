@@ -12,6 +12,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Use DEFAULT_PAGE_TEMPLATE in editor
 * Remove trailing "/" from URLs before converting them into filenames (Issue [#57](https://github.com/out-of-cheese-error/gooseberry/issues/57))
 
+### Added
+
+* Use --config or -c to open gooseberry with a specific config file. If empty, takes from GOOSEBERRY_CONFIG environment variable or uses default
+  location (Issue [#54](https://github.com/out-of-cheese-error/gooseberry/issues/54))
+
 ## [0.5.1] - 2020-01-21
 
 ### Fixed
