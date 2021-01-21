@@ -115,7 +115,7 @@ pub fn clean_uri(uri: &str) -> String {
             } else {
                 parsed_uri[url::Position::AfterScheme..]
                     .trim_start_matches("://")
-                    .trim_end_matches("/")
+                    .trim_end_matches('/')
                     .to_owned()
             }
         }
