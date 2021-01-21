@@ -10,6 +10,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 * Use DEFAULT_PAGE_TEMPLATE in editor
+* Remove trailing "/" from URLs before converting them into filenames (Issue [#57](https://github.com/out-of-cheese-error/gooseberry/issues/57))
 
 ## [0.5.1] - 2020-01-21
 
