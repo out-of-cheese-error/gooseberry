@@ -1,5 +1,5 @@
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 use hypothesis::annotations::{Order, SearchQuery, Sort};
@@ -21,8 +21,8 @@ global_settings = & [AppSettings::DeriveDisplayOrder, AppSettings::ColoredHelp]
 /// Create and manage your Hypothesis knowledge-base
 pub struct GooseberryCLI {
     /// Location of config file (uses default XDG location or environment variable if not given)
-    #[structopt(short, long, env = "GOOSEBERRY_CONFIG")]
-    pub(crate) config: Option<String>,
+    #[structopt(short, long, parse(from_os_str), env = "GOOSEBERRY_CONFIG")]
+    pub(crate) config: Option<PathBuf>,
     #[structopt(subcommand)]
     pub(crate) cmd: GooseberrySubcommand,
 }
@@ -218,13 +218,13 @@ pub enum KbConfigCommand {
 
 impl ConfigCommand {
     /// Handle config related commands
-    pub async fn run(&self, config_file: Option<String>) -> color_eyre::Result<()> {
+    pub async fn run(&self, config_file: Option<&Path>) -> color_eyre::Result<()> {
         match self {
             Self::Default { file } => {
                 GooseberryConfig::default_config(file.as_deref())?;
             }
             Self::Get => {
-                GooseberryConfig::load(config_file.clone()).await?;
+                GooseberryConfig::load(config_file).await?;
                 println!("{}", GooseberryConfig::get(config_file)?);
             }
             Self::Where => {

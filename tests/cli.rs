@@ -62,7 +62,8 @@ fn it_works() -> color_eyre::Result<()> {
     let group_id = dotenv::var("TEST_GROUP_ID")?;
     let config_file = make_config_file(&temp_dir, &username, &key, &group_id)?;
     let mut cmd = Command::cargo_bin("gooseberry")?;
-    cmd.env("GOOSEBERRY_CONFIG", config_file)
+    cmd.arg("-c")
+        .arg(config_file)
         .arg("view")
         .assert()
         .success();

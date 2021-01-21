@@ -157,7 +157,7 @@ file_extension = '{}'
     }
 
     /// Print location of config.toml file
-    pub fn print_location(config_file: Option<String>) -> color_eyre::Result<()> {
+    pub fn print_location(config_file: Option<&Path>) -> color_eyre::Result<()> {
         println!("{}", Self::location(config_file)?.to_string_lossy());
         Ok(())
     }
@@ -194,20 +194,19 @@ file_extension = '{}'
     }
 
     /// Gets the current config file location
-    pub fn location(config_file: Option<String>) -> color_eyre::Result<PathBuf> {
+    pub fn location(config_file: Option<&Path>) -> color_eyre::Result<PathBuf> {
         match config_file {
-            Some(file) => {
-                let path = Path::new(&file).to_owned();
+            Some(path) => {
                 if path.exists() {
-                    Ok(path)
+                    Ok(PathBuf::from(path))
                 } else {
                     let error: color_eyre::Result<PathBuf> = Err(Apologize::ConfigError {
-                        message: format!("No such file {}", file),
+                        message: format!("No such file {:?}", path),
                     }
                     .into());
                     error.suggestion(format!(
-                        "Use `gooseberry config default {}` to write out the default configuration and modify the generated file",
-                        file
+                        "Use `gooseberry config default {:?}` to write out the default configuration and modify the generated file",
+                        path
                     ))
                 }
             }
@@ -217,7 +216,7 @@ file_extension = '{}'
 
     /// Get current configuration
     /// Hides the developer key (except last three digits)
-    pub fn get(config_file: Option<String>) -> color_eyre::Result<String> {
+    pub fn get(config_file: Option<&Path>) -> color_eyre::Result<String> {
         let mut file = fs::File::open(Self::location(config_file)?)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -242,23 +241,22 @@ file_extension = '{}'
     }
 
     /// Read config from default location
-    pub async fn load(config_file: Option<String>) -> color_eyre::Result<Self> {
+    pub async fn load(config_file: Option<&Path>) -> color_eyre::Result<Self> {
         // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
         let mut config = match config_file {
-            Some(file) => {
-                let path = Path::new(&file).to_owned();
+            Some(path) => {
                 if path.exists() {
-                    let config: Self = confy::load_path(Path::new(&file))?;
+                    let config: Self = confy::load_path(path)?;
                     config.make_dirs()?;
                     Ok(config)
                 } else {
                     let error: color_eyre::Result<Self> = Err(Apologize::ConfigError {
-                        message: format!("No such file {}", file),
+                        message: format!("No such file {:?}", path),
                     }
                         .into());
                     error.suggestion(format!(
-                        "Use `gooseberry config default {}` to write out the default configuration and modify the generated file",
-                        file
+                        "Use `gooseberry config default {:?}` to write out the default configuration and modify the generated file",
+                        path
                     ))
                 }
             }
