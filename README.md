@@ -124,8 +124,8 @@ The default config TOML file is located in
 * Linux: `/home/<username>/.config`
 * Mac: `/Users/<username>/Library/Preferences`
 
-Change this by creating a config file with `gooseberry config default > config.toml`, modifying the contents, and then setting the environment
-variable `$GOOSEBERRY_CONFIG` to point to this file.
+Change this by creating a config file with `gooseberry config default > config.toml` and modifying the contents. You can then use this as your
+configuration with `gooseberry -c path/to/config.toml <subcommand>` or by setting the environment variable `$GOOSEBERRY_CONFIG` to point to the file.
 
 ### Hypothesis
 
