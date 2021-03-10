@@ -214,6 +214,8 @@ pub enum KbConfigCommand {
     Hierarchy,
     /// Change sort order of annotations within a page
     Sort,
+    /// Set which tags to ignore
+    Ignore,
 }
 
 impl ConfigCommand {
@@ -250,6 +252,7 @@ impl ConfigCommand {
                     KbConfigCommand::Extension => config.set_file_extension()?,
                     KbConfigCommand::Hierarchy => config.set_hierarchy()?,
                     KbConfigCommand::Sort => config.set_sort()?,
+                    KbConfigCommand::Ignore => config.set_ignore_tags()?,
                 };
             }
         }
