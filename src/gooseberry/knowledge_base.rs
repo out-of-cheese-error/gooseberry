@@ -291,6 +291,15 @@ impl Gooseberry {
             .filter_annotations(Filters::default(), None)
             .await?
             .into_iter()
+            .filter(|a| {
+                !a.tags.iter().any(|t| {
+                    self.config
+                        .ignore_tags
+                        .as_ref()
+                        .map(|ignore_tags| ignore_tags.contains(t))
+                        .unwrap_or(false)
+                })
+            })
             .map(AnnotationTemplate::from_annotation)
             .collect();
         self.sort_annotations(&mut annotations);

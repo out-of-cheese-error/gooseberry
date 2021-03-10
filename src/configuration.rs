@@ -4,7 +4,7 @@ use std::{env, fmt, fs, io};
 
 use chrono::Utc;
 use color_eyre::Help;
-use dialoguer::{theme, Confirm, Select};
+use dialoguer::{theme, Confirm, Input, Select};
 use directories_next::{ProjectDirs, UserDirs};
 use hypothesis::annotations::{Annotation, Permissions, Selector, Target, UserInfo};
 use hypothesis::{Hypothesis, UserAccountID};
@@ -94,6 +94,8 @@ pub struct GooseberryConfig {
     pub(crate) hierarchy: Option<Vec<OrderBy>>,
     /// Define how annotations on a page are sorted
     pub(crate) sort: Option<Vec<OrderBy>>,
+    /// Define tags to ignore
+    pub(crate) ignore_tags: Option<Vec<String>>,
 }
 
 /// Main project directory, cross-platform
@@ -118,6 +120,7 @@ impl Default for GooseberryConfig {
             file_extension: None,
             hierarchy: None,
             sort: None,
+            ignore_tags: None,
         };
         config.make_dirs().unwrap();
         config
@@ -140,6 +143,7 @@ db_dir = '<full path to database folder>'
 kb_dir = '<knowledge-base folder>'
 hierarchy = ['Tag']
 sort = ['Created']
+ignore_tags = []
 annotation_template = '''{}'''
 page_template = '''{}'''
 index_link_template = '''{}'''
@@ -417,6 +421,32 @@ file_extension = '{}'
         );
 
         self.sort = Some(order);
+        self.store()?;
+        Ok(())
+    }
+
+    pub fn set_ignore_tags(&mut self) -> color_eyre::Result<()> {
+        println!("Set tags to ignore during knowledge base generation");
+        let ignore_tags: String = Input::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("Enter comma-separated tags")
+            .with_initial_text(
+                self.ignore_tags
+                    .as_ref()
+                    .map(|tags| tags.join(", "))
+                    .unwrap_or_default(),
+            )
+            .allow_empty(true)
+            .interact_text()?;
+        if ignore_tags.is_empty() {
+            self.ignore_tags = None
+        } else {
+            self.ignore_tags = Some(
+                ignore_tags
+                    .split(',')
+                    .map(|t| t.trim().to_owned())
+                    .collect(),
+            )
+        }
         self.store()?;
         Ok(())
     }
