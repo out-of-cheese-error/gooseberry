@@ -91,7 +91,7 @@ impl Gooseberry {
                 "Enter:accept"
             ])
             .exact(!fuzzy)
-            .header(Some("Arrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Ctrl-C to abort\n\
+            .header(Some("Arrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Esc to abort\n\
             Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete annotation"))
             .multi(true)
             .reverse(true)
@@ -144,12 +144,12 @@ impl Gooseberry {
             let key = output.final_key;
             match key {
                 Key::Enter => {
-                    let tag = crate::utils::user_input("Tag to add", None, false, false)?;
-                    self.tag(annotations, false, Some(tag)).await?;
+                    let tags = self.search_tags(&annotations, true)?;
+                    self.tag(annotations, false, Some(tags)).await?;
                 }
                 Key::ShiftLeft => {
-                    let tag = crate::utils::user_input("Tag to remove", None, false, false)?;
-                    self.tag(annotations, true, Some(tag)).await?;
+                    let tags = self.search_tags(&annotations, false)?;
+                    self.tag(annotations, true, Some(tags)).await?;
                 }
                 Key::ShiftRight => {
                     self.delete(annotations, false).await?;
@@ -157,6 +157,86 @@ impl Gooseberry {
                 _ => (),
             }
             Ok(())
+        } else {
+            Err(Apologize::SearchError.into())
+        }
+    }
+
+    pub fn search_tags(
+        &self,
+        annotations: &[Annotation],
+        add: bool,
+    ) -> color_eyre::Result<Vec<String>> {
+        let mut tags: Vec<String> = if add {
+            // Get all tags
+            self.tag_to_annotations()?
+                .iter()
+                .map(|t| t.map(|(tag_key, _)| std::str::from_utf8(&tag_key).map(|s| s.to_owned())))
+                .collect::<Result<Result<HashSet<String>, _>, _>>()??
+                .into_iter()
+                .filter(|tag| {
+                    // ignore tags which all given annotations have
+                    !annotations.iter().all(|a| {
+                        self.get_annotation_tags(&a.id)
+                            .map(|a_tags| a_tags.contains(tag))
+                            .unwrap_or(false)
+                    })
+                })
+                .collect()
+        } else {
+            // Get tags present in given annotations
+            annotations
+                .iter()
+                .map(|a| self.get_annotation_tags(&a.id))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flat_map(|tags| tags.into_iter())
+                .collect::<HashSet<String>>()
+                .into_iter()
+                .collect()
+        };
+        tags.sort();
+
+        let mut message = if add {
+            "Select tags or create new comma-separated tags to add".to_owned()
+        } else {
+            "Select tags to remove".to_owned()
+        };
+        message.push_str("\nArrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Esc to abort, Enter to accept");
+        let options = SkimOptionsBuilder::default()
+            .height(Some("20%"))
+            .exact(true)
+            .header(Some(&message))
+            .multi(true)
+            .bind(vec!["Enter:accept"])
+            .reverse(true)
+            .build()
+            .map_err(|_| Apologize::SearchError)?;
+
+        let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
+        for tag in tags {
+            let _ = tx_item.send(Arc::new(tag));
+        }
+        drop(tx_item); // so that skim could know when to stop waiting for more items.
+        if let Some(output) = Skim::run_with(&options, Some(rx_item)) {
+            let tags: HashSet<String> = output
+                .selected_items
+                .iter()
+                .map(|i| i.output().to_string())
+                .collect();
+            let key = output.final_key;
+            if let Key::Enter = key {
+                return if tags.is_empty() && add {
+                    Ok(output
+                        .query
+                        .split(',')
+                        .map(|t| t.trim().to_owned())
+                        .collect())
+                } else {
+                    Ok(tags.into_iter().collect())
+                };
+            }
+            Ok(Vec::new())
         } else {
             Err(Apologize::SearchError.into())
         }

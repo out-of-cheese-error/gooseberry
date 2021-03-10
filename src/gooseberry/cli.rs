@@ -46,8 +46,9 @@ pub enum GooseberrySubcommand {
         /// Use this flag to remove the given tag from the filtered annotations instead of adding it
         #[structopt(short, long)]
         delete: bool,
-        /// The tag to add to / remove from the filtered annotations
-        tag: Option<String>,
+        /// The tags to add to / remove from the filtered annotations (comma-separated)
+        #[structopt(use_delimiter = true)]
+        tag: Vec<String>,
     },
     /// Delete annotations in bulk
     Delete {

@@ -83,7 +83,8 @@ impl Gooseberry {
                 tag,
             } => {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
-                self.tag(annotations, delete, tag).await
+                let tags = if tag.is_empty() { None } else { Some(tag) };
+                self.tag(annotations, delete, tags).await
             }
             GooseberrySubcommand::Delete { filters, force } => {
                 let annotations = self.filter_annotations(filters, None).await?;
@@ -105,6 +106,10 @@ impl Gooseberry {
     /// Sync newly added / updated annotations
     pub async fn sync(&self) -> color_eyre::Result<()> {
         let spinner = crate::utils::get_spinner("Syncing...");
+        // Sleep to make sure the previous requests are processed
+        let duration = core::time::Duration::from_millis(500);
+        std::thread::sleep(duration);
+
         let mut query = SearchQuery::builder()
             .limit(200)
             .order(Order::Asc)
@@ -200,74 +205,105 @@ impl Gooseberry {
         Ok(annotations)
     }
 
-    /// Tag a filtered set of annotations with a given tag
+    async fn add_tags(
+        &self,
+        annotations: Vec<Annotation>,
+        tags: Vec<String>,
+    ) -> color_eyre::Result<()> {
+        let annotations: Vec<_> = annotations
+            .into_iter()
+            .filter(|a| tags.iter().all(|tag| !a.tags.contains(&tag)))
+            .collect();
+        if annotations.is_empty() {
+            println!("All of the selected annotations already have all of those tags.");
+            return Ok(());
+        }
+        println!(
+            "Adding {} tag(s) to {} annotation(s)",
+            tags.len(),
+            annotations.len()
+        );
+        self.api
+            .update_annotations(
+                &annotations
+                    .clone()
+                    .into_iter()
+                    .map(|mut a| {
+                        a.tags.extend_from_slice(&tags);
+                        a
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
+
+        self.sync().await?;
+
+        Ok(())
+    }
+
+    async fn delete_tags(
+        &self,
+        annotations: Vec<Annotation>,
+        tags: Vec<String>,
+    ) -> color_eyre::Result<()> {
+        let annotations: Vec<_> = annotations
+            .into_iter()
+            .filter(|a| tags.iter().any(|tag| a.tags.contains(tag)))
+            .collect();
+        if annotations.is_empty() {
+            println!("None of the selected annotations have any of those tags.");
+            return Ok(());
+        }
+        println!(
+            "Deleting {} tag(s) from {} annotation(s)",
+            tags.len(),
+            annotations.len()
+        );
+        self.api
+            .update_annotations(
+                &annotations
+                    .clone()
+                    .into_iter()
+                    .map(|mut a| {
+                        a.tags.retain(|t| tags.iter().all(|tag| t != tag));
+                        a
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
+        self.sync().await?;
+        Ok(())
+    }
+    /// Tag a filtered set of annotations with given tags
     pub async fn tag(
         &self,
         annotations: Vec<Annotation>,
         delete: bool,
-        tag: Option<String>,
+        tags: Option<Vec<String>>,
     ) -> color_eyre::Result<()> {
-        let mut annotations = annotations;
-        if !annotations.is_empty() {
-            if delete {
-                let tag = match tag {
-                    Some(tag) => tag,
-                    None => crate::utils::user_input("Tag to delete", None, false, false)?,
-                };
-                annotations = annotations
-                    .into_iter()
-                    .filter(|a| a.tags.contains(&tag))
-                    .collect();
-                if annotations.is_empty() {
-                    println!("None of the selected annotations have that tag.");
+        if annotations.is_empty() {
+            println!("No matching annotations");
+            return Ok(());
+        }
+        let tags = match tags {
+            Some(tags) => tags,
+            None => {
+                if delete {
+                    self.search_tags(&annotations, false)?
                 } else {
-                    println!(
-                        "Deleting tag `{}` from {} annotations",
-                        tag,
-                        annotations.len()
-                    );
-                    self.api
-                        .update_annotations(
-                            &annotations
-                                .into_iter()
-                                .map(|mut a| {
-                                    a.tags.retain(|t| t != &tag);
-                                    a
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                        .await?;
-                    self.sync().await?;
-                }
-            } else {
-                let tag = match tag {
-                    Some(tag) => tag,
-                    None => crate::utils::user_input("Tag to add", None, false, false)?,
-                };
-                annotations = annotations
-                    .into_iter()
-                    .filter(|a| !a.tags.contains(&tag))
-                    .collect();
-                if annotations.is_empty() {
-                    println!("All of the selected annotations already have that tag.");
-                } else {
-                    println!("Adding tag `{}` to {} annotations", tag, annotations.len());
-                    self.api
-                        .update_annotations(
-                            &annotations
-                                .into_iter()
-                                .map(|mut a| {
-                                    a.tags.push(tag.to_owned());
-                                    a
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                        .await?;
-                    self.sync().await?;
+                    self.search_tags(&annotations, true)?
                 }
             }
+        };
+        if tags.is_empty() {
+            println!("No tags selected");
+            return Ok(());
+        }
+
+        if delete {
+            self.delete_tags(annotations, tags).await?;
         } else {
-            println!("No matching annotations");
+            self.add_tags(annotations, tags).await?;
         }
         Ok(())
     }

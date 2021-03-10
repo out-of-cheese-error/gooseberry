@@ -223,6 +223,26 @@ async fn tag() -> color_eyre::Result<()> {
         .iter()
         .all(|x| x.tags.contains(&"test_tag3".to_owned())));
 
+    // add multiple tags
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--tags=test_tag")
+        .arg("test_tag4,test_tag5")
+        .assert()
+        .success();
+    let futures: Vec<_> = test_data
+        .annotations
+        .iter()
+        .map(|a| test_data.hypothesis_client.fetch_annotation(&a.id))
+        .collect();
+    assert!(async { try_join_all(futures).await }
+        .await?
+        .iter()
+        .all(|x| x.tags.contains(&"test_tag4".to_owned())
+            && x.tags.contains(&"test_tag5".to_owned())));
+
     // delete a tag
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -242,6 +262,27 @@ async fn tag() -> color_eyre::Result<()> {
         .await?
         .into_iter()
         .any(|x| x.tags.contains(&"test_tag3".to_owned())));
+
+    // delete multiple tags
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--delete")
+        .arg("test_tag4,test_tag5")
+        .assert()
+        .success();
+
+    let futures: Vec<_> = test_data
+        .annotations
+        .iter()
+        .map(|a| test_data.hypothesis_client.fetch_annotation(&a.id))
+        .collect();
+    assert!(!async { try_join_all(futures).await }
+        .await?
+        .into_iter()
+        .any(|x| x.tags.contains(&"test_tag4".to_owned())
+            || x.tags.contains(&"test_tag5".to_owned())));
 
     // check tags filtered
     thread::sleep(duration);
