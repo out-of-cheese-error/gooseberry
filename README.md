@@ -5,8 +5,6 @@
 [![GitHub release](https://img.shields.io/github/release/out-of-cheese-error/gooseberry.svg)](https://GitHub.com/out-of-cheese-error/gooseberry/releases/)
 [![dependency status](https://deps.rs/repo/github/out-of-cheese-error/gooseberry/status.svg)](https://deps.rs/repo/github/out-of-cheese-error/gooseberry)
 
-**WIP**
-
 Gooseberry provides a command-line interface for [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web) and lets you generate a
 knowledge-base wiki without you having to actually type your knowledge out.
 
