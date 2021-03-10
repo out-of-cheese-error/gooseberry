@@ -30,6 +30,7 @@ knowledge-base wiki without you having to actually type your knowledge out.
         * [Sorting annotations within a page](#sorting-annotations-within-a-page)
         * [Index link template](#index-link-template)
         * [Index filename](#index-filename)
+        * [Ignoring tags](#ignoring-tags)
         * [File extensions](#file-extensions)
 * [Why "Gooseberry"?](#why-gooseberry)
 
@@ -348,6 +349,14 @@ to transclude files
 
 The name of the Index file, e.g. `mdbook` needs this to be called "SUMMARY" and in Obisidan you could use "00INDEX" to make it show up first in the
 file explorer.
+
+#### Ignoring tags
+
+`gooseberry config kb ignore`
+
+Some annotations maybe aren't meant for the knowledge base. You can exclude these by tagging them with a specific tag, and then adding this tag to the
+`ignore_tags` configuration option (manually in the config file or with the above command). Note: Annotations with ignored tags will still be included
+in the `search` and `tag` commands.
 
 #### File extensions
 
