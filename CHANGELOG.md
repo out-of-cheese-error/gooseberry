@@ -10,6 +10,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 * `ignore_tags` config option (Issue [#60](https://github.com/out-of-cheese-error/gooseberry/issues/60))
+* Tag manager that displays a search window of existing tags to add/remove and allows creating new tags (
+  Issue [#63](https://github.com/out-of-cheese-error/gooseberry/issues/63))
+* Add/remove multiple tags at once using comma-separated input e.g `gooseberry tag --from=today tag1,tag2,tag3`
 
 ## [0.5.2] - 2020-01-21
 
