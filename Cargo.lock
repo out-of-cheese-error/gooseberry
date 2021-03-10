@@ -940,9 +940,9 @@ dependencies = [
     "memchr",
     "pin-project-lite 0.2.4",
     "pin-utils",
- "proc-macro-hack",
- "proc-macro-nested",
- "slab",
+    "proc-macro-hack",
+    "proc-macro-nested",
+    "slab",
 ]
 
 [[package]]
@@ -1028,17 +1028,17 @@ dependencies = [
 
 [[package]]
 name = "gooseberry"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
- "assert_cmd",
- "bat",
- "bincode",
- "chrono",
- "chrono-english",
- "color-eyre",
- "confy",
- "dialoguer",
- "directories-next",
+    "assert_cmd",
+    "bat",
+    "bincode",
+    "chrono",
+    "chrono-english",
+    "color-eyre",
+    "confy",
+    "dialoguer",
+    "directories-next",
  "dotenv",
  "eyre",
  "futures",
@@ -2224,7 +2224,7 @@ version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "122e570113d28d773067fab24266b66753f6ea915758651696b6e35e49f88d6e"
 dependencies = [
- "cfg-if 1.0.0",
+    "cfg-if 1.0.0",
     "libc",
     "winapi",
 ]
