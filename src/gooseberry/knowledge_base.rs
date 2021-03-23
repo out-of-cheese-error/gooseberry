@@ -330,14 +330,13 @@ impl Gooseberry {
                 f: &|recurse_folder, inner_annotations, folder, depth, index_links| {
                     if depth == order.len() {
                         let folder_name = folder.to_str().ok_or(Apologize::KBError {
-                                message: format!("{:?} has non-unicode characters", folder)
-                            })?;
-                        let folder_name: String = folder_name.chars().take(250.min(folder_name.len())).collect();
-                        let path = PathBuf::from(format!(
-                            "{}.{}",
-                            folder_name,
-                            extension
-                        ));
+                            message: format!("{:?} has non-unicode characters", folder),
+                        })?;
+                        let folder_name: String = folder_name
+                            .chars()
+                            .take(250.min(folder_name.len()))
+                            .collect();
+                        let path = PathBuf::from(format!("{}.{}", folder_name, extension));
                         let link_data = get_link_data(&path, &src_dir)?;
                         index_links.push(hbs.render("index_link", &link_data)?);
                         let page_data = PageTemplate {
