@@ -14,6 +14,7 @@ knowledge-base wiki without you having to actually type your knowledge out.
 
 > made with [asciinema](https://github.com/asciinema/asciinema), [svg-term-cli](https://github.com/marionebl/svg-term-cli), and [svgembed](https://github.com/miraclx/svgembed)
 
+This demonstrates the interactive search functionality. `Enter` adds a new tag, `Shift-Left` deletes a tag, and `Shift-Right` deletes an annotation. (TODO: embed keypresses in GIF)
 
 ## Table of Contents
 
