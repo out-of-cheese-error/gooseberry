@@ -8,6 +8,13 @@
 Gooseberry provides a command-line interface for [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web) and lets you generate a
 knowledge-base wiki without you having to actually type your knowledge out.
 
+![Obsidian example](data/images/obsidian_example.png)
+
+![demo](data/images/gooseberry-embedded.svg)
+
+> made with [asciinema](https://github.com/asciinema/asciinema), [svg-term-cli](https://github.com/marionebl/svg-term-cli), and [svgembed](https://github.com/miraclx/svgembed)
+
+
 ## Table of Contents
 
 * [Install](#install)
