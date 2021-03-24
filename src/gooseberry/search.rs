@@ -88,11 +88,12 @@ impl Gooseberry {
                 "ctrl-c:abort",
                 "shift-left:accept",
                 "shift-right:accept",
+                "shift-up:accept",
                 "Enter:accept"
             ])
             .exact(!fuzzy)
             .header(Some("Arrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Esc to abort\n\
-            Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete annotation"))
+            Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete annotation, Shift-Up to print the set of URIs"))
             .multi(true)
             .reverse(true)
             .build()
@@ -153,6 +154,9 @@ impl Gooseberry {
                 }
                 Key::ShiftRight => {
                     self.delete(annotations, false).await?;
+                }
+                Key::ShiftUp => {
+                    self.uri(annotations, Vec::new())?;
                 }
                 _ => (),
             }
