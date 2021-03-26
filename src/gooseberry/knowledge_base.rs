@@ -10,6 +10,7 @@ use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
 use handlebars::{Handlebars, RenderError};
 use hypothesis::annotations::Annotation;
+use sanitize_filename::sanitize;
 use serde::Serialize;
 use serde_json::Value as Json;
 use url::Url;
@@ -30,6 +31,7 @@ pub struct AnnotationTemplate {
     #[serde(flatten)]
     pub annotation: Annotation,
     pub base_uri: String,
+    pub title: String,
     pub incontext: String,
     pub highlight: Vec<String>,
     pub display_name: Option<String>,
@@ -60,9 +62,16 @@ impl AnnotationTemplate {
         } else {
             None
         };
+        let mut title = String::from("Untitled document");
+        if let Some(document) = &annotation.document {
+            if !document.title.is_empty() {
+                title = document.title[0].to_owned();
+            }
+        }
         AnnotationTemplate {
             annotation,
             base_uri,
+            title,
             incontext,
             highlight,
             display_name,
@@ -219,6 +228,14 @@ impl Gooseberry {
                         .push(annotation);
                 }
             }
+            OrderBy::Title => {
+                for annotation in annotations {
+                    order_to_annotations
+                        .entry(sanitize(&annotation.title))
+                        .or_insert_with(Vec::new)
+                        .push(annotation);
+                }
+            }
             OrderBy::BaseURI => {
                 for annotation in annotations {
                     order_to_annotations
@@ -259,6 +276,7 @@ impl Gooseberry {
                             clean_uri(&a.annotation.uri).cmp(&clean_uri(&b.annotation.uri))
                         }
                         OrderBy::BaseURI => clean_uri(&a.base_uri).cmp(&clean_uri(&b.base_uri)),
+                        OrderBy::Title => a.title.cmp(&b.title),
                         OrderBy::ID => a.annotation.id.cmp(&b.annotation.id),
                         OrderBy::Created => format!("{}", a.annotation.created.format("%+"))
                             .cmp(&format!("{}", b.annotation.created.format("%+"))),

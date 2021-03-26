@@ -6,7 +6,7 @@ use chrono::Utc;
 use color_eyre::Help;
 use dialoguer::{theme, Confirm, Input, Select};
 use directories_next::{ProjectDirs, UserDirs};
-use hypothesis::annotations::{Annotation, Permissions, Selector, Target, UserInfo};
+use hypothesis::annotations::{Annotation, Document, Permissions, Selector, Target, UserInfo};
 use hypothesis::{Hypothesis, UserAccountID};
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,7 @@ Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
 {{text}}
 
-[See in context]({{incontext}})
+[See in context]({{incontext}}) at [{{title}}]({{uri}})
 
 "#;
 pub static DEFAULT_PAGE_TEMPLATE: &str = r#"
@@ -43,6 +43,7 @@ pub enum OrderBy {
     Tag,
     URI,
     BaseURI,
+    Title,
     ID,
     Empty,
     Created,
@@ -55,6 +56,7 @@ impl fmt::Display for OrderBy {
             OrderBy::Tag => write!(f, "tag"),
             OrderBy::URI => write!(f, "uri"),
             OrderBy::BaseURI => write!(f, "base_uri"),
+            OrderBy::Title => write!(f, "title"),
             OrderBy::ID => write!(f, "id"),
             OrderBy::Empty => write!(f, "empty"),
             OrderBy::Created => write!(f, "created"),
@@ -373,6 +375,7 @@ file_extension = '{}'
             OrderBy::Tag,
             OrderBy::URI,
             OrderBy::BaseURI,
+            OrderBy::Title,
             OrderBy::ID,
         ];
         let order = Self::get_order_bys(selections)?;
@@ -406,6 +409,7 @@ file_extension = '{}'
             OrderBy::URI,
             OrderBy::BaseURI,
             OrderBy::ID,
+            OrderBy::Title,
             OrderBy::Created,
             OrderBy::Updated,
         ];
@@ -512,6 +516,12 @@ file_extension = '{}'
                 .collect(),
                 hidden: false,
                 flagged: false,
+                document: Some(Document {
+                    title: vec!["Web page title".into()],
+                    dc: None,
+                    highwire: None,
+                    link: vec![],
+                }),
                 references: vec![],
                 user_info: Some(UserInfo {
                     display_name: Some("test_display_name".to_string()),
@@ -597,6 +607,12 @@ file_extension = '{}'
                 .collect(),
                 hidden: false,
                 flagged: false,
+                document: Some(Document {
+                    title: vec!["Web page title".into()],
+                    dc: None,
+                    highwire: None,
+                    link: vec![],
+                }),
                 references: vec![],
                 user_info: Some(UserInfo {
                     display_name: Some("test_display_name".to_string()),
