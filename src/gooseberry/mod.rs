@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 
 use color_eyre::Help;
@@ -99,6 +100,10 @@ impl Gooseberry {
             } => self.sync_group(group_id, filters, search, fuzzy).await,
             GooseberrySubcommand::Make { force } => self.make(force).await,
             GooseberrySubcommand::Clear { force } => self.clear(force),
+            GooseberrySubcommand::Uri { filters, ids } => {
+                let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
+                self.uri(annotations, ids)
+            }
             _ => Ok(()), // Already handled
         }
     }
@@ -375,6 +380,18 @@ impl Gooseberry {
             .inputs(inputs.iter().map(|i| bat::Input::from_bytes(i.as_bytes())))
             .print()
             .unwrap();
+        Ok(())
+    }
+
+    pub fn uri(&self, annotations: Vec<Annotation>, ids: Vec<String>) -> color_eyre::Result<()> {
+        let mut annotations = annotations;
+        if !ids.is_empty() {
+            annotations.retain(|a| ids.contains(&a.id));
+        }
+        let uris: HashSet<_> = annotations.into_iter().map(|a| a.uri).collect();
+        for uri in uris {
+            println!("{}", uri);
+        }
         Ok(())
     }
 

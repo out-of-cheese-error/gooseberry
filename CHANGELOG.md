@@ -6,8 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
 ### Fixed
+
 * truncates filename if over 250 characters
+
+### Added
+
+* The web-page/document `title` can be used in the annotation template, hierarchy, and sort configurations (
+  Issue [#69](https://github.com/out-of-cheese-error/gooseberry/issues/69))
+* `gooseberry uri` and `Shift-Up` option to `gooseberry search` that prints out the set of URIs associated with a list of selected annotations.
 
 ## [0.6.0] - 2021-03-10
 

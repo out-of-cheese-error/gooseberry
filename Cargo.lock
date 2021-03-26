@@ -1039,23 +1039,24 @@ dependencies = [
     "confy",
     "dialoguer",
     "directories-next",
- "dotenv",
- "eyre",
- "futures",
- "handlebars",
- "hypothesis",
- "indicatif",
- "predicates",
- "serde",
- "serde_derive",
- "serde_json",
- "skim",
- "sled",
- "structopt",
- "tempfile",
- "thiserror",
- "tokio",
- "url",
+    "dotenv",
+    "eyre",
+    "futures",
+    "handlebars",
+    "hypothesis",
+    "indicatif",
+    "predicates",
+    "sanitize-filename",
+    "serde",
+    "serde_derive",
+    "serde_json",
+    "skim",
+    "sled",
+    "structopt",
+    "tempfile",
+    "thiserror",
+    "tokio",
+    "url",
 ]
 
 [[package]]
@@ -1196,19 +1197,19 @@ dependencies = [
 
 [[package]]
 name = "hypothesis"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "404f66c2895be61d7740ec96c02de2d19ee41e62ca17d640257b47693dbc1ec7"
+checksum = "24cff47bfe8c0d0ed6d42f7c2ba3277064ba4f3999135d4c6ba23b92439c7a38"
 dependencies = [
- "chrono",
- "derive_builder",
- "futures",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "url",
+    "chrono",
+    "derive_builder",
+    "futures",
+    "reqwest",
+    "serde",
+    "serde_json",
+    "thiserror",
+    "tokio",
+    "url",
 ]
 
 [[package]]
@@ -1901,38 +1902,38 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.11.0"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd281b1030aa675fb90aa994d07187645bb3c8fc756ca766e7c3070b439de9de"
+checksum = "bf12057f289428dbf5c591c74bf10392e4a8003f993405a902f20117019022d4"
 dependencies = [
- "base64 0.13.0",
- "bytes 1.0.1",
- "encoding_rs",
- "futures-core",
- "futures-util",
- "http",
- "http-body",
- "hyper",
- "hyper-rustls",
- "ipnet",
- "js-sys",
- "lazy_static",
- "log",
- "mime",
- "percent-encoding",
- "pin-project-lite 0.2.4",
- "rustls",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "tokio",
- "tokio-rustls",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "webpki-roots",
- "winreg",
+    "base64 0.13.0",
+    "bytes 1.0.1",
+    "encoding_rs",
+    "futures-core",
+    "futures-util",
+    "http",
+    "http-body",
+    "hyper",
+    "hyper-rustls",
+    "ipnet",
+    "js-sys",
+    "lazy_static",
+    "log",
+    "mime",
+    "percent-encoding",
+    "pin-project-lite 0.2.4",
+    "rustls",
+    "serde",
+    "serde_json",
+    "serde_urlencoded",
+    "tokio",
+    "tokio-rustls",
+    "url",
+    "wasm-bindgen",
+    "wasm-bindgen-futures",
+    "web-sys",
+    "webpki-roots",
+    "winreg",
 ]
 
 [[package]]
@@ -2008,7 +2009,17 @@ version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
- "winapi-util",
+    "winapi-util",
+]
+
+[[package]]
+name = "sanitize-filename"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf18934a12018228c5b55a6dae9df5d0641e3566b3630cb46cc55564068e7c2f"
+dependencies = [
+    "lazy_static",
+    "regex",
 ]
 
 [[package]]
@@ -2074,18 +2085,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.124"
+version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd761ff957cb2a45fbb9ab3da6512de9de55872866160b23c25f1a841e99d29f"
+checksum = "558dc50e1a5a5fa7112ca2ce4effcb321b0300c0d4ccf0776a9f60cd89031171"
 dependencies = [
     "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.124"
+version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1800f7693e94e186f5e25a28291ae1570da908aff7d97a095dec1e56ff99069b"
+checksum = "b093b7a2bb58203b5da3056c05b4ec1fed827dcfdb37347a8841695263b3d06d"
 dependencies = [
     "proc-macro2",
     "quote",
@@ -2515,9 +2526,9 @@ checksum = "238ce071d267c5710f9d31451efec16c5ee22de34df17cc05e56cbc92e967117"
 
 [[package]]
 name = "tokio"
-version = "1.3.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d56477f6ed99e10225f38f9f75f872f29b8b8bd8c0b946f63345bb144e9eeda"
+checksum = "134af885d758d645f0f0505c9a8b3f9bf8a348fd822e112ab5248138348f1722"
 dependencies = [
     "autocfg",
     "bytes 1.0.1",

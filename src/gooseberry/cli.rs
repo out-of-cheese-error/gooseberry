@@ -66,6 +66,14 @@ pub enum GooseberrySubcommand {
         #[structopt(conflicts_with = "filters")]
         id: Option<String>,
     },
+    /// Get the set of URIs from a list of (optionally filtered) annotations
+    Uri {
+        #[structopt(flatten)]
+        filters: Filters,
+        /// list of comma-separated annotation IDs
+        #[structopt(use_delimiter = true)]
+        ids: Vec<String>,
+    },
     /// Create your knowledge-base text files
     Make {
         /// Don't ask for confirmation before clearing knowledge base directory
