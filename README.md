@@ -104,7 +104,7 @@ Then ran `gooseberry make` to make an `mdBook` style wiki which I could then ope
 
 ![Tag page example](data/images/wiki.png)
 
-Or an Obsidian style wiki, with annotations grouped into folders based on their base URI
+Or an Obsidian style wiki, with annotations grouped into folders based on the document/web-page title
 
 ![Obsidian example](data/images/obsidian_example.png)
 
@@ -170,6 +170,7 @@ The following keys can be used inside the template
 * `{{ uri }}` - Annotation URI
 * `{{ base_uri }}` - Base website of URI, i.e just the protocol and domain.
     * e.g. https://github.com/rust-lang/cargo?asdf becomes https://github.com/
+* `{{ title }}` - Title of webpage/article/document
 * `{{ incontext }}` - Link to annotation in context (opens the Hypothesis sidebar and focuses on the annotation)
 * `highlight` - List of selected/highlighted lines from document (split by newline)
 * `{{ text }}` - The text content of the annotation body
@@ -276,6 +277,7 @@ The available options are:
 * Tag - Groups annotations by tag
 * URI - Groups annotations by their URI
 * BaseURI - Groups annotations by their base URI
+* Title - Group annotations by the title of their webpage/article/document
 * ID - Groups annotations by annotation ID.
 
 Multiple hierarchies combined make folders and sub-folders, with the last entry defining pages.
@@ -298,6 +300,7 @@ The available options are:
 * Tag - Sorts by tag (multiple tags are considered as "tag1,tag2,tag3" for sorting)
 * URI
 * BaseURI
+* Title
 * ID
 * Created
 * Updated
