@@ -255,6 +255,8 @@ The following keys can be used inside the template:
 * `{{ relative_path }}` - path relative to KB directory
 * `{{ absolute_path }}` - full path on filesystem
 * `annotations` - a list of *rendered* annotations (according to the annotation template)
+* `raw_annotations` - a list of annotations (in case you need info for the page about the annotations -
+  e.g. `{{raw_annotations.0.title}}`)
 
 The default template is:
 

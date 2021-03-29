@@ -154,6 +154,7 @@ pub struct PageTemplate {
     #[serde(flatten)]
     pub link_data: LinkTemplate,
     pub annotations: Vec<String>,
+    pub raw_annotations: Vec<AnnotationTemplate>,
 }
 
 /// ## Markdown generation
@@ -360,9 +361,10 @@ impl Gooseberry {
                         let page_data = PageTemplate {
                             link_data,
                             annotations: inner_annotations
-                                .into_iter()
+                                .iter()
                                 .map(|a| hbs.render("annotation", &a))
                                 .collect::<Result<Vec<String>, _>>()?,
+                            raw_annotations: inner_annotations,
                         };
                         fs::File::create(&path)?
                             .write_all(hbs.render("page", &page_data)?.as_bytes())?;

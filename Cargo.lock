@@ -146,7 +146,7 @@ dependencies = [
     "serde",
     "serde_yaml",
     "syntect",
- "unicode-width",
+    "unicode-width",
 ]
 
 [[package]]
@@ -2431,9 +2431,9 @@ dependencies = [
     "cfg-if 1.0.0",
     "libc",
     "rand",
- "redox_syscall 0.2.4",
- "remove_dir_all",
- "winapi",
+    "redox_syscall 0.2.4",
+    "remove_dir_all",
+    "winapi",
 ]
 
 [[package]]

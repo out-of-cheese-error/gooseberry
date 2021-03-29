@@ -633,10 +633,14 @@ file_extension = '{}'
                     relative_path: "relative/path/to/page.md".to_string(),
                     absolute_path: "absolute/path/to/page.md".to_string(),
                 },
-                annotations: vec![test_annotation_1, test_annotation_2]
+                annotations: vec![test_annotation_1.clone(), test_annotation_2.clone()]
                     .into_iter()
                     .map(|a| hbs.render("annotation", &AnnotationTemplate::from_annotation(a)))
                     .collect::<Result<Vec<String>, _>>()?,
+                raw_annotations: vec![
+                    AnnotationTemplate::from_annotation(test_annotation_1),
+                    AnnotationTemplate::from_annotation(test_annotation_2),
+                ],
             };
 
             self.page_template = loop {
