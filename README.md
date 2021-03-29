@@ -164,8 +164,8 @@ Change the template used for rendering the annotation.
 The following keys can be used inside the template
 
 * `{{ id }}` - Annotation ID
-* `created` - Date of creation. Use with the `date_format` helper
-* `updated` - Date of creation. Use with the `date_format` helper
+* `created` - Date of creation. Use with the `date_format` helper (See [here](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html) for formatting options)
+* `updated` - Date of the last modification. Use with the `date_format` helper (See [here](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html) for formatting options)
 * `{{ user }}` - User account ID formatted as `acct:<username>@<authority>`
 * `{{ uri }}` - Annotation URI
 * `{{ base_uri }}` - Base website of URI, i.e just the protocol and domain.
