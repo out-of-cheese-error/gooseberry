@@ -22,6 +22,7 @@ This demonstrates the interactive search functionality. `Enter` adds a new tag, 
     * [Installation requirements](#installation-requirements)
     * [Binaries](#binaries)
     * [With brew (OSX)](#with-brew-osx)
+    * [AUR](#aur)
 * [Contributing](#contributing)
 * [Motivation](#motivation)
 * [A typical workflow](#a-typical-workflow)
@@ -60,6 +61,8 @@ See the [releases](https://github.com/out-of-cheese-error/gooseberry/releases/la
 ```bash
 brew tap out-of-cheese-error/gooseberry && brew install gooseberry
 ```
+### AUR
+gooseberry is [now](https://github.com/out-of-cheese-error/gooseberry/discussions/72) also available on the Arch User Repo [here](https://aur.archlinux.org/packages/gooseberry-bin/) 
 
 ## Contributing
 
