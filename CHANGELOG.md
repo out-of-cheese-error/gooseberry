@@ -13,6 +13,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 - markdown preview in search (Issue [#74](https://github.com/out-of-cheese-error/gooseberry/issues/74))
 
+### Added
+- handlebars_misc_helpers (Issue [#81](https://github.com/out-of-cheese-error/gooseberry/issues/66))
+
 ## [0.8.0] - 2021-03-14
 ### Fixed
 * All w3 selectors (partially) supported (Issue [#66](https://github.com/out-of-cheese-error/gooseberry/issues/66))
