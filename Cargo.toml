@@ -13,7 +13,7 @@ include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
-hypothesis = { version = "0.9.1", default-features = false }
+hypothesis = { version = "0.10.0", default-features = false }
 tokio = { version = "1.4.0", features = ["macros"] }
 
 # To extract the base URI
