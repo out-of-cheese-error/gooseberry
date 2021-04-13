@@ -1051,7 +1051,7 @@ dependencies = [
 
 [[package]]
 name = "gooseberry"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "assert_cmd",
  "bat",
@@ -1220,9 +1220,9 @@ dependencies = [
 
 [[package]]
 name = "hypothesis"
-version = "0.10.0"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bdc100125048775aae837b7be820fef0379df2685b6aaf9fcbef35dcc56d858"
+checksum = "51814206b4ee9e2269e1198bb26648e643d47b13156a5edd6c43e1eb089ac154"
 dependencies = [
  "chrono",
  "derive_builder",

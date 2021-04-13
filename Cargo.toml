@@ -1,6 +1,6 @@
 [package]
 name = "gooseberry"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["Ninjani"]
 edition = "2018"
 description = "A command line utility to generate a knowledge base from Hypothesis annotations "
@@ -13,7 +13,7 @@ include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
-hypothesis = { version = "0.10.0", default-features = false }
+hypothesis = { version = "0.10.2", default-features = false }
 tokio = { version = "1.4.0", features = ["macros"] }
 
 # To extract the base URI
