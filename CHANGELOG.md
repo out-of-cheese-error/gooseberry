@@ -7,7 +7,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 ### Changed
-Use local time instead of UTC for search
+- Use local time instead of UTC for search (Issue [#77](https://github.com/out-of-cheese-error/gooseberry/issues/77))
+
+### Fixed
+- markdown preview in search (Issue [#74](https://github.com/out-of-cheese-error/gooseberry/issues/74))
 
 ## [0.8.0] - 2021-03-14
 ### Fixed
