@@ -182,7 +182,9 @@ The following keys can be used inside the template
 * `references` - List of annotation IDs for any annotations this annotation references (e.g. is a reply to)
 * `{{ display_name }}` - Display name of annotation creator. This may not be set.
 
-See the [Handlebars Language Guide](https://handlebarsjs.com/guide/#what-is-handlebars) for more on templating. Some examples for using the list keys
+See the [Handlebars Language Guide](https://handlebarsjs.com/guide/#what-is-handlebars) for more on templating. You can also make use of the helpers from [handlebars_misc_helpers](https://lib.rs/crates/handlebars_misc_helpers).
+
+Some examples for using the list keys
 and for formatting dates are shown below for different systems:
 
 * mdBook
