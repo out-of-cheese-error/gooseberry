@@ -57,7 +57,7 @@ impl<'a> SkimItem for SearchAnnotation {
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
         ItemPreview::Command(format!(
-            "echo {:?} | bat -l markdown --color=always -p",
+            "echo \"{}\" | bat -l markdown --color=always -p",
             self.markdown
         ))
     }
