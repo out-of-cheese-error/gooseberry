@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Changed
+Use local time instead of UTC for search
+
 ## [0.8.0] - 2021-03-14
 ### Fixed
 * All w3 selectors (partially) supported (Issue [#66](https://github.com/out-of-cheese-error/gooseberry/issues/66))
