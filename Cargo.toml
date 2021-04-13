@@ -56,6 +56,7 @@ indicatif = "0.15.0"
 
 # Templating markdown
 handlebars = "3.5.3"
+handlebars_misc_helpers = "0.11.*"
 
 # Sanitizing filenames
 sanitize-filename = "0.3.0"

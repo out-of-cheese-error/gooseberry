@@ -107,6 +107,7 @@ impl<'a> Default for Templates<'a> {
 
 pub(crate) fn get_handlebars(templates: Templates) -> color_eyre::Result<Handlebars> {
     let mut hbs = Handlebars::new();
+    handlebars_misc_helpers::register(&mut hbs);
     hbs.register_escape_fn(handlebars::no_escape);
     hbs.register_helper("date_format", Box::new(date_format));
     hbs.register_template_string("annotation", templates.annotation_template)?;
