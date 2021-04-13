@@ -1,6 +1,6 @@
 [package]
 name = "gooseberry"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Ninjani"]
 edition = "2018"
 description = "A command line utility to generate a knowledge base from Hypothesis annotations "
@@ -14,7 +14,7 @@ include = ["src/**/*", "README.md"]
 [dependencies]
 # Hypothesis
 hypothesis = { version = "0.10.2", default-features = false }
-tokio = { version = "1.4.0", features = ["macros"] }
+tokio = { version = "1.5.0", features = ["macros"] }
 
 # To extract the base URI
 url = "2.2.1"
@@ -38,11 +38,11 @@ thiserror = "1.0.24"
 serde = "1.0.125"
 serde_json = "1.0.64"
 serde_derive = "1.0.125"
-bincode = "1.3.2"
+bincode = "1.3.3"
 
 # Parsing and manipulating dates
 chrono = { version = "0.4.19", features = ["serde"] }
-chrono-english = "0.1.5"
+chrono-english = "0.1.6"
 
 # Fuzzy search
 skim = "0.9.4"
@@ -55,7 +55,7 @@ bat = { version = "0.18.0", default-features = false, features = ["regex-fancy"]
 indicatif = "0.15.0"
 
 # Templating markdown
-handlebars = "3.5.3"
+handlebars = "3.5.4"
 
 # Sanitizing filenames
 sanitize-filename = "0.3.0"
@@ -65,7 +65,7 @@ assert_cmd = "1.0.3"
 predicates = "1.0.7"
 tempfile = "3.2.0"
 dotenv = "0.15.0"
-futures = "0.3.13"
+futures = "0.3.14"
 
 [profile.release]
 panic = 'abort'

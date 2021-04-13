@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8.1] - 2021-03-14
 ### Changed
 - Use local time instead of UTC for search (Issue [#77](https://github.com/out-of-cheese-error/gooseberry/issues/77))
+- Updated dependencies
 
 ### Fixed
 - markdown preview in search (Issue [#74](https://github.com/out-of-cheese-error/gooseberry/issues/74))
@@ -131,6 +132,12 @@ Main commands:
 * `gooseberry config` - manages configuration, view and edit Hypothesis credentials, the Hypothesis group, and the location of the knowledge base
 * `gooseberry move` - move annotations from one group to another (**move** not copy). Useful if you have a bunch of annotations scattered around and
   want to move them into one group for gooseberry.
+
+[0.8.1]: https://github.com/out-of-cheese-error/gooseberry/compare/0.8.0...0.8.1
+
+[0.8.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.7.1...0.8.0
+
+[0.7.1]: https://github.com/out-of-cheese-error/gooseberry/compare/0.7.0...0.7.1
 
 [0.7.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.6.0...0.7.0
 
