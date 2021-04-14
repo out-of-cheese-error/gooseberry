@@ -206,6 +206,7 @@ impl Gooseberry {
         let mut order_to_annotations = HashMap::new();
         match order {
             OrderBy::Tag => {
+                let path_separator = &std::path::MAIN_SEPARATOR.to_string();
                 for annotation in annotations {
                     if annotation.annotation.tags.is_empty() {
                         order_to_annotations
@@ -214,8 +215,9 @@ impl Gooseberry {
                             .push(annotation);
                     } else {
                         for tag in &annotation.annotation.tags {
+                            let tag = tag.replace("/", path_separator);
                             order_to_annotations
-                                .entry(tag.to_owned())
+                                .entry(tag)
                                 .or_insert_with(Vec::new)
                                 .push(annotation.clone());
                         }
@@ -368,6 +370,7 @@ impl Gooseberry {
                             raw_annotations: inner_annotations,
                         };
                         // TODO: check if nested tags work on Windows
+                        // TODO: add tests for nested tags
                         if let Some(prefix) = path.parent() {
                             fs::create_dir_all(prefix)?;
                         }
