@@ -262,6 +262,8 @@ pub enum KbConfigCommand {
     Sort,
     /// Set which tags to ignore
     Ignore,
+    /// Set string defining nested tags (e.g "/" => parent/child)
+    Nest,
 }
 
 impl ConfigCommand {
@@ -295,6 +297,7 @@ impl ConfigCommand {
                     KbConfigCommand::Page => config.set_page_template()?,
                     KbConfigCommand::Link => config.set_index_link_template()?,
                     KbConfigCommand::Index => config.set_index_name()?,
+                    KbConfigCommand::Nest => config.set_nested_tag()?,
                     KbConfigCommand::Extension => config.set_file_extension()?,
                     KbConfigCommand::Hierarchy => config.set_hierarchy()?,
                     KbConfigCommand::Sort => config.set_sort()?,

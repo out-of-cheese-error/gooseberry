@@ -290,7 +290,6 @@ impl Gooseberry {
         self.make_book(annotations, &kb_dir, make, index).await?;
         Ok(())
     }
-
     /// Write markdown files for wiki
     async fn make_book(
         &self,
