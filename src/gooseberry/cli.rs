@@ -74,11 +74,24 @@ pub enum GooseberrySubcommand {
         #[structopt(use_delimiter = true)]
         ids: Vec<String>,
     },
-    /// Create your knowledge-base text files
+    /// Create knowledge-base text files using optionally filtered annotations
     Make {
-        /// Don't ask for confirmation before clearing knowledge base directory
+        #[structopt(flatten)]
+        filters: Filters,
+        /// Clear knowledge base directory before recreating
         #[structopt(short, long)]
+        clear: bool,
+        /// Don't ask for confirmation before clearing
+        #[structopt(short, long, requires = "clear")]
         force: bool,
+        /// Don't make index file
+        #[structopt(short, long)]
+        no_index: bool,
+    },
+    /// Create an index file using hierarchy and optionally filtered annotations
+    Index {
+        #[structopt(flatten)]
+        filters: Filters,
     },
     /// Generate shell completions
     Complete {
