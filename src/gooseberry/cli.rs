@@ -154,8 +154,14 @@ pub struct Filters {
     #[structopt(default_value, long)]
     pub any: String,
     /// Only annotations with these tags
-    #[structopt(long)]
+    #[structopt(long, use_delimiter = true)]
     pub tags: Vec<String>,
+    /// Only annotations that contain this text inside the text that was annotated.
+    #[structopt(default_value, long)]
+    pub quote: String,
+    /// Only annotations that contain this text in their textual body.
+    #[structopt(default_value, long)]
+    pub text: String,
 }
 
 impl From<Filters> for SearchQuery {
@@ -180,6 +186,8 @@ impl From<Filters> for SearchQuery {
             } else {
                 Sort::Created
             },
+            quote: filters.quote,
+            text: filters.text,
             ..SearchQuery::default()
         }
     }
