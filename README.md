@@ -170,7 +170,7 @@ The following keys can be used inside the template
 * `created` - Date of creation. Use with the `date_format` helper (See [here](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html) for formatting options)
 * `updated` - Date of the last modification. Use with the `date_format` helper (See [here](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html) for formatting options)
 * `{{ user }}` - User account ID formatted as `acct:<username>@<authority>`
-* `{{ uri }}` - Annotation URI
+* `{{ uri }}` - URI of page being annotated (this can be a website URL or a PDF URN)
 * `{{ base_uri }}` - Base website of URI, i.e just the protocol and domain.
     * e.g. https://github.com/rust-lang/cargo?asdf becomes https://github.com/
 * `{{ title }}` - Title of webpage/article/document
