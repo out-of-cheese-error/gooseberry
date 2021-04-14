@@ -367,6 +367,10 @@ impl Gooseberry {
                                 .collect::<Result<Vec<String>, _>>()?,
                             raw_annotations: inner_annotations,
                         };
+                        // TODO: check if nested tags work on Windows
+                        if let Some(prefix) = path.parent() {
+                            fs::create_dir_all(prefix)?;
+                        }
                         fs::File::create(&path)?
                             .write_all(hbs.render("page", &page_data)?.as_bytes())?;
                     } else {
