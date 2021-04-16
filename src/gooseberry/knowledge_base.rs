@@ -158,6 +158,92 @@ pub struct PageTemplate {
     pub raw_annotations: Vec<AnnotationTemplate>,
 }
 
+fn group_annotations_by_order(
+    order: OrderBy,
+    annotations: Vec<AnnotationTemplate>,
+) -> HashMap<String, Vec<AnnotationTemplate>> {
+    let mut order_to_annotations = HashMap::new();
+    match order {
+        OrderBy::Tag => {
+            let path_separator = &std::path::MAIN_SEPARATOR.to_string();
+            for annotation in annotations {
+                if annotation.annotation.tags.is_empty() {
+                    order_to_annotations
+                        .entry(EMPTY_TAG.to_owned())
+                        .or_insert_with(Vec::new)
+                        .push(annotation);
+                } else {
+                    for tag in &annotation.annotation.tags {
+                        let tag = tag.replace("/", path_separator);
+                        order_to_annotations
+                            .entry(tag)
+                            .or_insert_with(Vec::new)
+                            .push(annotation.clone());
+                    }
+                }
+            }
+        }
+        OrderBy::URI => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(uri_to_filename(&annotation.annotation.uri))
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
+        OrderBy::Title => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(sanitize(&annotation.title))
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
+        OrderBy::BaseURI => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(uri_to_filename(&annotation.base_uri))
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
+        OrderBy::ID => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(annotation.annotation.id.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
+        OrderBy::Empty => panic!("Shouldn't happen"),
+        _ => panic!("{} shouldn't occur in hierarchy", order),
+    }
+    order_to_annotations
+}
+
+fn sort_annotations(sort: &[OrderBy], annotations: &mut Vec<AnnotationTemplate>) {
+    annotations.sort_by(|a, b| {
+        sort.iter().fold(Ordering::Equal, |acc, &field| {
+            acc.then_with(|| match field {
+                OrderBy::Tag => a
+                    .annotation
+                    .tags
+                    .join(",")
+                    .cmp(&b.annotation.tags.join(",")),
+                OrderBy::URI => clean_uri(&a.annotation.uri).cmp(&clean_uri(&b.annotation.uri)),
+                OrderBy::BaseURI => clean_uri(&a.base_uri).cmp(&clean_uri(&b.base_uri)),
+                OrderBy::Title => a.title.cmp(&b.title),
+                OrderBy::ID => a.annotation.id.cmp(&b.annotation.id),
+                OrderBy::Created => format!("{}", a.annotation.created.format("%+"))
+                    .cmp(&format!("{}", b.annotation.created.format("%+"))),
+                OrderBy::Updated => format!("{}", a.annotation.updated.format("%+"))
+                    .cmp(&format!("{}", b.annotation.updated.format("%+"))),
+                OrderBy::Empty => panic!("Shouldn't happen"),
+            })
+        })
+    });
+}
+
 /// ## Markdown generation
 /// functions related to generating the `mdBook` wiki
 impl Gooseberry {
@@ -181,10 +267,18 @@ impl Gooseberry {
     }
 
     /// Make mdBook wiki
-    pub async fn make(&mut self, force: bool) -> color_eyre::Result<()> {
+    pub async fn make(
+        &mut self,
+        filters: Filters,
+        clear: bool,
+        force: bool,
+        make: bool,
+        index: bool,
+    ) -> color_eyre::Result<()> {
         self.configure_kb()?;
         let kb_dir = self.config.kb_dir.as_ref().unwrap();
-        if kb_dir.exists()
+        if clear
+            && kb_dir.exists()
             && (force
                 || Confirm::with_theme(&ColorfulTheme::default())
                     .with_prompt("Clear knowledge base directory?")
@@ -194,113 +288,26 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-        self.make_book(&kb_dir).await?;
+        self.make_book(filters, &kb_dir, make, index).await?;
         Ok(())
     }
 
-    fn group_annotations_by_order(
-        &self,
-        order: OrderBy,
-        annotations: Vec<AnnotationTemplate>,
-    ) -> HashMap<String, Vec<AnnotationTemplate>> {
-        let mut order_to_annotations = HashMap::new();
-        match order {
-            OrderBy::Tag => {
-                let path_separator = &std::path::MAIN_SEPARATOR.to_string();
-                for annotation in annotations {
-                    if annotation.annotation.tags.is_empty() {
-                        order_to_annotations
-                            .entry(EMPTY_TAG.to_owned())
-                            .or_insert_with(Vec::new)
-                            .push(annotation);
-                    } else {
-                        for tag in &annotation.annotation.tags {
-                            let tag = tag.replace("/", path_separator);
-                            order_to_annotations
-                                .entry(tag)
-                                .or_insert_with(Vec::new)
-                                .push(annotation.clone());
-                        }
-                    }
-                }
-            }
-            OrderBy::URI => {
-                for annotation in annotations {
-                    order_to_annotations
-                        .entry(uri_to_filename(&annotation.annotation.uri))
-                        .or_insert_with(Vec::new)
-                        .push(annotation);
-                }
-            }
-            OrderBy::Title => {
-                for annotation in annotations {
-                    order_to_annotations
-                        .entry(sanitize(&annotation.title))
-                        .or_insert_with(Vec::new)
-                        .push(annotation);
-                }
-            }
-            OrderBy::BaseURI => {
-                for annotation in annotations {
-                    order_to_annotations
-                        .entry(uri_to_filename(&annotation.base_uri))
-                        .or_insert_with(Vec::new)
-                        .push(annotation);
-                }
-            }
-            OrderBy::ID => {
-                for annotation in annotations {
-                    order_to_annotations
-                        .entry(annotation.annotation.id.to_string())
-                        .or_insert_with(Vec::new)
-                        .push(annotation);
-                }
-            }
-            OrderBy::Empty => panic!("Shouldn't happen"),
-            _ => panic!("{} shouldn't occur in hierarchy", order),
-        }
-        order_to_annotations
-    }
-
-    fn sort_annotations(&self, annotations: &mut Vec<AnnotationTemplate>) {
-        annotations.sort_by(|a, b| {
-            self.config
-                .sort
-                .as_ref()
-                .unwrap_or(&vec![OrderBy::Created])
-                .iter()
-                .fold(Ordering::Equal, |acc, &field| {
-                    acc.then_with(|| match field {
-                        OrderBy::Tag => a
-                            .annotation
-                            .tags
-                            .join(",")
-                            .cmp(&b.annotation.tags.join(",")),
-                        OrderBy::URI => {
-                            clean_uri(&a.annotation.uri).cmp(&clean_uri(&b.annotation.uri))
-                        }
-                        OrderBy::BaseURI => clean_uri(&a.base_uri).cmp(&clean_uri(&b.base_uri)),
-                        OrderBy::Title => a.title.cmp(&b.title),
-                        OrderBy::ID => a.annotation.id.cmp(&b.annotation.id),
-                        OrderBy::Created => format!("{}", a.annotation.created.format("%+"))
-                            .cmp(&format!("{}", b.annotation.created.format("%+"))),
-                        OrderBy::Updated => format!("{}", a.annotation.updated.format("%+"))
-                            .cmp(&format!("{}", b.annotation.updated.format("%+"))),
-                        OrderBy::Empty => panic!("Shouldn't happen"),
-                    })
-                })
-        });
-    }
     /// Write markdown files for wiki
-    async fn make_book(&self, src_dir: &Path) -> color_eyre::Result<()> {
-        let pb = utils::get_spinner("Building knowledge base...");
+    async fn make_book(
+        &self,
+        filters: Filters,
+        src_dir: &Path,
+        make: bool,
+        index: bool,
+    ) -> color_eyre::Result<()> {
+        let pb = utils::get_spinner("Fetching annotations...");
         let extension = self.config.file_extension.as_ref().unwrap();
         let index_file = src_dir.join(format!(
             "{}.{}",
             self.config.index_name.as_ref().unwrap(),
             extension
         ));
-        if index_file.exists() {
+        if index && index_file.exists() {
             // Initialize
             fs::remove_file(&index_file)?;
         }
@@ -310,7 +317,7 @@ impl Gooseberry {
 
         // Get all annotations
         let mut annotations: Vec<_> = self
-            .filter_annotations(Filters::default(), None)
+            .filter_annotations(filters, None)
             .await?
             .into_iter()
             .filter(|a| {
@@ -324,7 +331,12 @@ impl Gooseberry {
             })
             .map(AnnotationTemplate::from_annotation)
             .collect();
-        self.sort_annotations(&mut annotations);
+        pb.finish_with_message(&format!("Fetched {} annotations", annotations.len()));
+        let pb = utils::get_spinner("Building knowledge base...");
+        sort_annotations(
+            self.config.sort.as_ref().unwrap_or(&vec![OrderBy::Created]),
+            &mut annotations,
+        );
 
         let order = self.config.hierarchy.as_ref().unwrap();
         if order.is_empty() {
@@ -360,28 +372,32 @@ impl Gooseberry {
                             .collect();
                         let path = PathBuf::from(format!("{}.{}", folder_name, extension));
                         let link_data = get_link_data(&path, &src_dir)?;
-                        index_links.push(hbs.render("index_link", &link_data)?);
-                        let page_data = PageTemplate {
-                            link_data,
-                            annotations: inner_annotations
-                                .iter()
-                                .map(|a| hbs.render("annotation", &a))
-                                .collect::<Result<Vec<String>, _>>()?,
-                            raw_annotations: inner_annotations,
-                        };
-                        // TODO: check if nested tags work on Windows
-                        // TODO: add tests for nested tags
-                        if let Some(prefix) = path.parent() {
-                            fs::create_dir_all(prefix)?;
+                        if index {
+                            index_links.push(hbs.render("index_link", &link_data)?);
                         }
-                        fs::File::create(&path)?
-                            .write_all(hbs.render("page", &page_data)?.as_bytes())?;
+                        if make {
+                            let page_data = PageTemplate {
+                                link_data,
+                                annotations: inner_annotations
+                                    .iter()
+                                    .map(|a| hbs.render("annotation", &a))
+                                    .collect::<Result<Vec<String>, _>>()?,
+                                raw_annotations: inner_annotations,
+                            };
+                            // TODO: check if nested tags work on Windows
+                            // TODO: add tests for nested tags
+                            if let Some(prefix) = path.parent() {
+                                fs::create_dir_all(prefix)?;
+                            }
+                            fs::File::create(&path)?
+                                .write_all(hbs.render("page", &page_data)?.as_bytes())?;
+                        }
                     } else {
-                        if !folder.exists() {
+                        if make && !folder.exists() {
                             fs::create_dir(&folder)?;
                         }
                         for (new_folder, annotations) in
-                            self.group_annotations_by_order(order[depth], inner_annotations)
+                            group_annotations_by_order(order[depth], inner_annotations)
                         {
                             (recurse_folder.f)(
                                 recurse_folder,
@@ -395,7 +411,6 @@ impl Gooseberry {
                     Ok(())
                 },
             };
-
             // Make directory structure
             (recurse_folder.f)(
                 &recurse_folder,
@@ -404,15 +419,22 @@ impl Gooseberry {
                 0,
                 &mut index_links,
             )?;
-            // Make Index file
-            fs::File::create(index_file)?
-                .write_all(index_links.into_iter().collect::<String>().as_bytes())?;
+            if index {
+                // Make Index file
+                fs::File::create(&index_file)?
+                    .write_all(index_links.into_iter().collect::<String>().as_bytes())?;
+            }
         }
         pb.finish_with_message("Done!");
-        println!(
-            "Knowledge base built at: {:?}",
-            self.config.kb_dir.as_ref().unwrap()
-        );
+        if make {
+            println!(
+                "Knowledge base built at: {:?}",
+                self.config.kb_dir.as_ref().unwrap()
+            );
+        }
+        if index {
+            println!("Index file location: {:?}", index_file);
+        }
         Ok(())
     }
 }

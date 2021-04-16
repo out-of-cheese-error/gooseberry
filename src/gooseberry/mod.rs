@@ -98,7 +98,15 @@ impl Gooseberry {
                 search,
                 fuzzy,
             } => self.sync_group(group_id, filters, search, fuzzy).await,
-            GooseberrySubcommand::Make { force } => self.make(force).await,
+            GooseberrySubcommand::Make {
+                filters,
+                clear,
+                force,
+                no_index,
+            } => self.make(filters, clear, force, true, !no_index).await,
+            GooseberrySubcommand::Index { filters } => {
+                self.make(filters, false, false, false, true).await
+            }
             GooseberrySubcommand::Clear { force } => self.clear(force),
             GooseberrySubcommand::Uri { filters, ids } => {
                 let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;

@@ -352,6 +352,8 @@ async fn make() -> color_eyre::Result<()> {
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("make")
         .arg("-f")
+        .arg("-c")
+        .arg("-n")
         .assert()
         .success();
 
@@ -370,8 +372,21 @@ async fn make() -> color_eyre::Result<()> {
             })
         })
         .collect::<Result<HashSet<String>, _>>()?;
-    // index file
-    assert!(file_names.contains("SUMMARY.md"));
+    // index file shouldn't exist yet
+    assert!(!file_names.contains("SUMMARY.md"));
+
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("index")
+        .assert()
+        .success();
+    // now index file should exist
+    assert!(test_data
+        .temp_dir
+        .path()
+        .join("kb")
+        .join("SUMMARY.md")
+        .exists());
 
     // check all tag files
     assert!(["test_tag", "test_tag1", "test_tag2", "test tag5"]
