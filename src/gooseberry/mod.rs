@@ -198,9 +198,7 @@ impl Gooseberry {
         filters: Filters,
         group: Option<String>,
     ) -> color_eyre::Result<Vec<Annotation>> {
-        let mut query: SearchQuery = filters.into();
-        query.user = self.api.user.0.to_owned();
-        query.group = match group {
+        let group = match group {
             Some(group) => group,
             None => self
                 .config
@@ -208,12 +206,20 @@ impl Gooseberry {
                 .clone()
                 .expect("This should have been set by Config"),
         };
-        let mut annotations: Vec<_> = self
-            .api
-            .search_annotations_return_all(&mut query)
-            .await?
-            .into_iter()
-            .collect();
+        let mut query: SearchQuery = filters.clone().into();
+        query.user = self.api.user.0.to_owned();
+        query.group = group.to_string();
+        let mut annotations: Vec<_> = self.api.search_annotations_return_all(&mut query).await?;
+        if filters.not {
+            let mut query: SearchQuery = Filters::default().into();
+            query.user = self.api.user.0.to_owned();
+            query.group = group;
+            let mut all_annotations: Vec<_> =
+                self.api.search_annotations_return_all(&mut query).await?;
+            let remove_ids = annotations.iter().map(|a| &a.id).collect::<HashSet<_>>();
+            all_annotations.retain(|a| !remove_ids.contains(&a.id));
+            annotations = all_annotations;
+        }
         annotations.sort_by(|a, b| a.created.cmp(&b.created));
         Ok(annotations)
     }

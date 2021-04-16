@@ -130,7 +130,7 @@ pub enum GooseberrySubcommand {
 }
 
 /// CLI options for filtering annotations
-#[derive(StructOpt, Debug, Default)]
+#[derive(StructOpt, Debug, Default, Clone)]
 pub struct Filters {
     /// Only annotations created after this date and time
     ///
@@ -162,6 +162,9 @@ pub struct Filters {
     /// Only annotations that contain this text in their textual body.
     #[structopt(default_value, long)]
     pub text: String,
+    /// Return annotations NOT matching the given filter criteria
+    #[structopt(short, long)]
+    pub not: bool,
 }
 
 impl From<Filters> for SearchQuery {
