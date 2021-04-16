@@ -209,7 +209,21 @@ impl Gooseberry {
         let mut query: SearchQuery = filters.clone().into();
         query.user = self.api.user.0.to_owned();
         query.group = group.to_string();
-        let mut annotations: Vec<_> = self.api.search_annotations_return_all(&mut query).await?;
+        let mut annotations = if filters.or {
+            let mut annotations = Vec::new();
+            for tag in &filters.tags {
+                let mut tag_query = query.clone();
+                tag_query.tags = vec![tag.to_string()];
+                annotations.extend(
+                    self.api
+                        .search_annotations_return_all(&mut tag_query)
+                        .await?,
+                );
+            }
+            annotations
+        } else {
+            self.api.search_annotations_return_all(&mut query).await?
+        };
         if filters.not {
             let mut query: SearchQuery = Filters::default().into();
             query.user = self.api.user.0.to_owned();

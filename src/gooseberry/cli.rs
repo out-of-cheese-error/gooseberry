@@ -142,7 +142,7 @@ pub struct Filters {
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
     pub before: Option<DateTime<Utc>>,
-    /// If true, includes annotations updated after --from or before --before (instead of just created)
+    /// Include annotations updated in given time range (instead of just created)
     #[structopt(short, long)]
     pub include_updated: bool,
     /// Only annotations with this pattern in their URL
@@ -153,7 +153,7 @@ pub struct Filters {
     /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
     #[structopt(default_value, long)]
     pub any: String,
-    /// Only annotations with these tags
+    /// Only annotations with ALL of these tags (use --or to match ANY)
     #[structopt(long, use_delimiter = true)]
     pub tags: Vec<String>,
     /// Only annotations that contain this text inside the text that was annotated.
@@ -162,9 +162,12 @@ pub struct Filters {
     /// Only annotations that contain this text in their textual body.
     #[structopt(default_value, long)]
     pub text: String,
-    /// Return annotations NOT matching the given filter criteria
+    /// Annotations NOT matching the given filter criteria
     #[structopt(short, long)]
     pub not: bool,
+    /// (Use with --tags) Annotations matching ANY of the given tags
+    #[structopt(short, long, requires = "tags")]
+    pub or: bool,
 }
 
 impl From<Filters> for SearchQuery {
