@@ -168,6 +168,12 @@ pub struct Filters {
     /// (Use with --tags) Annotations matching ANY of the given tags
     #[structopt(short, long, requires = "tags")]
     pub or: bool,
+    /// Only page notes
+    #[structopt(short, long)]
+    pub page: bool,
+    /// Only annotations (i.e exclude page notes)
+    #[structopt(short, long, conflicts_with = "page")]
+    pub annotation: bool,
 }
 
 impl From<Filters> for SearchQuery {
