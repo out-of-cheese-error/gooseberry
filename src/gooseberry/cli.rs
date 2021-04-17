@@ -84,8 +84,8 @@ pub enum GooseberrySubcommand {
         /// Don't ask for confirmation before clearing
         #[structopt(short, long, requires = "clear")]
         force: bool,
-        /// Don't make index file
-        #[structopt(short, long)]
+        /// Don't make an index file
+        #[structopt(long)]
         no_index: bool,
     },
     /// Create an index file using hierarchy and optionally filtered annotations

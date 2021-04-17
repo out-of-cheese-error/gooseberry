@@ -146,12 +146,13 @@ Gooseberry takes annotations from a given Hypothesis group which you can create/
 
 ### Knowledge base
 
-You can set all the below options at once by running `gooseberry config kb all` or changing the corresponding keys in the config file (found
-at `gooseberry config location`)
+You can set all the below options at once by running `gooseberry config kb all` or changing the corresponding keys in
+the config file (found at `gooseberry config location`)
 
-Generate knowledge base files using `gooseberry make` - this command has options to filter annotations, and to clear the directory before generating (`-c` or `--clear`).
-By default, it also generates an index file (configured by the `index` and `link` configuration options below) using the filtered annotations - this can be disabled with `-n` or `--no-index`.
-Use `gooseberry index` to generate just the index file, this command also has annotation filtering options. 
+Generate knowledge base files using `gooseberry make` - this command has options to filter annotations, and to clear the
+directory before generating (`-c` or `--clear`). By default, it also generates an index file (configured by the `index`
+and `link` configuration options below) using the filtered annotations - this can be disabled with `--no-index`.
+Use `gooseberry index` to generate just the index file, this command also has annotation filtering options.
 
 #### Knowledge base directory
 
