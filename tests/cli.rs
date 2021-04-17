@@ -32,6 +32,7 @@ hypothesis_group = '{}'
 kb_dir = '{}'
 hierarchy = ['Tag']
 sort = ['Created']
+nested_tag = ' : '
 annotation_template = '''{}'''
 page_template = '''{}'''
 index_link_template = '''{}'''
@@ -448,6 +449,22 @@ async fn make() -> color_eyre::Result<()> {
         .tags
         .contains(&"test tag5".to_owned()));
 
+    // add a nested tag
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--tags=test_tag")
+        .arg("test_tag6 : test_tag7")
+        .assert()
+        .success();
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
+        .await?
+        .tags
+        .contains(&"test_tag6 : test_tag7".to_owned()));
+
     // make
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
@@ -491,10 +508,19 @@ async fn make() -> color_eyre::Result<()> {
         .exists());
 
     // check all tag files
-    assert!(["test_tag", "test_tag1", "test_tag2", "test tag5"]
+    assert!(["test_tag", "test_tag1", "test_tag2", "test tag5",]
         .iter()
         .all(|t| file_names.contains(&format!("{}.md", t))));
 
+    // check nested tags
+    assert!(file_names.contains("test_tag6"));
+    assert!(test_data
+        .temp_dir
+        .path()
+        .join("kb")
+        .join("test_tag6")
+        .join("test_tag7.md")
+        .exists());
     test_data.clear().await?;
     Ok(())
 }
