@@ -224,6 +224,9 @@ impl Gooseberry {
         } else {
             self.api.search_annotations_return_all(&mut query).await?
         };
+        if !filters.exclude_tags.is_empty() {
+            annotations.retain(|a| !a.tags.iter().any(|t| filters.exclude_tags.contains(t)));
+        }
         if filters.page {
             annotations.retain(|a| a.target.iter().all(|t| t.selector.is_empty()));
         }

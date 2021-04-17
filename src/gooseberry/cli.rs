@@ -154,8 +154,11 @@ pub struct Filters {
     #[structopt(default_value, long)]
     pub any: String,
     /// Only annotations with ALL of these tags (use --or to match ANY)
-    #[structopt(long, use_delimiter = true)]
+    #[structopt(long, use_delimiter = true, multiple = true)]
     pub tags: Vec<String>,
+    /// Only annotations without ANY of these tags
+    #[structopt(long, use_delimiter = true, multiple = true)]
+    pub exclude_tags: Vec<String>,
     /// Only annotations that contain this text inside the text that was annotated.
     #[structopt(default_value, long)]
     pub quote: String,
