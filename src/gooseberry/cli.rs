@@ -31,7 +31,8 @@ pub struct GooseberryCLI {
 pub enum GooseberrySubcommand {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
-    /// Opens a search buffer to see, filter, delete, add tags to and delete tags from annotations
+    /// Opens a search buffer to filter annotations.
+    /// Has keyboard shortcuts for deleting annotations, modifying tags, and creating knowledge-base files
     Search {
         #[structopt(flatten)]
         filters: Filters,
@@ -84,8 +85,8 @@ pub enum GooseberrySubcommand {
         /// Don't ask for confirmation before clearing
         #[structopt(short, long, requires = "clear")]
         force: bool,
-        /// Don't make index file
-        #[structopt(short, long)]
+        /// Don't make an index file
+        #[structopt(long)]
         no_index: bool,
     },
     /// Create an index file using hierarchy and optionally filtered annotations
@@ -130,7 +131,7 @@ pub enum GooseberrySubcommand {
 }
 
 /// CLI options for filtering annotations
-#[derive(StructOpt, Debug, Default)]
+#[derive(StructOpt, Debug, Default, Clone)]
 pub struct Filters {
     /// Only annotations created after this date and time
     ///
@@ -142,7 +143,7 @@ pub struct Filters {
     /// Can be colloquial, e.g. "last Friday 8pm"
     #[structopt(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
     pub before: Option<DateTime<Utc>>,
-    /// If true, includes annotations updated after --from or before --before (instead of just created)
+    /// Include annotations updated in given time range (instead of just created)
     #[structopt(short, long)]
     pub include_updated: bool,
     /// Only annotations with this pattern in their URL
@@ -153,9 +154,30 @@ pub struct Filters {
     /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
     #[structopt(default_value, long)]
     pub any: String,
-    /// Only annotations with these tags
-    #[structopt(long)]
+    /// Only annotations with ALL of these tags (use --or to match ANY)
+    #[structopt(long, use_delimiter = true, multiple = true)]
     pub tags: Vec<String>,
+    /// Only annotations without ANY of these tags
+    #[structopt(long, use_delimiter = true, multiple = true)]
+    pub exclude_tags: Vec<String>,
+    /// Only annotations that contain this text inside the text that was annotated.
+    #[structopt(default_value, long)]
+    pub quote: String,
+    /// Only annotations that contain this text in their textual body.
+    #[structopt(default_value, long)]
+    pub text: String,
+    /// Annotations NOT matching the given filter criteria
+    #[structopt(short, long)]
+    pub not: bool,
+    /// (Use with --tags) Annotations matching ANY of the given tags
+    #[structopt(short, long, requires = "tags")]
+    pub or: bool,
+    /// Only page notes
+    #[structopt(short, long)]
+    pub page: bool,
+    /// Only annotations (i.e exclude page notes)
+    #[structopt(short, long, conflicts_with = "page")]
+    pub annotation: bool,
 }
 
 impl From<Filters> for SearchQuery {
@@ -180,6 +202,8 @@ impl From<Filters> for SearchQuery {
             } else {
                 Sort::Created
             },
+            quote: filters.quote,
+            text: filters.text,
             ..SearchQuery::default()
         }
     }

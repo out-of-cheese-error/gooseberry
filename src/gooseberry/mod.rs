@@ -10,6 +10,7 @@ use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI, GooseberrySubcommand};
 use crate::gooseberry::knowledge_base::AnnotationTemplate;
+use crate::utils;
 
 /// Command-line interface with `structopt`
 pub mod cli;
@@ -103,9 +104,25 @@ impl Gooseberry {
                 clear,
                 force,
                 no_index,
-            } => self.make(filters, clear, force, true, !no_index).await,
+            } => {
+                self.make(
+                    self.filter_annotations_make(filters).await?,
+                    clear,
+                    force,
+                    true,
+                    !no_index,
+                )
+                .await
+            }
             GooseberrySubcommand::Index { filters } => {
-                self.make(filters, false, false, false, true).await
+                self.make(
+                    self.filter_annotations_make(filters).await?,
+                    false,
+                    false,
+                    false,
+                    true,
+                )
+                .await
             }
             GooseberrySubcommand::Clear { force } => self.clear(force),
             GooseberrySubcommand::Uri { filters, ids } => {
@@ -198,9 +215,7 @@ impl Gooseberry {
         filters: Filters,
         group: Option<String>,
     ) -> color_eyre::Result<Vec<Annotation>> {
-        let mut query: SearchQuery = filters.into();
-        query.user = self.api.user.0.to_owned();
-        query.group = match group {
+        let group = match group {
             Some(group) => group,
             None => self
                 .config
@@ -208,13 +223,70 @@ impl Gooseberry {
                 .clone()
                 .expect("This should have been set by Config"),
         };
-        let mut annotations: Vec<_> = self
-            .api
-            .search_annotations_return_all(&mut query)
+        let mut query: SearchQuery = filters.clone().into();
+        query.user = self.api.user.0.to_owned();
+        query.group = group.to_string();
+        let mut annotations = if filters.or && !filters.tags.is_empty() {
+            let mut annotations = Vec::new();
+            for tag in &filters.tags {
+                let mut tag_query = query.clone();
+                tag_query.tags = vec![tag.to_string()];
+                annotations.extend(
+                    self.api
+                        .search_annotations_return_all(&mut tag_query)
+                        .await?,
+                );
+            }
+            annotations
+        } else {
+            self.api.search_annotations_return_all(&mut query).await?
+        };
+        if !filters.exclude_tags.is_empty() {
+            annotations.retain(|a| !a.tags.iter().any(|t| filters.exclude_tags.contains(t)));
+        }
+        if filters.page {
+            annotations.retain(|a| a.target.iter().all(|t| t.selector.is_empty()));
+        }
+        if filters.annotation {
+            annotations.retain(|a| a.target.iter().any(|t| !t.selector.is_empty()));
+        }
+        if filters.not {
+            let mut query: SearchQuery = Filters::default().into();
+            query.user = self.api.user.0.to_owned();
+            query.group = group;
+            let mut all_annotations: Vec<_> =
+                self.api.search_annotations_return_all(&mut query).await?;
+            let remove_ids = annotations.iter().map(|a| &a.id).collect::<HashSet<_>>();
+            all_annotations.retain(|a| !remove_ids.contains(&a.id));
+            annotations = all_annotations;
+        }
+        annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        Ok(annotations)
+    }
+
+    /// Fetch annotations for knowledge base
+    /// Ignores annotations with tags in `ignore_tags` configuration option.
+    pub async fn filter_annotations_make(
+        &self,
+        filters: Filters,
+    ) -> color_eyre::Result<Vec<Annotation>> {
+        let pb = utils::get_spinner("Fetching annotations...");
+        // Get all annotations
+        let annotations: Vec<_> = self
+            .filter_annotations(filters, None)
             .await?
             .into_iter()
+            .filter(|a| {
+                !a.tags.iter().any(|t| {
+                    self.config
+                        .ignore_tags
+                        .as_ref()
+                        .map(|ignore_tags| ignore_tags.contains(t))
+                        .unwrap_or(false)
+                })
+            })
             .collect();
-        annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        pb.finish_with_message(&format!("Fetched {} annotations", annotations.len()));
         Ok(annotations)
     }
 

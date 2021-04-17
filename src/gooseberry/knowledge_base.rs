@@ -19,7 +19,6 @@ use crate::configuration::{
     OrderBy, DEFAULT_ANNOTATION_TEMPLATE, DEFAULT_INDEX_LINK_TEMPLATE, DEFAULT_PAGE_TEMPLATE,
 };
 use crate::errors::Apologize;
-use crate::gooseberry::cli::Filters;
 use crate::gooseberry::Gooseberry;
 use crate::utils;
 use crate::utils::{clean_uri, uri_to_filename};
@@ -269,7 +268,7 @@ impl Gooseberry {
     /// Make mdBook wiki
     pub async fn make(
         &mut self,
-        filters: Filters,
+        annotations: Vec<Annotation>,
         clear: bool,
         force: bool,
         make: bool,
@@ -288,19 +287,22 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-        self.make_book(filters, &kb_dir, make, index).await?;
+        self.make_book(annotations, &kb_dir, make, index).await?;
         Ok(())
     }
 
     /// Write markdown files for wiki
     async fn make_book(
         &self,
-        filters: Filters,
+        annotations: Vec<Annotation>,
         src_dir: &Path,
         make: bool,
         index: bool,
     ) -> color_eyre::Result<()> {
-        let pb = utils::get_spinner("Fetching annotations...");
+        let mut annotations = annotations
+            .into_iter()
+            .map(AnnotationTemplate::from_annotation)
+            .collect();
         let extension = self.config.file_extension.as_ref().unwrap();
         let index_file = src_dir.join(format!(
             "{}.{}",
@@ -314,24 +316,6 @@ impl Gooseberry {
 
         // Register templates
         let hbs = self.get_handlebars()?;
-
-        // Get all annotations
-        let mut annotations: Vec<_> = self
-            .filter_annotations(filters, None)
-            .await?
-            .into_iter()
-            .filter(|a| {
-                !a.tags.iter().any(|t| {
-                    self.config
-                        .ignore_tags
-                        .as_ref()
-                        .map(|ignore_tags| ignore_tags.contains(t))
-                        .unwrap_or(false)
-                })
-            })
-            .map(AnnotationTemplate::from_annotation)
-            .collect();
-        pb.finish_with_message(&format!("Fetched {} annotations", annotations.len()));
         let pb = utils::get_spinner("Building knowledge base...");
         sort_annotations(
             self.config.sort.as_ref().unwrap_or(&vec![OrderBy::Created]),

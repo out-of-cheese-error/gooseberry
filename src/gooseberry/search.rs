@@ -3,6 +3,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use dialoguer::console::style;
+use dialoguer::theme::ColorfulTheme;
+use dialoguer::Confirm;
 use hypothesis::annotations::Annotation;
 use skim::prelude::{unbounded, Key, SkimOptionsBuilder};
 use skim::{
@@ -89,11 +91,13 @@ impl Gooseberry {
                 "shift-left:accept",
                 "shift-right:accept",
                 "shift-up:accept",
+                "shift-down:accept",
                 "Enter:accept"
             ])
             .exact(!fuzzy)
             .header(Some("Arrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Esc to abort\n\
-            Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete annotation, Shift-Up to print the set of URIs"))
+            Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete annotation\n\
+            Shift-Down to make knowledge-base files, Shift-Up to print the set of URIs"))
             .multi(true)
             .reverse(true)
             .build()
@@ -121,7 +125,7 @@ impl Gooseberry {
             }));
         }
         drop(tx_item); // so that skim could know when to stop waiting for more items.
-
+        drop(hbs);
         if let Some(output) = Skim::run_with(&options, Some(rx_item)) {
             let annotation_ids: HashSet<String> = output
                 .selected_items
@@ -154,6 +158,17 @@ impl Gooseberry {
                 }
                 Key::ShiftRight => {
                     self.delete(annotations, false).await?;
+                }
+                Key::ShiftDown => {
+                    let clear = Confirm::with_theme(&ColorfulTheme::default())
+                        .with_prompt("Clear knowledge base directory?")
+                        .default(true)
+                        .interact()?;
+                    let index = Confirm::with_theme(&ColorfulTheme::default())
+                        .with_prompt("Also make index file?")
+                        .default(true)
+                        .interact()?;
+                    self.make(annotations, clear, true, true, index).await?;
                 }
                 Key::ShiftUp => {
                     self.uri(annotations, Vec::new())?;
