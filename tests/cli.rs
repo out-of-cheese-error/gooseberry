@@ -189,7 +189,7 @@ async fn sync() -> color_eyre::Result<()> {
 }
 
 #[tokio::test]
-async fn tag() -> color_eyre::Result<()> {
+async fn tag_filter() -> color_eyre::Result<()> {
     // get test_data
     let test_data = TestData::populate().await;
     assert!(test_data.is_ok());
@@ -284,7 +284,8 @@ async fn tag() -> color_eyre::Result<()> {
         .any(|x| x.tags.contains(&"test_tag4".to_owned())
             || x.tags.contains(&"test_tag5".to_owned())));
 
-    // check tags filtered
+    // Testing filters:
+    // include tags
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
@@ -309,6 +310,107 @@ async fn tag() -> color_eyre::Result<()> {
         .tags
         .contains(&"test_tag4".to_owned()));
 
+    // exclude tags
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--exclude-tags=test_tag2,test_tag4")
+        .arg("test_tag5")
+        .assert()
+        .success();
+
+    // in a1
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
+        .await?
+        .tags
+        .contains(&"test_tag5".to_owned()));
+    // NOT in a2
+    assert!(!test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[1].id)
+        .await?
+        .tags
+        .contains(&"test_tag5".to_owned()));
+
+    // search by text
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--text=another")
+        .arg("test_tag6")
+        .assert()
+        .success();
+
+    // NOT in a1
+    assert!(!test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
+        .await?
+        .tags
+        .contains(&"test_tag6".to_owned()));
+    // in a2
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[1].id)
+        .await?
+        .tags
+        .contains(&"test_tag6".to_owned()));
+
+    // NOT
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--text=another")
+        .arg("--not")
+        .arg("test_tag7")
+        .assert()
+        .success();
+
+    // in a1
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
+        .await?
+        .tags
+        .contains(&"test_tag7".to_owned()));
+    // NOT in a2
+    assert!(!test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[1].id)
+        .await?
+        .tags
+        .contains(&"test_tag7".to_owned()));
+
+    // OR
+    thread::sleep(duration);
+    let mut cmd = Command::cargo_bin("gooseberry")?;
+    cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
+        .arg("tag")
+        .arg("--tags=test_tag1,test_tag2")
+        .arg("--or")
+        .arg("test_tag8")
+        .assert()
+        .success();
+
+    // in a1
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[0].id)
+        .await?
+        .tags
+        .contains(&"test_tag8".to_owned()));
+    // in a2
+    assert!(test_data
+        .hypothesis_client
+        .fetch_annotation(&test_data.annotations[1].id)
+        .await?
+        .tags
+        .contains(&"test_tag8".to_owned()));
     // clear data
     test_data.clear().await?;
     Ok(())
@@ -353,7 +455,7 @@ async fn make() -> color_eyre::Result<()> {
         .arg("make")
         .arg("-f")
         .arg("-c")
-        .arg("-n")
+        .arg("--no-index")
         .assert()
         .success();
 
