@@ -27,6 +27,7 @@ This demonstrates the interactive search functionality. `Enter` adds a new tag, 
 * [Motivation](#motivation)
 * [A typical workflow](#a-typical-workflow)
 * [Some advantages](#some-advantages)
+* [Filtering](#filtering)
 * [Customization](#customization)
     * [Hypothesis](#hypothesis)
     * [Knowledge base](#knowledge-base)
@@ -124,8 +125,60 @@ you got it from, if ever you feel like you're missing context.
 * If you're in the mood, the note-taking won't involve window switching.
 * Even without using the wiki functionality you end up with a CLI to quickly tag your Hypothesis annotations.
 * Even without using the tagging functionality you end up with a pretty cool wiki listing all your annotations.
-* Since it's just plaintext, and the template can be customized, you can integrate it with any knowledge base system accepting plaintext files
+* Since it's just plaintext, and the template can be customized, you can integrate it with any knowledge base system
+  accepting plaintext files
   (like Obsidian, mdBook, org-mode, vim-wiki, etc.)
+
+## Filtering
+
+You can filter the annotations you want to modify or export using the following options in most gooseberry commands:
+
+```
+FLAGS:
+    -i, --include-updated
+            Include annotations updated in given time range (instead of just created)
+
+    -n, --not
+            Annotations NOT matching the given filter criteria
+
+    -o, --or
+            (Use with --tags) Annotations matching ANY of the given tags
+
+    -p, --page
+            Only page notes
+
+    -a, --annotation
+            Only annotations (i.e exclude page notes)
+
+
+OPTIONS:
+        --from <from>
+            Only annotations created after this date and time
+
+            Can be colloquial, e.g. "last Friday 8pm"
+        --before <before>
+            Only annotations created before this date and time
+
+            Can be colloquial, e.g. "last Friday 8pm"
+        --uri <uri>
+            Only annotations with this pattern in their URL
+
+            Doesn't have to be the full URL, e.g. "wikipedia" [default: ]
+        --any <any>
+            Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri` [default: ]
+
+        --tags <tags>...
+            Only annotations with ALL of these tags (use --or to match ANY)
+
+        --exclude-tags <exclude-tags>...
+            Only annotations without ANY of these tags
+
+        --quote <quote>
+            Only annotations that contain this text inside the text that was annotated [default: ]
+
+        --text <text>
+            Only annotations that contain this text in their textual body [default: ]
+```
 
 ## Customization
 
@@ -134,8 +187,9 @@ The default config TOML file is located in
 * Linux: `/home/<username>/.config`
 * Mac: `/Users/<username>/Library/Preferences`
 
-Change this by creating a config file with `gooseberry config default > config.toml` and modifying the contents. You can then use this as your
-configuration with `gooseberry -c path/to/config.toml <subcommand>` or by setting the environment variable `$GOOSEBERRY_CONFIG` to point to the file.
+Change this by creating a config file with `gooseberry config default > config.toml` and modifying the contents. You can
+then use this as your configuration with `gooseberry -c path/to/config.toml <subcommand>` or by setting the environment
+variable `$GOOSEBERRY_CONFIG` to point to the file.
 
 ### Hypothesis
 
