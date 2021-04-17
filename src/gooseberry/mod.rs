@@ -10,6 +10,7 @@ use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
 use crate::gooseberry::cli::{ConfigCommand, Filters, GooseberryCLI, GooseberrySubcommand};
 use crate::gooseberry::knowledge_base::AnnotationTemplate;
+use crate::utils;
 
 /// Command-line interface with `structopt`
 pub mod cli;
@@ -103,9 +104,25 @@ impl Gooseberry {
                 clear,
                 force,
                 no_index,
-            } => self.make(filters, clear, force, true, !no_index).await,
+            } => {
+                self.make(
+                    self.filter_annotations_make(filters).await?,
+                    clear,
+                    force,
+                    true,
+                    !no_index,
+                )
+                .await
+            }
             GooseberrySubcommand::Index { filters } => {
-                self.make(filters, false, false, false, true).await
+                self.make(
+                    self.filter_annotations_make(filters).await?,
+                    false,
+                    false,
+                    false,
+                    true,
+                )
+                .await
             }
             GooseberrySubcommand::Clear { force } => self.clear(force),
             GooseberrySubcommand::Uri { filters, ids } => {
@@ -244,6 +261,32 @@ impl Gooseberry {
             annotations = all_annotations;
         }
         annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        Ok(annotations)
+    }
+
+    /// Fetch annotations for knowledge base
+    /// Ignores annotations with tags in `ignore_tags` configuration option.
+    pub async fn filter_annotations_make(
+        &self,
+        filters: Filters,
+    ) -> color_eyre::Result<Vec<Annotation>> {
+        let pb = utils::get_spinner("Fetching annotations...");
+        // Get all annotations
+        let annotations: Vec<_> = self
+            .filter_annotations(filters, None)
+            .await?
+            .into_iter()
+            .filter(|a| {
+                !a.tags.iter().any(|t| {
+                    self.config
+                        .ignore_tags
+                        .as_ref()
+                        .map(|ignore_tags| ignore_tags.contains(t))
+                        .unwrap_or(false)
+                })
+            })
+            .collect();
+        pb.finish_with_message(&format!("Fetched {} annotations", annotations.len()));
         Ok(annotations)
     }
 

@@ -31,7 +31,8 @@ pub struct GooseberryCLI {
 pub enum GooseberrySubcommand {
     /// Sync newly added or updated Hypothesis annotations.
     Sync,
-    /// Opens a search buffer to see, filter, delete, add tags to and delete tags from annotations
+    /// Opens a search buffer to filter annotations.
+    /// Has keyboard shortcuts for deleting annotations, modifying tags, and creating knowledge-base files
     Search {
         #[structopt(flatten)]
         filters: Filters,
