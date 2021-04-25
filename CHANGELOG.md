@@ -20,7 +20,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Separate make and index commands, allow filtering annotations in both (
   Issue [#90](https://github.com/out-of-cheese-error/gooseberry/issues/90))
 
-## [0.8.1] - 2021-03-14
+## [0.8.1] - 2021-04-14
 
 ### Changed
 
@@ -34,7 +34,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - handlebars_misc_helpers (Issue [#81](https://github.com/out-of-cheese-error/gooseberry/issues/66))
 
-## [0.8.0] - 2021-03-14
+## [0.8.0] - 2021-04-14
 ### Fixed
 * All w3 selectors (partially) supported (Issue [#66](https://github.com/out-of-cheese-error/gooseberry/issues/66))
 
