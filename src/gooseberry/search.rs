@@ -105,16 +105,36 @@ impl Gooseberry {
 
         let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
         for annotation in &annotations {
-            let highlight = format!(
-                "{} | {} |{}| {}",
-                style(&utils::get_quotes(&annotation).join(" ").replace("\n", " ")),
-                annotation.text.replace("\n", " "),
-                style(&annotation.tags.join("|")).fg(dialoguer::console::Color::Red),
+            let mut title = String::from("Untitled document");
+            if let Some(document) = &annotation.document {
+                if !document.title.is_empty() {
+                    title = document.title[0].to_owned();
+                }
+            }
+            let mut highlight = format!(
+                "{}",
+                style(title.replace("\n", " ")).fg(dialoguer::console::Color::Green)
+            );
+            let quote = utils::get_quotes(&annotation).join(" ").replace("\n", " ");
+            if !quote.is_empty() {
+                highlight.push_str(&format!("| {}", quote));
+            }
+            if !annotation.text.is_empty() {
+                highlight.push_str(&format!("| {}", annotation.text.replace("\n", " ")));
+            }
+            if !annotation.tags.is_empty() {
+                highlight.push_str(&format!(
+                    "|{}",
+                    style(&annotation.tags.join("|")).fg(dialoguer::console::Color::Red)
+                ));
+            }
+            highlight.push_str(&format!(
+                "| {}",
                 style(&annotation.uri)
                     .fg(dialoguer::console::Color::Cyan)
                     .italic()
                     .underlined()
-            );
+            ));
             let _ = tx_item.send(Arc::new(SearchAnnotation {
                 highlight,
                 markdown: hbs.render(
