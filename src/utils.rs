@@ -63,13 +63,13 @@ pub fn user_input(
 
 /// Gets input from external editor, optionally displays default text in editor
 pub fn external_editor_input(default: Option<&str>, extension: &str) -> color_eyre::Result<String> {
-    Ok(Editor::new()
+    Editor::new()
         .trim_newlines(false)
         .extension(extension)
         .edit(default.unwrap_or(""))
         .suggestion("Set your default editor using the $EDITOR or $VISUAL environment variables")?
         .ok_or(Apologize::EditorError)
-        .suggestion("Make sure to save next time!")?)
+        .suggestion("Make sure to save next time!")
 }
 
 pub fn get_spinner(message: &str) -> indicatif::ProgressBar {

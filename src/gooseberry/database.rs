@@ -81,13 +81,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
         annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
-        if annotation.tags.is_empty()
-            || annotation
-                .tags
-                .iter()
-                .find(|t| !t.trim().is_empty())
-                .is_none()
-        {
+        if annotation.tags.is_empty() || !annotation.tags.iter().any(|t| !t.trim().is_empty()) {
             self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
         } else {
             for tag in &annotation.tags {
@@ -146,12 +140,12 @@ impl Gooseberry {
     /// Delete an annotation ID from the annotation tree
     pub fn delete_from_annotations(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
-        Ok(utils::split_ids(
+        utils::split_ids(
             &self
                 .annotation_to_tags()?
                 .remove(annotation_key)?
                 .ok_or(Apologize::AnnotationNotFound { id: id.to_owned() })?,
-        )?)
+        )
     }
 
     /// Delete annotation from database

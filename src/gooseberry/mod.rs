@@ -39,7 +39,7 @@ impl Gooseberry {
     /// (makes new ones the first time).
     pub async fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
         if let GooseberrySubcommand::Config { cmd } = &cli.cmd {
-            return Ok(ConfigCommand::run(cmd, cli.config.as_deref()).await?);
+            return ConfigCommand::run(cmd, cli.config.as_deref()).await;
         }
         if let GooseberrySubcommand::Complete { shell } = &cli.cmd {
             GooseberryCLI::complete(*shell);

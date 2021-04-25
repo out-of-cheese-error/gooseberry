@@ -251,7 +251,7 @@ fn sort_annotations(sort: &[OrderBy], annotations: &mut Vec<AnnotationTemplate>)
 /// functions related to generating the `mdBook` wiki
 impl Gooseberry {
     pub(crate) fn get_handlebars(&self) -> color_eyre::Result<Handlebars> {
-        Ok(get_handlebars(self.config.get_templates())?)
+        get_handlebars(self.config.get_templates())
     }
 
     fn configure_kb(&mut self) -> color_eyre::Result<()> {
