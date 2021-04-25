@@ -16,6 +16,7 @@ use crate::gooseberry::knowledge_base::{
 };
 use crate::{utils, NAME};
 
+pub static DEFAULT_NESTED_TAG: &str = "/";
 pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
 
 ### {{id}}
@@ -98,6 +99,8 @@ pub struct GooseberryConfig {
     pub(crate) sort: Option<Vec<OrderBy>>,
     /// Define tags to ignore
     pub(crate) ignore_tags: Option<Vec<String>>,
+    /// Define nested tag pattern
+    pub(crate) nested_tag: Option<String>,
 }
 
 /// Main project directory, cross-platform
@@ -123,6 +126,7 @@ impl Default for GooseberryConfig {
             hierarchy: None,
             sort: None,
             ignore_tags: None,
+            nested_tag: None,
         };
         config.make_dirs().unwrap();
         config
@@ -146,12 +150,14 @@ kb_dir = '<knowledge-base folder>'
 hierarchy = ['Tag']
 sort = ['Created']
 ignore_tags = []
+nested_tag = {}
 annotation_template = '''{}'''
 page_template = '''{}'''
 index_link_template = '''{}'''
 index_name = '{}'
 file_extension = '{}'
 "#,
+            DEFAULT_NESTED_TAG,
             DEFAULT_ANNOTATION_TEMPLATE,
             DEFAULT_PAGE_TEMPLATE,
             DEFAULT_INDEX_LINK_TEMPLATE,
@@ -299,6 +305,7 @@ file_extension = '{}'
         self.set_page_template()?;
         self.set_index_link_template()?;
         self.set_index_name()?;
+        self.set_nested_tag()?;
         self.set_file_extension()?;
         self.set_hierarchy()?;
         self.set_sort()?;
@@ -720,6 +727,17 @@ file_extension = '{}'
         self.index_name = Some(utils::user_input(
             "What name should gooseberry use for the index file",
             Some(self.index_name.as_deref().unwrap_or(DEFAULT_INDEX_FILENAME)),
+            true,
+            false,
+        )?);
+        self.store()?;
+        Ok(())
+    }
+
+    pub fn set_nested_tag(&mut self) -> color_eyre::Result<()> {
+        self.nested_tag = Some(utils::user_input(
+            "What pattern should gooseberry use to define nested tags",
+            Some(self.nested_tag.as_deref().unwrap_or(DEFAULT_NESTED_TAG)),
             true,
             false,
         )?);

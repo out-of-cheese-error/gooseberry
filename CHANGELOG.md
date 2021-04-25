@@ -7,7 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 ### Added
-- Nested tag support - "parent/child" tags used with the "Tag" hierarchy create nested folders.
+- Nested tag support (Issue [#85](https://github.com/out-of-cheese-error/gooseberry/issues/85))
+  - `gooseberry config kb nested` and `nested_tag` config option to determine pattern to use for nesting tags.
+  - `parent<nested_tag>child` tags used with the "Tag" hierarchy create nested folders.
 - Separate make and index commands, allow filtering annotations in both (
   Issue [#90](https://github.com/out-of-cheese-error/gooseberry/issues/90))
 - Better and more filtering options (Issue [#92](https://github.com/out-of-cheese-error/gooseberry/issues/92))

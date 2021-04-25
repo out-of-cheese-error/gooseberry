@@ -160,6 +160,7 @@ pub struct PageTemplate {
 fn group_annotations_by_order(
     order: OrderBy,
     annotations: Vec<AnnotationTemplate>,
+    nested_tag: Option<&String>,
 ) -> HashMap<String, Vec<AnnotationTemplate>> {
     let mut order_to_annotations = HashMap::new();
     match order {
@@ -173,7 +174,10 @@ fn group_annotations_by_order(
                         .push(annotation);
                 } else {
                     for tag in &annotation.annotation.tags {
-                        let tag = tag.replace("/", path_separator);
+                        let mut tag = tag.to_owned();
+                        if let Some(nested_tag) = nested_tag {
+                            tag = tag.replace(nested_tag, path_separator);
+                        }
                         order_to_annotations
                             .entry(tag)
                             .or_insert_with(Vec::new)
@@ -290,7 +294,6 @@ impl Gooseberry {
         self.make_book(annotations, &kb_dir, make, index).await?;
         Ok(())
     }
-
     /// Write markdown files for wiki
     async fn make_book(
         &self,
@@ -380,9 +383,11 @@ impl Gooseberry {
                         if make && !folder.exists() {
                             fs::create_dir(&folder)?;
                         }
-                        for (new_folder, annotations) in
-                            group_annotations_by_order(order[depth], inner_annotations)
-                        {
+                        for (new_folder, annotations) in group_annotations_by_order(
+                            order[depth],
+                            inner_annotations,
+                            self.config.nested_tag.as_ref(),
+                        ) {
                             (recurse_folder.f)(
                                 recurse_folder,
                                 annotations,

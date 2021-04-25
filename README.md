@@ -36,6 +36,7 @@ This demonstrates the interactive search functionality. `Enter` adds a new tag, 
         * [Page template](#page-template)
         * [Grouping annotations into folders and pages](#grouping-annotations-into-folders-and-pages)
         * [Sorting annotations within a page](#sorting-annotations-within-a-page)
+        * [Tags and nesting](#tags-and-nesting)
         * [Index link template](#index-link-template)
         * [Index filename](#index-filename)
         * [Ignoring tags](#ignoring-tags)
@@ -371,14 +372,25 @@ The available options are:
 * Created
 * Updated
 
-Multiple sort options can be combined in order of priority e.g. `sort = ["Tag", "Created"]` sorts by tags, then by the date of creation.
+Multiple sort options can be combined in order of priority e.g. `sort = ["Tag", "Created"]` sorts by tags, then by the
+date of creation.
+
+#### Tags and nesting
+
+`gooseberry config kb nested`
+
+This defines the pattern to use for nesting tags. e.g. if `nested_tag = "/"` then a tag of "parent/child" combined
+with `hierarchy = ["Tag"]` would create a "parent" folder with a "child" file inside it.
+
+Commas (",") and semicolons (";") should not be used inside tags as they are used as separators by Gooseberry.
 
 #### Index link template
 
 `gooseberry config kb link`
 
 This configures the index file, which generally contains links to all other pages in the generated knowledge base
-(unless `hierarchy=[]` in which case all annotations are rendered on the index page). The template controls how each of these links are rendered.
+(unless `hierarchy=[]` in which case all annotations are rendered on the index page). The template controls how each of
+these links are rendered.
 
 Available keys:
 
