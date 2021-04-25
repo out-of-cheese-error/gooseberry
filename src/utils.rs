@@ -8,7 +8,6 @@ use url::Url;
 use crate::errors::Apologize;
 
 /// ASCII code of semicolon
-/// TODO: Tag cannot have semicolon in it, remember to add this to the README
 pub const SEMICOLON: u8 = 59;
 
 /// Makes `DateTime` from a string, can be colloquial like "last Friday 8pm"

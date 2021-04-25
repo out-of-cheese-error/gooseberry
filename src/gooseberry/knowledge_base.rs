@@ -372,7 +372,6 @@ impl Gooseberry {
                                 raw_annotations: inner_annotations,
                             };
                             // TODO: check if nested tags work on Windows
-                            // TODO: add tests for nested tags
                             if let Some(prefix) = path.parent() {
                                 fs::create_dir_all(prefix)?;
                             }
