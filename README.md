@@ -250,7 +250,7 @@ and for formatting dates are shown below for different systems:
 * mdBook
 
 ```markdown
-##### {{date_format "%c" (created)}} - *{{id}}*
+##### {{date_format "%c" created}} - *{{id}}*
 
 {{#each tags}}| [{{this}}]({{this}}.md) {{#if @last}}|{{/if}}{{/each}}
 
@@ -283,7 +283,7 @@ hierarchy (`hierarchy = ["tag"]`).
 ```markdown
 ### {{id}}
 
-Created: {{date_format "%c" (created)}} Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+Created: {{date_format "%c" created}} Tags: {{#each tags}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
 {{#each highlight}}> {{this}}{{/each}}
 

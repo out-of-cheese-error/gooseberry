@@ -20,7 +20,7 @@ pub static DEFAULT_NESTED_TAG: &str = "/";
 pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
 
 ### {{id}}
-Created: {{date_format "%c" (created)}}
+Created: {{date_format "%c" created}}
 Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
 {{#each highlight}}> {{this}}{{/each}}
