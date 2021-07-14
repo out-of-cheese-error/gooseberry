@@ -163,6 +163,8 @@ Main commands:
 * `gooseberry move` - move annotations from one group to another (**move** not copy). Useful if you have a bunch of
   annotations scattered around and want to move them into one group for gooseberry.
 
+[0.9.1]: https://github.com/out-of-cheese-error/gooseberry/compare/0.9.0...0.9.1
+
 [0.9.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.8.1...0.9.0
 
 [0.8.1]: https://github.com/out-of-cheese-error/gooseberry/compare/0.8.0...0.8.1
