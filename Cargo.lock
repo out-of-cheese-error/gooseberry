@@ -81,12 +81,12 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2475b58cd94eb4f70159f4fd8844ba3b807532fe3131b3373fae060bbe30396"
 dependencies = [
-    "bstr",
-    "doc-comment",
-    "predicates 1.0.7",
-    "predicates-core",
-    "predicates-tree",
-    "wait-timeout",
+ "bstr",
+ "doc-comment",
+ "predicates 1.0.7",
+ "predicates-core",
+ "predicates-tree",
+ "wait-timeout",
 ]
 
 [[package]]
@@ -95,13 +95,13 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8bda305457262b339322106c776e3fd21df860018e566eb6a5b1aa4b6ae02d"
 dependencies = [
-    "flate2",
-    "http",
-    "log",
-    "native-tls",
-    "openssl",
-    "url",
-    "wildmatch",
+ "flate2",
+ "http",
+ "log",
+ "native-tls",
+ "openssl",
+ "url",
+ "wildmatch",
 ]
 
 [[package]]
@@ -620,8 +620,8 @@ checksum = "c9dd058f8b65922819fabb4a41e7d1964e56344042c26efbccd465202c23fa0c"
 dependencies = [
  "console",
  "lazy_static",
-    "tempfile",
-    "zeroize",
+ "tempfile",
+ "zeroize",
 ]
 
 [[package]]
@@ -642,7 +642,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
 dependencies = [
-    "generic-array",
+ "generic-array",
 ]
 
 [[package]]
@@ -1084,35 +1084,35 @@ dependencies = [
 
 [[package]]
 name = "gooseberry"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
-    "assert_cmd",
-    "bat",
-    "bincode",
-    "chrono",
-    "chrono-english",
-    "color-eyre",
-    "confy",
-    "dialoguer",
-    "directories-next",
-    "dotenv",
-    "eyre",
-    "futures",
-    "handlebars",
-    "handlebars_misc_helpers",
-    "hypothesis",
-    "indicatif",
-    "predicates 2.0.0",
-    "sanitize-filename",
-    "serde",
-    "serde_derive",
-    "serde_json",
-    "skim",
-    "sled",
-    "structopt",
-    "tempfile",
-    "thiserror",
-    "tokio",
+ "assert_cmd",
+ "bat",
+ "bincode",
+ "chrono",
+ "chrono-english",
+ "color-eyre",
+ "confy",
+ "dialoguer",
+ "directories-next",
+ "dotenv",
+ "eyre",
+ "futures",
+ "handlebars",
+ "handlebars_misc_helpers",
+ "hypothesis",
+ "indicatif",
+ "predicates 2.0.0",
+ "sanitize-filename",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "skim",
+ "sled",
+ "structopt",
+ "tempfile",
+ "thiserror",
+ "tokio",
  "url",
 ]
 
@@ -1141,12 +1141,12 @@ version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72a0ffab8c36d0436114310c7e10b59b3307e650ddfabf6d006028e29a70c6e6"
 dependencies = [
-    "log",
-    "pest",
-    "pest_derive",
-    "quick-error",
-    "serde",
-    "serde_json",
+ "log",
+ "pest",
+ "pest_derive",
+ "quick-error",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1155,15 +1155,15 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8988751386607e16876907136f6f005a2254f936f41dccf541ea3b5d3474e8ea"
 dependencies = [
-    "Inflector",
-    "attohttpc",
-    "enquote",
-    "handlebars",
-    "jsonnet-rs",
-    "lazy_static",
-    "log",
-    "serde",
-    "serde_json",
+ "Inflector",
+ "attohttpc",
+ "enquote",
+ "handlebars",
+ "jsonnet-rs",
+ "lazy_static",
+ "log",
+ "serde",
+ "serde_json",
  "serde_yaml",
  "thiserror",
  "toml",
@@ -1328,10 +1328,10 @@ version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d207dc617c7a380ab07ff572a6e52fa202a2a8f355860ac9c38e23f8196be1b"
 dependencies = [
-    "console",
-    "lazy_static",
-    "number_prefix",
-    "regex",
+ "console",
+ "lazy_static",
+ "number_prefix",
+ "regex",
 ]
 
 [[package]]
@@ -1340,7 +1340,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
-    "cfg-if 1.0.0",
+ "cfg-if 1.0.0",
 ]
 
 [[package]]
@@ -1355,7 +1355,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
 dependencies = [
-    "either",
+ "either",
 ]
 
 [[package]]
@@ -1379,8 +1379,8 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82b396bdfc3ae94965555c9ec3efa2214e5f3921545a943ef9fc9873ff5e4723"
 dependencies = [
-    "jsonnet-sys",
-    "libc",
+ "jsonnet-sys",
+ "libc",
 ]
 
 [[package]]
@@ -1389,8 +1389,8 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02347cbdf34234f30f0d92f0f8f678a15883bd5e1e4b3def4ed4a14f691d9add"
 dependencies = [
-    "cc",
-    "libc",
+ "cc",
+ "libc",
 ]
 
 [[package]]
@@ -1812,8 +1812,8 @@ version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eeb433456c1a57cc93554dea3ce40b4c19c4057e41c55d4a0f3d84ea71c325aa"
 dependencies = [
-    "difference",
-    "predicates-core",
+ "difference",
+ "predicates-core",
 ]
 
 [[package]]
@@ -1822,12 +1822,12 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6e46ca79eb4e21e2ec14430340c71250ab69332abf85521c95d3a8bc336aa76"
 dependencies = [
-    "difflib",
-    "float-cmp",
-    "itertools",
-    "normalize-line-endings",
-    "predicates-core",
-    "regex",
+ "difflib",
+ "float-cmp",
+ "itertools",
+ "normalize-line-endings",
+ "predicates-core",
+ "regex",
 ]
 
 [[package]]
@@ -3126,7 +3126,7 @@ version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
 dependencies = [
-    "webpki",
+ "webpki",
 ]
 
 [[package]]
@@ -3141,8 +3141,8 @@ version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
 dependencies = [
-    "winapi-i686-pc-windows-gnu",
-    "winapi-x86_64-pc-windows-gnu",
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
 ]
 
 [[package]]
