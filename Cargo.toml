@@ -52,18 +52,18 @@ dialoguer = "0.8.0"
 bat = { version = "0.18.0", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
-indicatif = "0.15.0"
+indicatif = "0.16.2"
 
 # Templating markdown
-handlebars = "3.5.4"
+handlebars = "4.1.0"
 
 # Sanitizing filenames
 sanitize-filename = "0.3.0"
-handlebars_misc_helpers = "0.11.2"
+handlebars_misc_helpers = "0.12.1"
 
 [dev-dependencies]
 assert_cmd = "1.0.3"
-predicates = "1.0.7"
+predicates = "2.0.0"
 tempfile = "3.2.0"
 dotenv = "0.15.0"
 futures = "0.3.14"

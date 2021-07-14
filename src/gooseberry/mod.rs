@@ -286,7 +286,7 @@ impl Gooseberry {
                 })
             })
             .collect();
-        pb.finish_with_message(&format!("Fetched {} annotations", annotations.len()));
+        pb.finish_with_message(format!("Fetched {} annotations", annotations.len()));
         Ok(annotations)
     }
 

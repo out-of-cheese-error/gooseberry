@@ -79,7 +79,7 @@ pub fn get_spinner(message: &str) -> indicatif::ProgressBar {
             .tick_chars("/|\\- ")
             .template("{spinner:.dim.bold.blue} {wide_msg}"),
     );
-    spinner.set_message(message);
+    spinner.set_message(message.to_owned());
     spinner
 }
 
