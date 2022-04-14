@@ -68,8 +68,7 @@ impl Gooseberry {
     }
 
     pub fn add_to_tag(&self, tag_key: &[u8], annotation_key: &[u8]) -> color_eyre::Result<()> {
-        self.tag_to_annotations()?
-            .merge(tag_key.to_vec(), annotation_key.to_vec())?;
+        self.tag_to_annotations()?.merge(tag_key, annotation_key)?;
         Ok(())
     }
 
@@ -132,7 +131,7 @@ impl Gooseberry {
             self.tag_to_annotations()?.remove(tag_key)?;
         } else {
             self.tag_to_annotations()?
-                .insert(tag_key.to_vec(), utils::join_ids(&new_indices)?)?;
+                .insert(tag_key, utils::join_ids(&new_indices)?)?;
         }
         Ok(())
     }

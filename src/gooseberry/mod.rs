@@ -3,6 +3,7 @@ use std::fs;
 
 use color_eyre::Help;
 use dialoguer::Confirm;
+use eyre::eyre;
 use hypothesis::annotations::{Annotation, Order, SearchQuery};
 use hypothesis::Hypothesis;
 
@@ -145,7 +146,12 @@ impl Gooseberry {
             .order(Order::Asc)
             .search_after(self.get_sync_time()?)
             .user(&self.api.user.0)
-            .group(self.config.hypothesis_group.as_deref().unwrap())
+            .group(
+                self.config
+                    .hypothesis_group
+                    .as_deref()
+                    .ok_or_else(|| eyre!("No Hypothesis group"))?,
+            )
             .build()?;
         let (added, updated) =
             self.sync_annotations(&self.api.search_annotations_return_all(&mut query).await?)?;
@@ -221,7 +227,7 @@ impl Gooseberry {
                 .config
                 .hypothesis_group
                 .clone()
-                .expect("This should have been set by Config"),
+                .ok_or_else(|| eyre!("This should have been set by Config"))?,
         };
         let mut query: SearchQuery = filters.clone().into();
         query.user = self.api.user.0.to_owned();
@@ -297,7 +303,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().all(|tag| !a.tags.contains(&tag)))
+            .filter(|a| tags.iter().all(|tag| !a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("All of the selected annotations already have all of those tags.");
@@ -438,15 +444,12 @@ impl Gooseberry {
                 .language("markdown")
                 .input_from_bytes(markdown.as_ref())
                 .print()
-                .unwrap();
+                .map_err(|_| eyre!("Bat printing error"))?;
             return Ok(());
         }
-        let annotations: Vec<Annotation> = self
+        let inputs: Vec<_> = self
             .filter_annotations(filters, None)
             .await?
-            .into_iter()
-            .collect();
-        let inputs: Vec<_> = annotations
             .into_iter()
             .map(|annotation| {
                 hbs.render(
@@ -459,7 +462,7 @@ impl Gooseberry {
             .language("markdown")
             .inputs(inputs.iter().map(|i| bat::Input::from_bytes(i.as_bytes())))
             .print()
-            .unwrap();
+            .map_err(|_| eyre!("Bat printing error"))?;
         Ok(())
     }
 

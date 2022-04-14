@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use color_eyre::Help;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirm;
+use eyre::eyre;
 use handlebars::{Handlebars, RenderError};
 use hypothesis::annotations::Annotation;
 use sanitize_filename::sanitize;
@@ -37,7 +38,7 @@ pub struct AnnotationTemplate {
 }
 
 pub fn replace_spaces(astring: &str) -> String {
-    astring.replace(" ", "\\ ")
+    astring.replace(' ', "\\ ")
 }
 
 impl AnnotationTemplate {
@@ -279,7 +280,11 @@ impl Gooseberry {
         index: bool,
     ) -> color_eyre::Result<()> {
         self.configure_kb()?;
-        let kb_dir = self.config.kb_dir.as_ref().unwrap();
+        let kb_dir = self
+            .config
+            .kb_dir
+            .as_ref()
+            .ok_or_else(|| eyre!("No knowledge base directory"))?;
         if clear
             && kb_dir.exists()
             && (force
@@ -291,7 +296,7 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-        self.make_book(annotations, &kb_dir, make, index).await?;
+        self.make_book(annotations, kb_dir, make, index).await?;
         Ok(())
     }
     /// Write markdown files for wiki
@@ -306,10 +311,17 @@ impl Gooseberry {
             .into_iter()
             .map(AnnotationTemplate::from_annotation)
             .collect();
-        let extension = self.config.file_extension.as_ref().unwrap();
+        let extension = self
+            .config
+            .file_extension
+            .as_ref()
+            .ok_or_else(|| eyre!("No file extension"))?;
         let index_file = src_dir.join(format!(
             "{}.{}",
-            self.config.index_name.as_ref().unwrap(),
+            self.config
+                .index_name
+                .as_ref()
+                .ok_or_else(|| eyre!("No index name"))?,
             extension
         ));
         if index && index_file.exists() {
@@ -325,7 +337,11 @@ impl Gooseberry {
             &mut annotations,
         );
 
-        let order = self.config.hierarchy.as_ref().unwrap();
+        let order = self
+            .config
+            .hierarchy
+            .as_ref()
+            .ok_or_else(|| eyre!("No hierarchy"))?;
         if order.is_empty() {
             // Index file has all annotations
             fs::File::create(&index_file)?.write_all(
@@ -358,7 +374,7 @@ impl Gooseberry {
                             .take(250.min(folder_name.len()))
                             .collect();
                         let path = PathBuf::from(format!("{}.{}", folder_name, extension));
-                        let link_data = get_link_data(&path, &src_dir)?;
+                        let link_data = get_link_data(&path, src_dir)?;
                         if index {
                             index_links.push(hbs.render("index_link", &link_data)?);
                         }
@@ -417,7 +433,10 @@ impl Gooseberry {
         if make {
             println!(
                 "Knowledge base built at: {:?}",
-                self.config.kb_dir.as_ref().unwrap()
+                self.config
+                    .kb_dir
+                    .as_ref()
+                    .ok_or_else(|| eyre!("No knowledge base directory"))?
             );
         }
         if index {
