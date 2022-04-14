@@ -145,7 +145,7 @@ impl Gooseberry {
             .order(Order::Asc)
             .search_after(self.get_sync_time()?)
             .user(&self.api.user.0)
-            .group(self.config.hypothesis_group.as_deref().unwrap())
+            .group(self.config.hypothesis_group.as_deref().expect("No Hypothesis group"))
             .build()?;
         let (added, updated) =
             self.sync_annotations(&self.api.search_annotations_return_all(&mut query).await?)?;
@@ -438,7 +438,7 @@ impl Gooseberry {
                 .language("markdown")
                 .input_from_bytes(markdown.as_ref())
                 .print()
-                .unwrap();
+                .expect("Bat printing error");
             return Ok(());
         }
         let annotations: Vec<Annotation> = self
@@ -459,7 +459,7 @@ impl Gooseberry {
             .language("markdown")
             .inputs(inputs.iter().map(|i| bat::Input::from_bytes(i.as_bytes())))
             .print()
-            .unwrap();
+            .expect("Bat printing error");
         Ok(())
     }
 

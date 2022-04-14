@@ -279,7 +279,7 @@ impl Gooseberry {
         index: bool,
     ) -> color_eyre::Result<()> {
         self.configure_kb()?;
-        let kb_dir = self.config.kb_dir.as_ref().unwrap();
+        let kb_dir = self.config.kb_dir.as_ref().expect("No knowledge base directory");
         if clear
             && kb_dir.exists()
             && (force
@@ -306,10 +306,10 @@ impl Gooseberry {
             .into_iter()
             .map(AnnotationTemplate::from_annotation)
             .collect();
-        let extension = self.config.file_extension.as_ref().unwrap();
+        let extension = self.config.file_extension.as_ref().expect("No file extension");
         let index_file = src_dir.join(format!(
             "{}.{}",
-            self.config.index_name.as_ref().unwrap(),
+            self.config.index_name.as_ref().expect("No index name"),
             extension
         ));
         if index && index_file.exists() {
@@ -325,7 +325,7 @@ impl Gooseberry {
             &mut annotations,
         );
 
-        let order = self.config.hierarchy.as_ref().unwrap();
+        let order = self.config.hierarchy.as_ref().expect("No hierarchy");
         if order.is_empty() {
             // Index file has all annotations
             fs::File::create(&index_file)?.write_all(
@@ -417,7 +417,7 @@ impl Gooseberry {
         if make {
             println!(
                 "Knowledge base built at: {:?}",
-                self.config.kb_dir.as_ref().unwrap()
+                self.config.kb_dir.as_ref().expect("No knowledge base directory")
             );
         }
         if index {
