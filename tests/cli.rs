@@ -38,11 +38,15 @@ page_template = '''{}'''
 index_link_template = '''{}'''
 index_name = '{}'
 file_extension = '{}'"#,
-        db_dir.to_str().expect("Can't convert directory to string"),
+        db_dir
+            .to_str()
+            .ok_or(eyre!("Can't convert directory to string"))?,
         username,
         key,
         group_id,
-        kb_dir.to_str().expect("Can't convert directory to string"),
+        kb_dir
+            .to_str()
+            .ok_or(eyre!("Can't convert directory to string"))?,
         gooseberry::configuration::DEFAULT_ANNOTATION_TEMPLATE,
         gooseberry::configuration::DEFAULT_PAGE_TEMPLATE,
         gooseberry::configuration::DEFAULT_INDEX_LINK_TEMPLATE,

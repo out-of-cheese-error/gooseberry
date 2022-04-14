@@ -6,6 +6,7 @@ use chrono::Utc;
 use color_eyre::Help;
 use dialoguer::{theme, Confirm, Input, Select};
 use directories_next::{ProjectDirs, UserDirs};
+use eyre::eyre;
 use hypothesis::annotations::{Annotation, Document, Permissions, Selector, Target, UserInfo};
 use hypothesis::{Hypothesis, UserAccountID};
 use serde::{Deserialize, Serialize};
@@ -284,8 +285,14 @@ file_extension = '{}'
         if config.hypothesis_username.is_none()
             || config.hypothesis_key.is_none()
             || !Self::authorize(
-                config.hypothesis_username.as_deref().expect("No hypothesis username"),
-                config.hypothesis_key.as_deref().expect("No hypothesis key"),
+                config
+                    .hypothesis_username
+                    .as_deref()
+                    .ok_or_else(|| eyre!("No hypothesis username"))?,
+                config
+                    .hypothesis_key
+                    .as_deref()
+                    .ok_or_else(|| eyre!("No hypothesis key"))?,
             )
             .await?
         {
@@ -322,7 +329,11 @@ file_extension = '{}'
             println!("NOTE: the directory will be deleted and regenerated on each make!");
             let input = utils::user_input(
                 "Directory to build knowledge base",
-                Some(default.to_str().expect("Couldn't convert directory to string")),
+                Some(
+                    default
+                        .to_str()
+                        .ok_or_else(|| eyre!("Couldn't convert directory to string"))?,
+                ),
                 true,
                 false,
             )?;
@@ -389,8 +400,12 @@ file_extension = '{}'
         if order.is_empty() {
             println!(
                 "Single file: {}.{}",
-                self.index_name.as_ref().expect("No index name"),
-                self.file_extension.as_ref().expect("No file extension")
+                self.index_name
+                    .as_ref()
+                    .ok_or_else(|| eyre!("No index name"))?,
+                self.file_extension
+                    .as_ref()
+                    .ok_or_else(|| eyre!("No file extension"))?
             );
         } else {
             println!(
@@ -400,7 +415,9 @@ file_extension = '{}'
                     .map(|o| o.to_string())
                     .collect::<Vec<_>>()
                     .join("/"),
-                self.file_extension.as_ref().expect("No file extension")
+                self.file_extension
+                    .as_ref()
+                    .ok_or_else(|| eyre!("No file extension"))?
             );
         }
         self.hierarchy = Some(order);
@@ -629,7 +646,10 @@ file_extension = '{}'
             test_annotation_2.text = "Another annotation".to_string();
 
             let templates = Templates {
-                annotation_template: self.annotation_template.as_ref().expect("No annotation template"),
+                annotation_template: self
+                    .annotation_template
+                    .as_ref()
+                    .ok_or_else(|| eyre!("No annotation template"))?,
                 ..Default::default()
             };
             let hbs = get_handlebars(templates)?;
@@ -774,22 +794,24 @@ file_extension = '{}'
                 .with_prompt("Where should gooseberry take annotations from?")
                 .items(&selections[..])
                 .interact()?;
-            let (username, key) = (self.hypothesis_username.as_deref().expect("No Hypothesis username"), self.hypothesis_key.as_deref().expect("No Hypothesis key"));
+
+            let (username, key) = (
+                self.hypothesis_username
+                    .as_deref()
+                    .ok_or_else(|| eyre!("No Hypothesis username"))?,
+                self.hypothesis_key
+                    .as_deref()
+                    .ok_or_else(|| eyre!("No Hypothesis key"))?,
+            );
             if selection == 0 {
                 let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
-                let group_id = Hypothesis::new(
-                    username,
-                    key,
-                )?
-                .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
-                .await?
-                .id;
+                let group_id = Hypothesis::new(username, key)?
+                    .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
+                    .await?
+                    .id;
                 break group_id;
             } else {
-                let api = Hypothesis::new(
-                    username,
-                    key,
-                )?;
+                let api = Hypothesis::new(username, key)?;
                 let groups = api
                     .get_groups(&hypothesis::groups::GroupFilters::default())
                     .await?;
