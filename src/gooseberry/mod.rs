@@ -303,7 +303,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().all(|tag| !a.tags.contains(&tag)))
+            .filter(|a| tags.iter().all(|tag| !a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("All of the selected annotations already have all of those tags.");
@@ -447,12 +447,9 @@ impl Gooseberry {
                 .map_err(|_| eyre!("Bat printing error"))?;
             return Ok(());
         }
-        let annotations: Vec<Annotation> = self
+        let inputs: Vec<_> = self
             .filter_annotations(filters, None)
             .await?
-            .into_iter()
-            .collect();
-        let inputs: Vec<_> = annotations
             .into_iter()
             .map(|annotation| {
                 hbs.render(

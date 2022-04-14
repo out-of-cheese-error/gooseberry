@@ -38,7 +38,7 @@ pub struct AnnotationTemplate {
 }
 
 pub fn replace_spaces(astring: &str) -> String {
-    astring.replace(" ", "\\ ")
+    astring.replace(' ', "\\ ")
 }
 
 impl AnnotationTemplate {
@@ -296,7 +296,7 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-        self.make_book(annotations, &kb_dir, make, index).await?;
+        self.make_book(annotations, kb_dir, make, index).await?;
         Ok(())
     }
     /// Write markdown files for wiki
@@ -374,7 +374,7 @@ impl Gooseberry {
                             .take(250.min(folder_name.len()))
                             .collect();
                         let path = PathBuf::from(format!("{}.{}", folder_name, extension));
-                        let link_data = get_link_data(&path, &src_dir)?;
+                        let link_data = get_link_data(&path, src_dir)?;
                         if index {
                             index_links.push(hbs.render("index_link", &link_data)?);
                         }

@@ -113,14 +113,14 @@ impl Gooseberry {
             }
             let mut highlight = format!(
                 "{}",
-                style(title.replace("\n", " ")).fg(dialoguer::console::Color::Green)
+                style(title.replace('\n', " ")).fg(dialoguer::console::Color::Green)
             );
-            let quote = utils::get_quotes(&annotation).join(" ").replace("\n", " ");
+            let quote = utils::get_quotes(annotation).join(" ").replace('\n', " ");
             if !quote.is_empty() {
                 highlight.push_str(&format!("| {}", quote));
             }
             if !annotation.text.is_empty() {
-                highlight.push_str(&format!("| {}", annotation.text.replace("\n", " ")));
+                highlight.push_str(&format!("| {}", annotation.text.replace('\n', " ")));
             }
             if !annotation.tags.is_empty() {
                 highlight.push_str(&format!(
@@ -311,8 +311,8 @@ impl Gooseberry {
         for annotation in annotations {
             let highlight = format!(
                 "{} | {} |{}| {}",
-                style(&utils::get_quotes(&annotation).join(" ").replace("\n", " ")),
-                annotation.text.replace("\n", " "),
+                style(&utils::get_quotes(annotation).join(" ").replace('\n', " ")),
+                annotation.text.replace('\n', " "),
                 style(&annotation.tags.join("|")).fg(dialoguer::console::Color::Red),
                 style(&annotation.uri)
                     .fg(dialoguer::console::Color::Cyan)

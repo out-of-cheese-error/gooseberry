@@ -126,7 +126,7 @@ pub fn clean_uri(uri: &str) -> String {
 pub fn uri_to_filename(uri: &str) -> String {
     clean_uri(uri)
         .replace("://", "_")
-        .replace(".", "_")
-        .replace("/", "_")
-        .replace(":", "_")
+        .replace('.', "_")
+        .replace('/', "_")
+        .replace(':', "_")
 }
