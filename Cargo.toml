@@ -2,7 +2,7 @@
 name = "gooseberry"
 version = "0.9.2"
 authors = ["Ninjani"]
-edition = "2018"
+edition = "2021"
 description = "A command line utility to generate a knowledge base from Hypothesis annotations "
 repository = "https://github.com/out-of-cheese-error/gooseberry"
 readme = "README.md"
@@ -14,7 +14,7 @@ include = ["src/**/*", "README.md"]
 [dependencies]
 # Hypothesis
 hypothesis = { version = "0.10.2", default-features = false }
-tokio = { version = "1.17.0", features = ["macros"] }
+tokio = { version = "1.18.0", features = ["macros"] }
 
 # To extract the base URI
 url = "2.2.2"

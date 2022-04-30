@@ -225,7 +225,7 @@ fn group_annotations_by_order(
     order_to_annotations
 }
 
-fn sort_annotations(sort: &[OrderBy], annotations: &mut Vec<AnnotationTemplate>) {
+fn sort_annotations(sort: &[OrderBy], annotations: &mut [AnnotationTemplate]) {
     annotations.sort_by(|a, b| {
         sort.iter().fold(Ordering::Equal, |acc, &field| {
             acc.then_with(|| match field {
@@ -307,7 +307,7 @@ impl Gooseberry {
         make: bool,
         index: bool,
     ) -> color_eyre::Result<()> {
-        let mut annotations = annotations
+        let mut annotations: Vec<_> = annotations
             .into_iter()
             .map(AnnotationTemplate::from_annotation)
             .collect();
