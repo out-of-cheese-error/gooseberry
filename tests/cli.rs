@@ -55,7 +55,7 @@ file_extension = '{}'"#,
     );
     let config_file = temp_dir.path().join("gooseberry.toml");
     fs::write(&config_file, config_contents)?;
-    Ok(config_file.to_path_buf())
+    Ok(config_file)
 }
 
 #[test]
