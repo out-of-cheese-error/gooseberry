@@ -36,7 +36,8 @@ pub static DEFAULT_PAGE_TEMPLATE: &str = r#"
 {{#each annotations}}{{this}}{{/each}}
 
 "#;
-pub static DEFAULT_INDEX_LINK_TEMPLATE: &str = r#"- [{{name}}]({{relative_path}})"#;
+pub static DEFAULT_INDEX_LINK_TEMPLATE: &str = r#"
+- [{{name}}]({{relative_path}})"#;
 pub static DEFAULT_INDEX_FILENAME: &str = "SUMMARY";
 pub static DEFAULT_FILE_EXTENSION: &str = "md";
 
