@@ -130,7 +130,6 @@ pub enum GooseberrySubcommand {
     },
 }
 
-/// CLI options for filtering annotations
 #[derive(StructOpt, Debug, Default, Clone)]
 pub struct Filters {
     /// Only annotations created after this date and time
