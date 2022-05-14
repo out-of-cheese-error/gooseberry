@@ -154,7 +154,7 @@ pub struct Filters {
     /// Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
     #[structopt(default_value, long)]
     pub any: String,
-    /// Only annotations with ALL of these tags (use --or to match ANY)
+    /// Only annotations with ANY of these tags (use --and to match ALL)
     #[structopt(long, use_delimiter = true, multiple = true)]
     pub tags: Vec<String>,
     /// Only annotations without ANY of these tags
@@ -169,9 +169,9 @@ pub struct Filters {
     /// Annotations NOT matching the given filter criteria
     #[structopt(short, long)]
     pub not: bool,
-    /// (Use with --tags) Annotations matching ANY of the given tags
-    #[structopt(short, long, requires = "tags")]
-    pub or: bool,
+    /// (Use with --tags) Annotations matching ALL of the given tags
+    #[structopt(long, requires = "tags")]
+    pub and: bool,
     /// Only page notes
     #[structopt(short, long)]
     pub page: bool,

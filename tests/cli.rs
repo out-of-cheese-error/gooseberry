@@ -391,13 +391,13 @@ async fn tag_filter() -> color_eyre::Result<()> {
         .tags
         .contains(&"test_tag7".to_owned()));
 
-    // OR
+    // AND
     thread::sleep(duration);
     let mut cmd = Command::cargo_bin("gooseberry")?;
     cmd.env("GOOSEBERRY_CONFIG", &test_data.config_file)
         .arg("tag")
-        .arg("--tags=test_tag1,test_tag2")
-        .arg("--or")
+        .arg("--tags=test_tag,test_tag1,test_tag5,test_tag7")
+        .arg("--and")
         .arg("test_tag8")
         .assert()
         .success();
@@ -409,8 +409,8 @@ async fn tag_filter() -> color_eyre::Result<()> {
         .await?
         .tags
         .contains(&"test_tag8".to_owned()));
-    // in a2
-    assert!(test_data
+    // NOT in a2
+    assert!(!test_data
         .hypothesis_client
         .fetch_annotation(&test_data.annotations[1].id)
         .await?
