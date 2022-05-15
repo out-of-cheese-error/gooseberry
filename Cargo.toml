@@ -14,7 +14,7 @@ include = ["src/**/*", "README.md"]
 [dependencies]
 # Hypothesis
 hypothesis = { version = "0.10.3", default-features = false }
-tokio = { version = "1.18.0", features = ["macros"] }
+tokio = { version = "1.18.2", features = ["macros"] }
 
 # To extract the base URI
 url = "2.2.2"
@@ -32,12 +32,12 @@ directories-next = "1.0.1"
 # Error handling
 eyre = "0.6.8"
 color-eyre = "0.6.1"
-thiserror = "1.0.30"
+thiserror = "1.0.31"
 
 # Serializing
-serde = "1.0.136"
-serde_json = "1.0.79"
-serde_derive = "1.0.136"
+serde = "1.0.137"
+serde_json = "1.0.81"
+serde_derive = "1.0.137"
 ciborium = "0.2.0"
 
 # Parsing and manipulating dates
@@ -48,8 +48,8 @@ chrono-english = "0.1.7"
 skim = "0.9.4"
 
 # Console related
-dialoguer = "0.10.0"
-bat = { version = "0.20.0", default-features = false, features = ["regex-fancy"] }
+dialoguer = "0.10.1"
+bat = { version = "0.21.0", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
 indicatif = "0.16.2"
@@ -58,7 +58,7 @@ indicatif = "0.16.2"
 handlebars = "4.2.2"
 
 # Sanitizing filenames
-sanitize-filename = "0.3.0"
+sanitize-filename = "0.4.0"
 handlebars_misc_helpers = "0.12.1"
 
 [dev-dependencies]
