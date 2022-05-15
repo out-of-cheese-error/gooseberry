@@ -7,7 +7,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ## Changed
-Store annotations in local database for faster search and retrieval. (Issue [#76](https://github.com/out-of-cheese-error/gooseberry/issues/76))
+- Store annotations in local database for faster search and retrieval. (Issue [#76](https://github.com/out-of-cheese-error/gooseberry/issues/76))
+- Use --and to match ALL tags, default matches ANY tag (previously --or)
+
+## Fixed
+- Help strings in CLI
 
 ## [0.9.3] - 2022-04-30
 ### Changed
@@ -177,6 +181,8 @@ Main commands:
   location of the knowledge base
 * `gooseberry move` - move annotations from one group to another (**move** not copy). Useful if you have a bunch of
   annotations scattered around and want to move them into one group for gooseberry.
+
+[0.9.3]: https://github.com/out-of-cheese-error/gooseberry/compare/0.9.2...0.9.3
 
 [0.9.2]: https://github.com/out-of-cheese-error/gooseberry/compare/0.9.1...0.9.2
 
