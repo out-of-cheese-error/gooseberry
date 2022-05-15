@@ -199,7 +199,7 @@ async fn tag_filter() -> color_eyre::Result<()> {
     let test_data = TestData::populate().await;
     assert!(test_data.is_ok());
     let test_data = test_data?;
-    let duration = time::Duration::from_millis(500);
+    let duration = time::Duration::from_millis(1000);
 
     // check sync
     thread::sleep(duration);

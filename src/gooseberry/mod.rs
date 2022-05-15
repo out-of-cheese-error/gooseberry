@@ -256,50 +256,41 @@ impl Gooseberry {
         Ok(annotations)
     }
 
-    pub fn filter_annotation(&self, annotation: &Annotation, filters: &Filters) -> (String, bool) {
+    pub fn filter_annotation(&self, annotation: &Annotation, filters: &Filters) -> bool {
+        // Check if page note
         if filters.page && annotation.target.iter().any(|t| !t.selector.is_empty()) {
-            return ("Not a page note".into(), false);
+            return false;
         }
+        // Check if annotation
         if filters.annotation && annotation.target.iter().all(|t| t.selector.is_empty()) {
-            return ("Not an annotation".into(), false);
+            return false;
         }
+        // Check if date > from date
         if let Some(from) = filters.from {
             if filters.include_updated {
                 if annotation.updated < from {
-                    return (
-                        format!("Updated {:?} < {:?}", annotation.updated, from),
-                        false,
-                    );
+                    return false;
                 }
             } else if annotation.created < from {
-                return (
-                    format!("Created {:?} < {:?}", annotation.created, from),
-                    false,
-                );
+                return false;
             }
         }
+        // Check if date < before date
         if let Some(before) = filters.before {
             if filters.include_updated {
                 if annotation.updated > before {
-                    return (
-                        format!("Updated {:?} > {:?}", annotation.updated, before),
-                        false,
-                    );
+                    return false;
                 }
             } else if annotation.created > before {
-                return (
-                    format!("Created {:?} > {:?}", annotation.created, before),
-                    false,
-                );
+                return false;
             }
         }
+        // Check if URI has pattern
         if !filters.uri.is_empty() && !annotation.uri.contains(&filters.uri) {
-            return (
-                format!("{:?} not in URI {:?}", filters.uri, annotation.uri),
-                false,
-            );
+            return false;
         }
 
+        // Check if pattern in quote, tags, text, or URI
         if !(filters.any.is_empty()
             || utils::get_quotes(annotation)
                 .join(" ")
@@ -308,61 +299,46 @@ impl Gooseberry {
             || annotation.text.contains(&filters.any)
             || annotation.uri.contains(&filters.any))
         {
-            return (format!("{:?} not in annotation", filters.any), false);
+            return false;
         }
 
+        // Check if tags overlap
         if !filters.tags.is_empty() {
             if filters.and {
+                // all tags must match
                 if !annotation.tags.iter().all(|t| filters.tags.contains(t)) {
-                    return (
-                        format!("{:?} not in all tags {:?}", filters.tags, annotation.tags),
-                        false,
-                    );
+                    return false;
                 }
+                // any tag can match
             } else if !annotation.tags.iter().any(|t| filters.tags.contains(t)) {
-                return (
-                    format!("{:?} not in any tags {:?}", filters.tags, annotation.tags),
-                    false,
-                );
+                return false;
             }
         }
 
+        // Check if tags are in excluded tags
         if !filters.exclude_tags.is_empty()
             && annotation
                 .tags
                 .iter()
                 .any(|t| filters.exclude_tags.contains(t))
         {
-            return (
-                format!(
-                    "{:?} in exclude tags {:?}",
-                    annotation.tags, filters.exclude_tags
-                ),
-                false,
-            );
+            return false;
         }
 
+        // Check if pattern in quote
         if !filters.quote.is_empty()
             && !utils::get_quotes(annotation)
                 .join(" ")
                 .contains(&filters.quote)
         {
-            return (
-                format!(
-                    "{:?} not in quote {:?}",
-                    filters.quote,
-                    utils::get_quotes(annotation).join(" ")
-                ),
-                false,
-            );
+            return false;
         }
+
+        // Check if pattern in text
         if !filters.text.is_empty() && !annotation.text.contains(&filters.text) {
-            return (
-                format!("{:?} not in text {:?}", filters.text, annotation.text),
-                false,
-            );
+            return false;
         }
-        ("Passed".into(), true)
+        true
     }
 
     /// Filter annotations based on command-line flags
@@ -370,8 +346,9 @@ impl Gooseberry {
         let mut annotations = Vec::new();
         for annotation in self.iter_annotations()? {
             let annotation = annotation?;
-            let (_, keep) = self.filter_annotation(&annotation, &filters);
+            let keep = self.filter_annotation(&annotation, &filters);
             if filters.not {
+                // If NOT, keep everything that doesn't match
                 if !keep {
                     annotations.push(annotation);
                 }
