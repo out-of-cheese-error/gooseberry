@@ -77,7 +77,7 @@ impl Gooseberry {
         match cli.cmd {
             GooseberrySubcommand::Sync => self.sync().await,
             GooseberrySubcommand::Search { filters, fuzzy } => {
-                let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
+                let annotations: Vec<Annotation> = self.filter_annotations(filters)?;
                 self.search(annotations, fuzzy).await
             }
             GooseberrySubcommand::Tag {
@@ -85,15 +85,15 @@ impl Gooseberry {
                 delete,
                 tag,
             } => {
-                let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
+                let annotations: Vec<Annotation> = self.filter_annotations(filters)?;
                 let tags = if tag.is_empty() { None } else { Some(tag) };
                 self.tag(annotations, delete, tags).await
             }
             GooseberrySubcommand::Delete { filters, force } => {
-                let annotations = self.filter_annotations(filters, None).await?;
+                let annotations = self.filter_annotations(filters)?;
                 self.delete(annotations, force).await
             }
-            GooseberrySubcommand::View { filters, id } => self.view(filters, id).await,
+            GooseberrySubcommand::View { filters, id } => self.view(filters, id),
             GooseberrySubcommand::Move {
                 group_id,
                 filters,
@@ -105,29 +105,23 @@ impl Gooseberry {
                 clear,
                 force,
                 no_index,
-            } => {
-                self.make(
-                    self.filter_annotations_make(filters).await?,
-                    clear,
-                    force,
-                    true,
-                    !no_index,
-                )
-                .await
-            }
-            GooseberrySubcommand::Index { filters } => {
-                self.make(
-                    self.filter_annotations_make(filters).await?,
-                    false,
-                    false,
-                    false,
-                    true,
-                )
-                .await
-            }
+            } => self.make(
+                self.filter_annotations_make(filters)?,
+                clear,
+                force,
+                true,
+                !no_index,
+            ),
+            GooseberrySubcommand::Index { filters } => self.make(
+                self.filter_annotations_make(filters)?,
+                false,
+                false,
+                false,
+                true,
+            ),
             GooseberrySubcommand::Clear { force } => self.clear(force),
             GooseberrySubcommand::Uri { filters, ids } => {
-                let annotations: Vec<Annotation> = self.filter_annotations(filters, None).await?;
+                let annotations: Vec<Annotation> = self.filter_annotations(filters)?;
                 self.uri(annotations, ids)
             }
             _ => Ok(()), // Already handled
@@ -154,7 +148,7 @@ impl Gooseberry {
             )
             .build()?;
         let (added, updated) =
-            self.sync_annotations(&self.api.search_annotations_return_all(&mut query).await?)?;
+            self.sync_annotations(self.api.search_annotations_return_all(&mut query).await?)?;
         self.set_sync_time(&query.search_after)?;
         spinner.finish_with_message("Done!");
         if added > 0 {
@@ -186,7 +180,7 @@ impl Gooseberry {
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = self
-            .filter_annotations(filters, Some(group_id.to_owned()))
+            .filter_annotations_api(filters, group_id.to_owned())
             .await?;
         if search || fuzzy {
             // Run a search window.
@@ -215,24 +209,16 @@ impl Gooseberry {
         Ok(())
     }
 
-    /// Filter annotations based on command-line flags
-    pub async fn filter_annotations(
+    /// Filter annotations using hypothesis API based on command-line flags
+    pub async fn filter_annotations_api(
         &self,
         filters: Filters,
-        group: Option<String>,
+        group: String,
     ) -> color_eyre::Result<Vec<Annotation>> {
-        let group = match group {
-            Some(group) => group,
-            None => self
-                .config
-                .hypothesis_group
-                .clone()
-                .ok_or_else(|| eyre!("This should have been set by Config"))?,
-        };
         let mut query: SearchQuery = filters.clone().into();
         query.user = self.api.user.0.to_owned();
         query.group = group.to_string();
-        let mut annotations = if filters.or && !filters.tags.is_empty() {
+        let mut annotations = if !filters.and && !filters.tags.is_empty() {
             let mut annotations = Vec::new();
             for tag in &filters.tags {
                 let mut tag_query = query.clone();
@@ -270,17 +256,117 @@ impl Gooseberry {
         Ok(annotations)
     }
 
+    pub fn filter_annotation(&self, annotation: &Annotation, filters: &Filters) -> bool {
+        // Check if page note
+        if filters.page && annotation.target.iter().any(|t| !t.selector.is_empty()) {
+            return false;
+        }
+        // Check if annotation
+        if filters.annotation && annotation.target.iter().all(|t| t.selector.is_empty()) {
+            return false;
+        }
+        // Check if date > from date
+        if let Some(from) = filters.from {
+            if filters.include_updated {
+                if annotation.updated < from {
+                    return false;
+                }
+            } else if annotation.created < from {
+                return false;
+            }
+        }
+        // Check if date < before date
+        if let Some(before) = filters.before {
+            if filters.include_updated {
+                if annotation.updated > before {
+                    return false;
+                }
+            } else if annotation.created > before {
+                return false;
+            }
+        }
+        // Check if URI has pattern
+        if !filters.uri.is_empty() && !annotation.uri.contains(&filters.uri) {
+            return false;
+        }
+
+        // Check if pattern in quote, tags, text, or URI
+        if !(filters.any.is_empty()
+            || utils::get_quotes(annotation)
+                .join(" ")
+                .contains(&filters.any)
+            || annotation.tags.iter().any(|t| t.contains(&filters.any))
+            || annotation.text.contains(&filters.any)
+            || annotation.uri.contains(&filters.any))
+        {
+            return false;
+        }
+
+        // Check if tags overlap
+        if !filters.tags.is_empty() {
+            if filters.and {
+                // all tags must match
+                if !annotation.tags.iter().all(|t| filters.tags.contains(t)) {
+                    return false;
+                }
+                // any tag can match
+            } else if !annotation.tags.iter().any(|t| filters.tags.contains(t)) {
+                return false;
+            }
+        }
+
+        // Check if tags are in excluded tags
+        if !filters.exclude_tags.is_empty()
+            && annotation
+                .tags
+                .iter()
+                .any(|t| filters.exclude_tags.contains(t))
+        {
+            return false;
+        }
+
+        // Check if pattern in quote
+        if !filters.quote.is_empty()
+            && !utils::get_quotes(annotation)
+                .join(" ")
+                .contains(&filters.quote)
+        {
+            return false;
+        }
+
+        // Check if pattern in text
+        if !filters.text.is_empty() && !annotation.text.contains(&filters.text) {
+            return false;
+        }
+        true
+    }
+
+    /// Filter annotations based on command-line flags
+    pub fn filter_annotations(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
+        let mut annotations = Vec::new();
+        for annotation in self.iter_annotations()? {
+            let annotation = annotation?;
+            let keep = self.filter_annotation(&annotation, &filters);
+            if filters.not {
+                // If NOT, keep everything that doesn't match
+                if !keep {
+                    annotations.push(annotation);
+                }
+            } else if keep {
+                annotations.push(annotation);
+            }
+        }
+        annotations.sort_by(|a, b| a.created.cmp(&b.created));
+        Ok(annotations)
+    }
+
     /// Fetch annotations for knowledge base
     /// Ignores annotations with tags in `ignore_tags` configuration option.
-    pub async fn filter_annotations_make(
-        &self,
-        filters: Filters,
-    ) -> color_eyre::Result<Vec<Annotation>> {
+    pub fn filter_annotations_make(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
         let pb = utils::get_spinner("Fetching annotations...");
         // Get all annotations
         let annotations: Vec<_> = self
-            .filter_annotations(filters, None)
-            .await?
+            .filter_annotations(filters)?
             .into_iter()
             .filter(|a| {
                 !a.tags.iter().any(|t| {
@@ -425,16 +511,14 @@ impl Gooseberry {
     }
 
     /// View optionally filtered annotations in the terminal
-    pub async fn view(&mut self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
+    pub fn view(&mut self, filters: Filters, id: Option<String>) -> color_eyre::Result<()> {
         if self.config.annotation_template.is_none() {
             self.config.set_annotation_template()?;
         }
         let hbs = self.get_handlebars()?;
         if let Some(id) = id {
             let annotation = self
-                .api
-                .fetch_annotation(&id)
-                .await
+                .get_annotation(&id)
                 .suggestion("Are you sure this is a valid and existing annotation ID?")?;
             let markdown = hbs.render(
                 "annotation",
@@ -448,8 +532,7 @@ impl Gooseberry {
             return Ok(());
         }
         let inputs: Vec<_> = self
-            .filter_annotations(filters, None)
-            .await?
+            .filter_annotations(filters)?
             .into_iter()
             .map(|annotation| {
                 hbs.render(

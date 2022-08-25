@@ -188,7 +188,7 @@ impl Gooseberry {
                         .with_prompt("Also make index file?")
                         .default(true)
                         .interact()?;
-                    self.make(annotations, clear, true, true, index).await?;
+                    self.make(annotations, clear, true, true, index)?;
                 }
                 Key::ShiftUp => {
                     self.uri(annotations, Vec::new())?;

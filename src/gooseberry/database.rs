@@ -56,7 +56,7 @@ impl Gooseberry {
     }
 
     /// Tree storing annotation id: (tags ...)
-    /// Referred to as the annotation tree
+    /// Referred to as the annotation to tags tree
     pub fn annotation_to_tags(&self) -> color_eyre::Result<sled::Tree> {
         Ok(self.db.open_tree("annotation_to_tags")?)
     }
@@ -67,57 +67,78 @@ impl Gooseberry {
         Ok(self.db.open_tree("tag_to_annotations")?)
     }
 
-    pub fn add_to_tag(&self, tag_key: &[u8], annotation_key: &[u8]) -> color_eyre::Result<()> {
-        self.tag_to_annotations()?.merge(tag_key, annotation_key)?;
-        Ok(())
+    /// Tree storing annotation ID: annotation
+    /// Referred to as the annotations tree
+    pub fn annotations(&self) -> color_eyre::Result<sled::Tree> {
+        Ok(self.db.open_tree("annotations")?)
     }
 
-    /// Add an annotation to both trees
+    /// Add an annotation to all trees
     pub fn add_annotation(
         &self,
-        annotation: &Annotation,
-        annotation_batch: &mut sled::Batch,
+        annotation: Annotation,
+        annotations_batch: &mut sled::Batch,
+        annotation_to_tags_batch: &mut sled::Batch,
     ) -> color_eyre::Result<()> {
         let annotation_key = annotation.id.as_bytes();
-        annotation_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
+        annotation_to_tags_batch.insert(annotation_key, utils::join_ids(&annotation.tags)?);
         if annotation.tags.is_empty() || !annotation.tags.iter().any(|t| !t.trim().is_empty()) {
-            self.add_to_tag(EMPTY_TAG.as_bytes(), annotation_key)?;
+            self.tag_to_annotations()?
+                .merge(EMPTY_TAG.as_bytes(), annotation_key)?;
         } else {
             for tag in &annotation.tags {
                 if tag.is_empty() {
                     continue;
                 }
                 let tag_key = tag.as_bytes();
-                self.add_to_tag(tag_key, annotation_key)?;
+                self.tag_to_annotations()?.merge(tag_key, annotation_key)?;
             }
         }
+        let mut annotation_bytes = Vec::new();
+        ciborium::ser::into_writer(&annotation, &mut annotation_bytes)?;
+        annotations_batch.insert(annotation.id.as_bytes(), &*annotation_bytes);
         Ok(())
     }
 
     /// add or update annotations from the Hypothesis API
     pub fn sync_annotations(
         &self,
-        annotations: &[Annotation],
+        annotations: Vec<Annotation>,
     ) -> color_eyre::Result<(usize, usize)> {
         let (mut added, mut updated) = (0, 0);
-        let mut annotation_batch = sled::Batch::default();
+        let mut annotation_to_tags_batch = sled::Batch::default();
+        let mut annotations_batch = sled::Batch::default();
         for annotation in annotations {
             let annotation_key = annotation.id.as_bytes();
             if self.annotation_to_tags()?.contains_key(annotation_key)? {
                 self.delete_annotation(&annotation.id)?;
-                self.add_annotation(annotation, &mut annotation_batch)?;
+                self.add_annotation(
+                    annotation,
+                    &mut annotations_batch,
+                    &mut annotation_to_tags_batch,
+                )?;
                 updated += 1;
             } else {
-                self.add_annotation(annotation, &mut annotation_batch)?;
+                self.add_annotation(
+                    annotation,
+                    &mut annotations_batch,
+                    &mut annotation_to_tags_batch,
+                )?;
                 added += 1;
             }
         }
-        self.annotation_to_tags()?.apply_batch(annotation_batch)?;
+        self.annotation_to_tags()?
+            .apply_batch(annotation_to_tags_batch)?;
+        self.annotations()?.apply_batch(annotations_batch)?;
         Ok((added, updated))
     }
 
     /// Delete an annotation index from the tag tree
-    pub fn delete_from_tag(&self, tag_key: &[u8], annotation_id: &str) -> color_eyre::Result<()> {
+    pub fn delete_from_tag_to_annotations_tree(
+        &self,
+        tag_key: &[u8],
+        annotation_id: &str,
+    ) -> color_eyre::Result<()> {
         let new_indices: Vec<_> =
             utils::split_ids(&self.tag_to_annotations()?.get(tag_key)?.ok_or(
                 Apologize::TagNotFound {
@@ -136,8 +157,8 @@ impl Gooseberry {
         Ok(())
     }
 
-    /// Delete an annotation ID from the annotation tree
-    pub fn delete_from_annotations(&self, id: &str) -> color_eyre::Result<Vec<String>> {
+    /// Delete an annotation ID from the annotation to tags tree
+    pub fn delete_from_annotation_to_tags_tree(&self, id: &str) -> color_eyre::Result<Vec<String>> {
         let annotation_key = id.as_bytes();
         utils::split_ids(
             &self
@@ -147,31 +168,43 @@ impl Gooseberry {
         )
     }
 
+    /// Delete an annotation ID from the annotations tree
+    pub fn delete_from_annotations_tree(&self, id: &str) -> color_eyre::Result<()> {
+        let annotation_key = id.as_bytes();
+        self.annotations()?.remove(annotation_key)?;
+        Ok(())
+    }
+
     /// Delete annotation from database
     pub fn delete_annotation(&self, id: &str) -> color_eyre::Result<Vec<String>> {
-        let tags = self.delete_from_annotations(id)?;
+        let tags = self.delete_from_annotation_to_tags_tree(id)?;
         for tag in &tags {
             if tag.is_empty() {
                 continue;
             }
-            self.delete_from_tag(tag.as_bytes(), id)?;
+            self.delete_from_tag_to_annotations_tree(tag.as_bytes(), id)?;
         }
+        self.delete_from_annotations_tree(id)?;
         Ok(tags)
     }
 
     /// Delete multiple annotations
     pub fn delete_annotations(&self, ids: &[String]) -> color_eyre::Result<Vec<Vec<String>>> {
+        let mut annotation_to_tags_batch = sled::Batch::default();
         let mut annotation_batch = sled::Batch::default();
         let mut tags_list = Vec::with_capacity(ids.len());
         for id in ids {
             let tags = self.get_annotation_tags(id)?;
+            annotation_to_tags_batch.remove(id.as_bytes());
             annotation_batch.remove(id.as_bytes());
             for tag in &tags {
-                self.delete_from_tag(tag.as_bytes(), id)?;
+                self.delete_from_tag_to_annotations_tree(tag.as_bytes(), id)?;
             }
             tags_list.push(tags);
         }
-        self.annotation_to_tags()?.apply_batch(annotation_batch)?;
+        self.annotation_to_tags()?
+            .apply_batch(annotation_to_tags_batch)?;
+        self.annotations()?.apply_batch(annotation_batch)?;
         Ok(tags_list)
     }
 
@@ -198,5 +231,24 @@ impl Gooseberry {
         } else {
             Ok(tags)
         }
+    }
+
+    /// Retrieve annotation by ID
+    pub fn get_annotation(&self, id: &str) -> color_eyre::Result<Annotation> {
+        let annotation_key = id.as_bytes();
+        let annotation_bytes = self
+            .annotations()?
+            .get(annotation_key)?
+            .ok_or(Apologize::AnnotationNotFound { id: id.to_owned() })?;
+        Ok(ciborium::de::from_reader(&*annotation_bytes)?)
+    }
+
+    pub fn iter_annotations(
+        &self,
+    ) -> color_eyre::Result<impl Iterator<Item = color_eyre::Result<Annotation>>> {
+        Ok(self.annotations()?.iter().map(|item| {
+            let (_, annotation_bytes) = item?;
+            Ok(ciborium::de::from_reader(&*annotation_bytes)?)
+        }))
     }
 }

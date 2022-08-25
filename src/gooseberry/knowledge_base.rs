@@ -271,7 +271,7 @@ impl Gooseberry {
     }
 
     /// Make mdBook wiki
-    pub async fn make(
+    pub fn make(
         &mut self,
         annotations: Vec<Annotation>,
         clear: bool,
@@ -296,11 +296,11 @@ impl Gooseberry {
             fs::remove_dir_all(&kb_dir)?;
             fs::create_dir_all(&kb_dir)?;
         }
-        self.make_book(annotations, kb_dir, make, index).await?;
+        self.make_book(annotations, kb_dir, make, index)?;
         Ok(())
     }
     /// Write markdown files for wiki
-    async fn make_book(
+    fn make_book(
         &self,
         annotations: Vec<Annotation>,
         src_dir: &Path,
