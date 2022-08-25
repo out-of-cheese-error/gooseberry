@@ -5,7 +5,7 @@ First off, thank you for considering contributing to gooseberry.
 The following document explains how Gooseberry works and lists some potential improvements (usually with an issue number attached). 
 Pick one that seems interesting to work on, or make an issue if you want something added to the list!
 If you have any questions about contributing or need help with anything, my nick is ninjani on the [official](https://discord.gg/rust-lang) and [community](https://discord.gg/aVESxV8) Discord servers.
-Also, if you don't feel like contributing code but you're interested in the idea, another way to help is to just use Gooseberry and file feature requests (over [here](https://github.com/out-of-cheese-error/gooseberry/issues/11) or in a separate issue) and bug reports.
+Also, if you don't feel like contributing code, but you're interested in the idea, another way to help is to just use Gooseberry and file feature requests and bug reports.
 
 Gooseberry welcomes contributions from everyone. All contributors are expected to follow the [Rust Code of Conduct](http://www.rust-lang.org/conduct.html).
 
@@ -43,7 +43,6 @@ If the required subsection does not exist yet under **Unreleased**, create it!
 
 ## Getting started
 Clone this repository and explore the code via `cargo doc --open --no-deps`. 
-You'll also need to install [mdBook](https://rust-lang.github.io/mdBook/index.html) and [mdbook_mermaid](https://docs.rs/mdbook-mermaid/0.4.2/mdbook_mermaid/index.html) to view the generated markdown files.
 
 ## Testing
 
@@ -57,9 +56,10 @@ Set TEST_GROUP_ID to a **new** Hypothesis group without any annotations in it. T
 
 Run tests with `cargo test -- --test-threads=1` (THIS IS IMPORTANT).
 
-If a test fails there may be annotations created in the group which are not yet deleted. This can interfere with further test runs.
-To fix this, **change the `HYPOTHESIS_GROUP` in your config to the test group ID** and run the following commands
+If a test fails there may be annotations created in the group which are not yet deleted. This can interfere with future test runs.
+To fix this, **change the `HYPOTHESIS_GROUP` to the test group ID (first line below)** and run the following commands
 ```bash
+gooseberry config group <TEST_GROUP_ID>
 gooseberry clear -f
 gooseberry sync
 gooseberry delete --tags=test_tag -a -f
@@ -102,9 +102,11 @@ When creating new tests, make sure to tag each created annotation with "test_tag
 
 ## How Gooseberry works
 The general idea behind Gooseberry is to pull annotations from Hypothesis (via
-the [hypothesis](https://github.com/out-of-cheese-error/rust-hypothesis) crate)
-and write them out as plaintext files to form a personal knowledge base (PKB). Tags are used to interlink different annotations to have a more
-explorable and organized PKB.
+the [hypothesis](https://github.com/out-of-cheese-error/rust-hypothesis) crate), store them in a local database,
+and write them out as plaintext files to form a personal knowledge base (PKB). 
+Tags are used to interlink different annotations to have a more explorable and organized PKB. 
+Hypothesis annotations are stored locally in binary format for fast searching and retrieval. 
+Changes (with `tag` or `delete`) are pushed to Hypothesis and resynced to the local database.
 
 Here's the current code structure:
 ```
@@ -121,82 +123,6 @@ Here's the current code structure:
 ├── main.rs
 └── utils.rs
 ```
-
-### `configuration.rs`
-Deals with configuring Gooseberry in terms of:
-
-1. db_dir: the directory in which to store `sled` database files. This is automatically set in a platform-specific manner
-   using [directories-next](https://crates.io/crates/directories-next) and will not need to be accessed by the user. Running `gooseberry clear` will
-   clear the database, empty this directory and reset the sync time.
-3. hypothesis_username: Username to authorize Hypothesis. This is taken from the `HYPOTHESIS_NAME` environment variable if it exists, or set the first
-   time Gooseberry is run via an input prompt. It can be changed by calling `gooseberry config authorize`.
-4. hypothesis_key: personal API developer key obtained from Hypothesis; queried and set during the first run or taken from the `HYPOTHESIS_KEY`
-   environment variable. It can be changed by calling `gooseberry config authorize`.
-5. hypothesis_group: the Hypothesis group from which to sync annotations. On the first run, the user can either choose to create a new group or enter
-   an existing group ID. This can be changed by calling `gooseberry config group`.
-6. `gooseberry config kb` deals with configuring the generated knowledge base.
-
-The config file location is automatically set but can be changed using the `GOOSEBERRY_CONFIG` environment variable.
-
-#### Possible improvements
-~~* Setting the kb_dir somewhere more accessible to the user ([Issue #8](https://github.com/out-of-cheese-error/gooseberry/issues/8): easy)~~
-* Using a list of Hypothesis groups instead of just one, for different subjects for instance
-    * This would open up the possibility of splitting the Wiki by group with interlinking tags ([Issue #9](https://github.com/out-of-cheese-error/gooseberry/issues/9): medium)
-
-### `errors.rs`
-Gooseberry-specific errors with meaningful messages. 
-In general the code makes use of `suggestion`s via the [eyre](https://crates.io/crates/eyre) crate: these should inform the user on how to fix something that's broken on their end (e.g wrong credentials)
-
-### `gooseberry/cli.rs`
-The StructOpt CLI 
-
-#### Possible improvements
-Needs more tests
-
-### `gooseberry/database.rs`
-The database has two `sled` Trees (which behave like `BTreeMap`s) and one entry:
-1. `annotation_to_tags_tree`: links an annotation ID to the tags it contains.
-2. `tag_to_annotations_tree`: links a tag to all the annotation IDs that contain that tag.
-3. `last_sync_time`: stores the time of the last Hypothesis sync.
-
-* Calling `gooseberry sync` pulls in annotations from the configured Hypothesis group which were created or updated after the `last_sync_time`. These
-  are then added to the two trees and the sync time is updated.
-* Calling `gooseberry tag` (with optional filters) gets a set of annotations from Hypothesis and then adds (/ deletes) a user-specified tag to (/
-  from) each one. This modification is uploaded back to Hypothesis and the database is re-synced. Some specific behavior here:
-    * An annotation without any tags is stored in the database trees under the `EMPTY_TAG` key. This is not reflected in Hypothesis.
-
-* Calling `gooseberry delete` (with optional filters) deletes a set of annotations from Hypothesis.
-* Calling `gooseberry move <group_id>` (with optional filters) moves a set of annotations from the Hypothesis group corresponding to `group_id` to the
-  configured Gooseberry group and then re-syncs the database to add these.
-
-#### Possible improvements
-
-* More flexible tagging behavior. Now the user has to specify each tag one at a time for a set of filtered annotations. May make sense to have an
-  interactive window with multiple selections and tagging on the fly. (Hard)
-* Have a fixed set of Gooseberry-specific tags (in an enum or a separate module). Currently there's the `EMPTY_TAG` but it could be possible to have a
-  more flexible linking system with `gooseberry_from:id_to:id`
-  etc. ([Issue #2](https://github.com/out-of-cheese-error/gooseberry/issues/2): question)
-* Thoroughly test tagging functionality on edge-cases (no tags, tag exists, tag doesn't exist, tag is changed on Hypothesis but not synced
-  etc.) ([Issue #1](https://github.com/out-of-cheese-error/gooseberry/issues/1): medium)
-* Currently depends a lot on an internet connection, would it make sense to also store serialized annotations in the database? Note: this
-  functionality was removed because `bincode` doesn't support "tagged" enums and using raw JSON would be both memory-hungry and slow.
-
-### `gooseberry/knowledge_base.rs`
-
-TODO: document this
-
-### `gooseberry/search.rs`
-
-This handles the `gooseberry search` and `gooseberry move -s` commands which open a fuzzy/exact search window in the terminal
-using [skim](https://github.com/lotabout/skim). Each annotation's markdown is displayed in the preview wndow and the quote, text, tags, and URI are
-displayed as a single (very long) line which the user can search against. There are options to scroll (arrow keys), select multiple hits (TAB) and
-select all (CTRL-A). In `gooseberry search` there are options to add a tag to the selected annotations (Enter), delete a tag from the selected
-annotations (Shift-Left), and delete the selected annotations (Shift-Right). Adding `--fuzzy` switches to fuzzy search.
-
-#### Possible improvements
-
-* skim has a crazy number of options, this is a matter of checking them out and seeing which would improve user experience.
-* the long lines are not very nice and sometimes lag but skim only seems to allow wrapping via the preview window - this needs some more investigation
 
 ## Contributions
 
