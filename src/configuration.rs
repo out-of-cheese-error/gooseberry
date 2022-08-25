@@ -301,14 +301,14 @@ file_extension = '{}'
         }
 
         if config.hypothesis_group.is_none() {
-            config.set_group().await?;
+            config.set_group(None).await?;
         }
         Ok(config)
     }
 
     /// Queries and sets all knowledge base related configuration options
     pub fn set_kb_all(&mut self) -> color_eyre::Result<()> {
-        self.set_kb_dir()?;
+        self.set_kb_dir(None)?;
         self.set_annotation_template()?;
         self.set_page_template()?;
         self.set_index_link_template()?;
@@ -321,11 +321,22 @@ file_extension = '{}'
     }
 
     /// Sets the knowledge base directory
-    pub fn set_kb_dir(&mut self) -> color_eyre::Result<()> {
+    pub fn set_kb_dir(&mut self, directory: Option<&Path>) -> color_eyre::Result<()> {
+        if let Some(path) = directory {
+            if path.exists() || fs::create_dir(path).is_ok() {
+                self.kb_dir = Some(path.to_owned());
+                self.store()?;
+                return Ok(());
+            } else {
+                println!(
+                    "\nDirectory could not be created, make sure all parent folders exist and you have the right permissions.\n"
+                )
+            }
+        }
         let default = UserDirs::new()
             .ok_or(Apologize::Homeless)?
             .home_dir()
-            .join(crate::NAME);
+            .join(NAME);
         self.kb_dir = loop {
             println!("NOTE: the directory will be deleted and regenerated on each make!");
             let input = utils::user_input(
@@ -784,7 +795,28 @@ file_extension = '{}'
     /// Sets the Hypothesis group used for Gooseberry annotations
     /// This opens a command-line prompt wherein the user can select creating a new group or
     /// using an existing group by ID
-    pub async fn set_group(&mut self) -> color_eyre::Result<()> {
+    pub async fn set_group(&mut self, group_id: Option<String>) -> color_eyre::Result<()> {
+        let (username, key) = (
+            self.hypothesis_username
+                .as_deref()
+                .ok_or_else(|| eyre!("No Hypothesis username"))?,
+            self.hypothesis_key
+                .as_deref()
+                .ok_or_else(|| eyre!("No Hypothesis key"))?,
+        );
+        let api = Hypothesis::new(username, key)?;
+        if let Some(group_id) = group_id {
+            if api.fetch_group(&group_id, Vec::new()).await.is_ok() {
+                self.hypothesis_group = Some(group_id);
+                self.store()?;
+                return Ok(());
+            } else {
+                println!(
+                    "\nGroup could not be loaded, please try again.\n\
+                              Make sure the group exists and you are authorized to access it.\n\n"
+                )
+            }
+        }
         let selections = &[
             "Create a new Hypothesis group",
             "Use an existing Hypothesis group",
@@ -796,14 +828,6 @@ file_extension = '{}'
                 .items(&selections[..])
                 .interact()?;
 
-            let (username, key) = (
-                self.hypothesis_username
-                    .as_deref()
-                    .ok_or_else(|| eyre!("No Hypothesis username"))?,
-                self.hypothesis_key
-                    .as_deref()
-                    .ok_or_else(|| eyre!("No Hypothesis key"))?,
-            );
             if selection == 0 {
                 let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
                 let group_id = Hypothesis::new(username, key)?
@@ -812,7 +836,6 @@ file_extension = '{}'
                     .id;
                 break group_id;
             } else {
-                let api = Hypothesis::new(username, key)?;
                 let groups = api
                     .get_groups(&hypothesis::groups::GroupFilters::default())
                     .await?;

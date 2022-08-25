@@ -249,7 +249,10 @@ pub enum KbConfigCommand {
     /// Change everything related to the knowledge base
     All,
     /// Change knowledge base directory
-    Directory,
+    Directory {
+        #[clap(parse(from_os_str))]
+        directory: Option<PathBuf>,
+    },
     /// Change annotation handlebars template
     Annotation,
     /// Change page handlebars template
@@ -288,15 +291,17 @@ impl ConfigCommand {
                 let mut config = GooseberryConfig::load(config_file).await?;
                 config.request_credentials().await?;
             }
-            Self::Group => {
+            Self::Group { group_id } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
-                config.set_group().await?;
+                config.set_group(group_id.clone()).await?;
             }
             Self::Kb { cmd } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
                 match cmd {
                     KbConfigCommand::All => config.set_kb_all()?,
-                    KbConfigCommand::Directory => config.set_kb_dir()?,
+                    KbConfigCommand::Directory { directory } => {
+                        config.set_kb_dir(directory.as_deref())?
+                    }
                     KbConfigCommand::Annotation => config.set_annotation_template()?,
                     KbConfigCommand::Page => config.set_page_template()?,
                     KbConfigCommand::Link => config.set_index_link_template()?,
