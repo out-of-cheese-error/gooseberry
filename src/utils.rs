@@ -3,6 +3,7 @@ use chrono_english::{parse_date_string, Dialect};
 use color_eyre::Section;
 use dialoguer::{theme, Editor, Input};
 use hypothesis::annotations::Selector;
+use std::time::Duration;
 use url::Url;
 
 use crate::errors::Apologize;
@@ -71,16 +72,16 @@ pub fn external_editor_input(default: Option<&str>, extension: &str) -> color_ey
         .suggestion("Make sure to save next time!")
 }
 
-pub fn get_spinner(message: &str) -> indicatif::ProgressBar {
+pub fn get_spinner(message: &str) -> color_eyre::Result<indicatif::ProgressBar> {
     let spinner = indicatif::ProgressBar::new_spinner();
-    spinner.enable_steady_tick(200);
+    spinner.enable_steady_tick(Duration::from_millis(200));
     spinner.set_style(
         indicatif::ProgressStyle::default_spinner()
             .tick_chars("/|\\- ")
-            .template("{spinner:.dim.bold.blue} {wide_msg}"),
+            .template("{spinner:.dim.bold.blue} {wide_msg}")?,
     );
     spinner.set_message(message.to_owned());
-    spinner
+    Ok(spinner)
 }
 
 pub fn get_quotes(annotation: &hypothesis::annotations::Annotation) -> Vec<&str> {

@@ -331,7 +331,7 @@ impl Gooseberry {
 
         // Register templates
         let hbs = self.get_handlebars()?;
-        let pb = utils::get_spinner("Building knowledge base...");
+        let pb = utils::get_spinner("Building knowledge base...")?;
         sort_annotations(
             self.config.sort.as_ref().unwrap_or(&vec![OrderBy::Created]),
             &mut annotations,

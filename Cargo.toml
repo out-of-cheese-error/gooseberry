@@ -14,13 +14,14 @@ include = ["src/**/*", "README.md"]
 [dependencies]
 # Hypothesis
 hypothesis = { version = "0.10.3", default-features = false }
-tokio = { version = "1.18.2", features = ["macros"] }
+tokio = { version = "1.20.1", features = ["macros"] }
 
 # To extract the base URI
 url = "2.2.2"
 
 # CLI
-structopt = "0.3.26"
+clap = { version = "3.2.17", features = ["derive", "env"] }
+clap_complete = "3.2.4"
 
 # Database
 sled = "0.34.7"
@@ -31,31 +32,31 @@ directories-next = "1.0.1"
 
 # Error handling
 eyre = "0.6.8"
-color-eyre = "0.6.1"
-thiserror = "1.0.31"
+color-eyre = "0.6.2"
+thiserror = "1.0.32"
 
 # Serializing
-serde = "1.0.137"
-serde_json = "1.0.81"
-serde_derive = "1.0.137"
+serde = "1.0.144"
+serde_json = "1.0.85"
+serde_derive = "1.0.144"
 ciborium = "0.2.0"
 
 # Parsing and manipulating dates
-chrono = { version = "0.4.19", features = ["serde"] }
+chrono = { version = "0.4.22", features = ["serde"] }
 chrono-english = "0.1.7"
 
 # Fuzzy search
 skim = "0.9.4"
 
 # Console related
-dialoguer = "0.10.1"
+dialoguer = "0.10.2"
 bat = { version = "0.21.0", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
-indicatif = "0.16.2"
+indicatif = "0.17.0"
 
 # Templating markdown
-handlebars = "4.2.2"
+handlebars = "4.3.3"
 
 # Sanitizing filenames
 sanitize-filename = "0.4.0"
@@ -66,7 +67,7 @@ assert_cmd = "2.0.4"
 predicates = "2.1.1"
 tempfile = "3.3.0"
 dotenv = "0.15.0"
-futures = "0.3.21"
+futures = "0.3.23"
 
 [profile.release]
 panic = 'abort'

@@ -130,7 +130,7 @@ impl Gooseberry {
 
     /// Sync newly added / updated annotations
     pub async fn sync(&self) -> color_eyre::Result<()> {
-        let spinner = crate::utils::get_spinner("Syncing...");
+        let spinner = utils::get_spinner("Syncing...")?;
         // Sleep to make sure the previous requests are processed
         let duration = core::time::Duration::from_millis(500);
         std::thread::sleep(duration);
@@ -363,7 +363,7 @@ impl Gooseberry {
     /// Fetch annotations for knowledge base
     /// Ignores annotations with tags in `ignore_tags` configuration option.
     pub fn filter_annotations_make(&self, filters: Filters) -> color_eyre::Result<Vec<Annotation>> {
-        let pb = utils::get_spinner("Fetching annotations...");
+        let pb = utils::get_spinner("Fetching annotations...")?;
         // Get all annotations
         let annotations: Vec<_> = self
             .filter_annotations(filters)?
