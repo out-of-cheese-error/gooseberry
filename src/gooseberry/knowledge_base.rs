@@ -36,7 +36,6 @@ pub struct AnnotationTemplate {
     pub highlight: Vec<String>,
     pub display_name: Option<String>,
     pub group_name: String,
-    pub group_id: String,
 }
 
 pub fn replace_spaces(astring: &str) -> String {
@@ -77,7 +76,6 @@ impl AnnotationTemplate {
             .get(&annotation.group)
             .unwrap_or(&annotation.group)
             .to_owned();
-        let group_id = annotation.group.to_owned();
         AnnotationTemplate {
             annotation,
             base_uri,
@@ -86,7 +84,6 @@ impl AnnotationTemplate {
             highlight,
             display_name,
             group_name,
-            group_id,
         }
     }
 }
@@ -231,15 +228,15 @@ fn group_annotations_by_order(
                     .push(annotation);
             }
         }
-        OrderBy::GroupID => {
+        OrderBy::Group => {
             for annotation in annotations {
                 order_to_annotations
-                    .entry(annotation.group_id.to_string())
+                    .entry(annotation.annotation.group.to_string())
                     .or_insert_with(Vec::new)
                     .push(annotation);
             }
         }
-        OrderBy::Group => {
+        OrderBy::GroupName => {
             for annotation in annotations {
                 order_to_annotations
                     .entry(annotation.group_name.to_string())
@@ -270,8 +267,8 @@ fn sort_annotations(sort: &[OrderBy], annotations: &mut [AnnotationTemplate]) {
                     .cmp(&format!("{}", b.annotation.created.format("%+"))),
                 OrderBy::Updated => format!("{}", a.annotation.updated.format("%+"))
                     .cmp(&format!("{}", b.annotation.updated.format("%+"))),
-                OrderBy::GroupID => a.group_id.cmp(&b.group_id),
-                OrderBy::Group => a.group_name.cmp(&b.group_name),
+                OrderBy::Group => a.annotation.group.cmp(&b.annotation.group),
+                OrderBy::GroupName => a.group_name.cmp(&b.group_name),
                 OrderBy::Empty => panic!("Shouldn't happen"),
             })
         })

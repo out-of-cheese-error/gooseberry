@@ -22,7 +22,7 @@ pub static DEFAULT_NESTED_TAG: &str = "/";
 pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
 
 ### {{id}}
-Group: {{group_id}} ({{group_name}})
+Group: {{group}} ({{group_name}})
 Created: {{date_format "%c" created}}
 Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
@@ -53,8 +53,8 @@ pub enum OrderBy {
     Empty,
     Created,
     Updated,
-    GroupID,
     Group,
+    GroupName,
 }
 
 impl fmt::Display for OrderBy {
@@ -68,8 +68,8 @@ impl fmt::Display for OrderBy {
             OrderBy::Empty => write!(f, "empty"),
             OrderBy::Created => write!(f, "created"),
             OrderBy::Updated => write!(f, "updated"),
-            OrderBy::GroupID => write!(f, "group_id"),
             OrderBy::Group => write!(f, "group"),
+            OrderBy::GroupName => write!(f, "group_name"),
         }
     }
 }
@@ -418,8 +418,8 @@ file_extension = '{}'
             OrderBy::BaseURI,
             OrderBy::Title,
             OrderBy::ID,
-            OrderBy::GroupID,
             OrderBy::Group,
+            OrderBy::GroupName,
         ];
         let order = Self::get_order_bys(selections)?;
         if order.is_empty() {
@@ -461,8 +461,8 @@ file_extension = '{}'
             OrderBy::Title,
             OrderBy::Created,
             OrderBy::Updated,
-            OrderBy::GroupID,
             OrderBy::Group,
+            OrderBy::GroupName,
         ];
         let order = Self::get_order_bys(selections)?;
 
