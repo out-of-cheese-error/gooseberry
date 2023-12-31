@@ -28,7 +28,7 @@ fn make_config_file(
 db_dir = '{}'
 hypothesis_username = '{}'
 hypothesis_key = '{}'
-hypothesis_group = '{}'
+hypothesis_groups = {{'{}' = "test_group"}}
 kb_dir = '{}'
 hierarchy = ['Tag']
 sort = ['Created']

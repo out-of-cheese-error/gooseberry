@@ -155,6 +155,9 @@ pub struct Filters {
     /// Only annotations with ANY of these tags (use --and to match ALL)
     #[clap(long, value_delimiter = ',')]
     pub tags: Vec<String>,
+    /// Only annotations from these groups
+    #[clap(long, value_delimiter = ',')]
+    pub groups: Vec<String>,
     /// Only annotations without ANY of these tags
     #[clap(long, value_delimiter = ',')]
     pub exclude_tags: Vec<String>,
@@ -202,6 +205,7 @@ impl From<Filters> for SearchQuery {
             },
             quote: filters.quote,
             text: filters.text,
+            group: filters.groups,
             ..SearchQuery::default()
         }
     }
@@ -232,8 +236,11 @@ pub enum ConfigCommand {
     Where,
     /// Change Hypothesis credentials
     Authorize,
-    /// Change the group used for Hypothesis annotations
-    Group { group_id: Option<String> },
+    /// Change the groups used for Hypothesis annotations
+    Group {
+        #[clap(value_delimiter = ',', required = false)]
+        group_ids: Vec<String>,
+    },
     /// Change options related to the knowledge base
     Kb {
         #[clap(subcommand)]
@@ -285,9 +292,9 @@ impl ConfigCommand {
                 let mut config = GooseberryConfig::load(config_file).await?;
                 config.request_credentials().await?;
             }
-            Self::Group { group_id } => {
+            Self::Group { group_ids } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
-                config.set_group(group_id.clone()).await?;
+                config.set_groups(group_ids.clone()).await?;
             }
             Self::Kb { cmd } => {
                 let mut config = GooseberryConfig::load(config_file).await?;

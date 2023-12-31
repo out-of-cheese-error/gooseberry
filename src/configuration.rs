@@ -1,10 +1,11 @@
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fmt, fs, io};
 
 use chrono::Utc;
 use color_eyre::Help;
-use dialoguer::{theme, Confirm, Input, Select};
+use dialoguer::{theme, Confirm, Input, MultiSelect, Select};
 use directories_next::{ProjectDirs, UserDirs};
 use eyre::eyre;
 use hypothesis::annotations::{Annotation, Document, Permissions, Selector, Target, UserInfo};
@@ -21,6 +22,7 @@ pub static DEFAULT_NESTED_TAG: &str = "/";
 pub static DEFAULT_ANNOTATION_TEMPLATE: &str = r#"
 
 ### {{id}}
+Group: {{group_id}} ({{group_name}})
 Created: {{date_format "%c" created}}
 Tags: {{#each tags}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 
@@ -51,6 +53,8 @@ pub enum OrderBy {
     Empty,
     Created,
     Updated,
+    GroupID,
+    Group,
 }
 
 impl fmt::Display for OrderBy {
@@ -64,6 +68,8 @@ impl fmt::Display for OrderBy {
             OrderBy::Empty => write!(f, "empty"),
             OrderBy::Created => write!(f, "created"),
             OrderBy::Updated => write!(f, "updated"),
+            OrderBy::GroupID => write!(f, "group_id"),
+            OrderBy::Group => write!(f, "group"),
         }
     }
 }
@@ -77,7 +83,6 @@ pub struct GooseberryConfig {
     pub(crate) hypothesis_key: Option<String>,
     /// Hypothesis group with knowledge base annotations
     pub(crate) hypothesis_group: Option<String>,
-
     /// Related to tagging and editing
     /// Directory to store `sled` database files
     pub(crate) db_dir: PathBuf,
@@ -103,6 +108,9 @@ pub struct GooseberryConfig {
     pub(crate) ignore_tags: Option<Vec<String>>,
     /// Define nested tag pattern
     pub(crate) nested_tag: Option<String>,
+    /// Hypothesis groups with knowledge base annotations
+    #[serde(default)]
+    pub(crate) hypothesis_groups: HashMap<String, String>,
 }
 
 /// Main project directory, cross-platform
@@ -116,6 +124,7 @@ impl Default for GooseberryConfig {
             hypothesis_username: None,
             hypothesis_key: None,
             hypothesis_group: None,
+            hypothesis_groups: HashMap::new(),
             db_dir: get_project_dir()
                 .map(|dir| dir.data_dir().join("gooseberry_db"))
                 .expect("Couldn't make database directory"),
@@ -146,7 +155,6 @@ impl GooseberryConfig {
             r#"
 hypothesis_username = '<Hypothesis username>'
 hypothesis_key = '<Hypothesis personal API key>'
-hypothesis_group = '<Hypothesis group ID to take annotations from>'
 db_dir = '<full path to database folder>'
 kb_dir = '<knowledge-base folder>'
 hierarchy = ['Tag']
@@ -275,7 +283,7 @@ file_extension = '{}'
                 }
             }
             None => {
-                Ok(confy::load(NAME, None).suggestion(Apologize::ConfigError {
+                Ok(confy::load(NAME).suggestion(Apologize::ConfigError {
                     message: "Couldn't load from the default config location, maybe you don't have access? \
                     Try running `gooseberry config default config_file.toml`, modify the generated file, \
                 then `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>`".into()
@@ -299,9 +307,12 @@ file_extension = '{}'
         {
             config.set_credentials().await?;
         }
-
-        if config.hypothesis_group.is_none() {
-            config.set_group(None).await?;
+        if config.hypothesis_groups.is_empty() {
+            let mut group_ids = Vec::new();
+            if let Some(ref group_id) = config.hypothesis_group {
+                group_ids.push(group_id.to_owned());
+            }
+            config.set_groups(group_ids).await?;
         }
         Ok(config)
     }
@@ -407,6 +418,7 @@ file_extension = '{}'
             OrderBy::BaseURI,
             OrderBy::Title,
             OrderBy::ID,
+            OrderBy::Group,
         ];
         let order = Self::get_order_bys(selections)?;
         if order.is_empty() {
@@ -448,6 +460,7 @@ file_extension = '{}'
             OrderBy::Title,
             OrderBy::Created,
             OrderBy::Updated,
+            OrderBy::Group,
         ];
         let order = Self::get_order_bys(selections)?;
 
@@ -563,7 +576,10 @@ file_extension = '{}'
                     display_name: Some("test_display_name".to_string()),
                 }),
             };
-            let test_markdown_annotation = AnnotationTemplate::from_annotation(test_annotation);
+            let mut group_name_mapping = HashMap::new();
+            group_name_mapping.insert("group_id".to_owned(), "group_name".to_owned());
+            let test_markdown_annotation =
+                AnnotationTemplate::from_annotation(test_annotation, &group_name_mapping);
             self.annotation_template = loop {
                 let template = utils::external_editor_input(
                     Some(
@@ -656,7 +672,11 @@ file_extension = '{}'
             };
             let mut test_annotation_2 = test_annotation_1.clone();
             test_annotation_2.text = "Another annotation".to_string();
+            test_annotation_2.group = "group_id_2".to_string();
 
+            let mut group_name_mapping = HashMap::new();
+            group_name_mapping.insert("group_id".to_owned(), "group_name".to_owned());
+            group_name_mapping.insert("group_id_2".to_owned(), "group_name_2".to_owned());
             let templates = Templates {
                 annotation_template: self
                     .annotation_template
@@ -674,11 +694,16 @@ file_extension = '{}'
                 },
                 annotations: vec![test_annotation_1.clone(), test_annotation_2.clone()]
                     .into_iter()
-                    .map(|a| hbs.render("annotation", &AnnotationTemplate::from_annotation(a)))
+                    .map(|a| {
+                        hbs.render(
+                            "annotation",
+                            &AnnotationTemplate::from_annotation(a, &group_name_mapping),
+                        )
+                    })
                     .collect::<Result<Vec<String>, _>>()?,
                 raw_annotations: vec![
-                    AnnotationTemplate::from_annotation(test_annotation_1),
-                    AnnotationTemplate::from_annotation(test_annotation_2),
+                    AnnotationTemplate::from_annotation(test_annotation_1, &group_name_mapping),
+                    AnnotationTemplate::from_annotation(test_annotation_2, &group_name_mapping),
                 ],
             };
 
@@ -792,10 +817,77 @@ file_extension = '{}'
         Ok(())
     }
 
-    /// Sets the Hypothesis group used for Gooseberry annotations
-    /// This opens a command-line prompt wherein the user can select creating a new group or
-    /// using an existing group by ID
-    pub async fn set_group(&mut self, group_id: Option<String>) -> color_eyre::Result<()> {
+    /// This opens a command-line prompt where the user can select from either creating a new group or
+    /// using an existing group by ID, with the option of selecting multiple groups
+    pub async fn get_groups(&self, api: Hypothesis) -> color_eyre::Result<HashMap<String, String>> {
+        let selections = &[
+            "Create a new Hypothesis group",
+            "Use existing Hypothesis groups",
+        ];
+        let selection = Select::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("Where should gooseberry take annotations from?")
+            .items(&selections[..])
+            .interact()?;
+        let mut selected = HashSet::new();
+        if selection == 0 {
+            loop {
+                let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
+                let group_description = utils::user_input(
+                    "Enter a group description",
+                    Some("Gooseberry knowledge base annotations"),
+                    true,
+                    true,
+                )?;
+
+                let group_id = api
+                    .create_group(&group_name, Some(&group_description))
+                    .await?
+                    .id;
+
+                selected.insert(group_id.clone());
+                if Confirm::with_theme(&theme::ColorfulTheme::default())
+                    .with_prompt("Add more groups?")
+                    .interact()?
+                {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+        }
+        let groups = api
+            .get_groups(&hypothesis::groups::GroupFilters::default())
+            .await?;
+        let group_selection: Vec<_> = groups
+            .iter()
+            .map(|g| format!("{}: {}", g.id, g.name))
+            .collect();
+        let defaults: Vec<_> = groups.iter().map(|g| selected.contains(&g.id)).collect();
+        let mut group_name_mapping = HashMap::new();
+        for group_index in MultiSelect::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("Which groups should gooseberry use?")
+            .items(&group_selection[..])
+            .defaults(&defaults[..])
+            .interact()?
+        {
+            api.fetch_group(&groups[group_index].id, Vec::new())
+                .await
+                .map_err(|error| Apologize::GroupNotFound {
+                    id: groups[group_index].id.clone(),
+                    error,
+                })?;
+            group_name_mapping.insert(
+                groups[group_index].id.to_owned(),
+                groups[group_index].name.to_owned(),
+            );
+        }
+        Ok(group_name_mapping)
+    }
+
+    /// Sets the Hypothesis groups used for Gooseberry annotations
+    /// This opens a command-line prompt where the user can select from either creating a new group or
+    /// using an existing group by ID, with the option of selecting multiple groups
+    pub async fn set_groups(&mut self, group_ids: Vec<String>) -> color_eyre::Result<()> {
         let (username, key) = (
             self.hypothesis_username
                 .as_deref()
@@ -805,61 +897,22 @@ file_extension = '{}'
                 .ok_or_else(|| eyre!("No Hypothesis key"))?,
         );
         let api = Hypothesis::new(username, key)?;
-        if let Some(group_id) = group_id {
-            if api.fetch_group(&group_id, Vec::new()).await.is_ok() {
-                self.hypothesis_group = Some(group_id);
-                self.store()?;
-                return Ok(());
-            } else {
-                println!(
-                    "\nGroup could not be loaded, please try again.\n\
-                              Make sure the group exists and you are authorized to access it.\n\n"
-                )
+        if group_ids.is_empty() {
+            self.hypothesis_groups = self.get_groups(api).await?;
+        } else {
+            for group_id in group_ids {
+                let group = api
+                    .fetch_group(&group_id, Vec::new())
+                    .await
+                    .map_err(|error| Apologize::GroupNotFound {
+                        id: group_id.clone(),
+                        error,
+                    })?;
+                self.hypothesis_groups
+                    .insert(group.id.to_owned(), group.name.to_owned());
             }
         }
-        let selections = &[
-            "Create a new Hypothesis group",
-            "Use an existing Hypothesis group",
-        ];
-
-        let group_id = loop {
-            let selection = Select::with_theme(&theme::ColorfulTheme::default())
-                .with_prompt("Where should gooseberry take annotations from?")
-                .items(&selections[..])
-                .interact()?;
-
-            if selection == 0 {
-                let group_name = utils::user_input("Enter a group name", Some(NAME), true, false)?;
-                let group_id = Hypothesis::new(username, key)?
-                    .create_group(&group_name, Some("Gooseberry knowledge base annotations"))
-                    .await?
-                    .id;
-                break group_id;
-            } else {
-                let groups = api
-                    .get_groups(&hypothesis::groups::GroupFilters::default())
-                    .await?;
-                let group_selection: Vec<_> = groups
-                    .iter()
-                    .map(|g| format!("{}: {}", g.id, g.name))
-                    .collect();
-                let group_index = Select::with_theme(&theme::ColorfulTheme::default())
-                    .with_prompt("Which group should gooseberry use?")
-                    .items(&group_selection[..])
-                    .interact()?;
-                let group_id = groups[group_index].id.to_owned();
-                if api.fetch_group(&group_id, Vec::new()).await.is_ok() {
-                    break group_id;
-                } else {
-                    println!(
-                        "\nGroup could not be loaded, please try again.\n\
-                          Make sure the group exists and you are authorized to access it.\n\n"
-                    )
-                }
-            }
-        };
-
-        self.hypothesis_group = Some(group_id);
+        self.hypothesis_group = None;
         self.store()?;
         Ok(())
     }
@@ -930,7 +983,7 @@ file_extension = '{}'
                 message: "The current config_file location does not seem to have write access. \
                    Use `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>` to set a new location".into()
             })?,
-            None => confy::store(NAME, None, (*self).clone()).suggestion(Apologize::ConfigError {
+            None => confy::store(NAME, (*self).clone()).suggestion(Apologize::ConfigError {
                 message: "The current config_file location does not seem to have write access. \
                     Use `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>` to set a new location".into()
             })?,
