@@ -132,7 +132,7 @@ fn get_link_data(path: &Path, src_dir: &Path) -> color_eyre::Result<LinkTemplate
             .to_string_lossy()
             .to_string(),
         relative_path: path
-            .strip_prefix(&src_dir)?
+            .strip_prefix(src_dir)?
             .to_str()
             .ok_or(Apologize::KBError {
                 message: format!("{:?} has non-unicode characters", path),
@@ -293,8 +293,8 @@ impl Gooseberry {
                     .default(true)
                     .interact()?)
         {
-            fs::remove_dir_all(&kb_dir)?;
-            fs::create_dir_all(&kb_dir)?;
+            fs::remove_dir_all(kb_dir)?;
+            fs::create_dir_all(kb_dir)?;
         }
         self.make_book(annotations, kb_dir, make, index)?;
         Ok(())

@@ -13,61 +13,61 @@ include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
-hypothesis = { version = "0.10.4", default-features = false }
+hypothesis = { version = "0.11.1", default-features = false }
 tokio = { version = "1.20.1", features = ["macros"] }
 
 # To extract the base URI
 url = "2.2.2"
 
 # CLI
-clap = { version = "3.2.17", features = ["derive", "env"] }
-clap_complete = "3.2.4"
+clap = { version = "4.4.12", features = ["derive", "env"] }
+clap_complete = "4.4.5"
 
 # Database
 sled = "0.34.7"
 
 # Configuration management
-confy = "0.4.0"
+confy = "0.5.1"
 directories-next = "1.0.1"
 
 # Error handling
-eyre = "0.6.8"
+eyre = "0.6.11"
 color-eyre = "0.6.2"
-thiserror = "1.0.32"
+thiserror = "1.0.53"
 
 # Serializing
-serde = "1.0.144"
-serde_json = "1.0.85"
-serde_derive = "1.0.144"
-ciborium = "0.2.0"
+serde = "1.0.193"
+serde_json = "1.0.108"
+serde_derive = "1.0.193"
+ciborium = "0.2.1"
 
 # Parsing and manipulating dates
-chrono = { version = "0.4.22", features = ["serde"] }
+chrono = { version = "0.4.31", features = ["serde"] }
 chrono-english = "0.1.7"
 
 # Fuzzy search
-skim = "0.9.4"
+skim = "0.10.4"
 
 # Console related
-dialoguer = "0.10.2"
-bat = { version = "0.21.0", default-features = false, features = ["regex-fancy"] }
+dialoguer = "0.11.0"
+bat = { version = "0.24.0", default-features = false, features = ["regex-fancy"] }
 
 # Indicator bar
-indicatif = "0.17.0"
+indicatif = "0.17.7"
 
 # Templating markdown
-handlebars = "4.3.3"
+handlebars = "4.3.7"
 
 # Sanitizing filenames
-sanitize-filename = "0.4.0"
-handlebars_misc_helpers = "0.12.1"
+sanitize-filename = "0.5.0"
+handlebars_misc_helpers = "0.13.0"
 
 [dev-dependencies]
-assert_cmd = "2.0.4"
-predicates = "2.1.1"
-tempfile = "3.3.0"
+assert_cmd = "2.0.12"
+predicates = "3.0.4"
+tempfile = "3.9.0"
 dotenv = "0.15.0"
-futures = "0.3.23"
+futures = "0.3.30"
 
 [profile.release]
 panic = 'abort'

@@ -28,7 +28,7 @@ pub struct SearchAnnotation {
     markdown: String,
 }
 
-impl<'a> SkimItem for SearchAnnotation {
+impl SkimItem for SearchAnnotation {
     fn text(&self) -> Cow<str> {
         AnsiString::parse(&self.highlight).into_inner()
     }
@@ -158,10 +158,7 @@ impl Gooseberry {
                         .to_string()
                 })
                 .collect();
-            annotations = annotations
-                .into_iter()
-                .filter(|a| annotation_ids.contains(&a.id))
-                .collect();
+            annotations.retain(|a| annotation_ids.contains(&a.id));
             if annotations.is_empty() {
                 println!("Nothing selected");
                 return Ok(());

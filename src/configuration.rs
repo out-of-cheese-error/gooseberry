@@ -188,7 +188,7 @@ file_extension = '{}'
         }
         if let Some(kb_dir) = &self.kb_dir {
             if !kb_dir.exists() {
-                fs::create_dir_all(&kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
+                fs::create_dir_all(kb_dir).map_err(|e: io::Error| Apologize::ConfigError {
                     message: format!(
                         "Couldn't create knowledge base directory {:?}, {}",
                         kb_dir, e
@@ -275,7 +275,7 @@ file_extension = '{}'
                 }
             }
             None => {
-                Ok(confy::load(NAME).suggestion(Apologize::ConfigError {
+                Ok(confy::load(NAME, None).suggestion(Apologize::ConfigError {
                     message: "Couldn't load from the default config location, maybe you don't have access? \
                     Try running `gooseberry config default config_file.toml`, modify the generated file, \
                 then `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>`".into()
@@ -926,11 +926,11 @@ file_extension = '{}'
         // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
         let config_file = env::var("GOOSEBERRY_CONFIG").ok();
         match config_file {
-            Some(file) => confy::store_path(Path::new(&file), &(*self).clone()).suggestion(Apologize::ConfigError {
+            Some(file) => confy::store_path(Path::new(&file), (*self).clone()).suggestion(Apologize::ConfigError {
                 message: "The current config_file location does not seem to have write access. \
                    Use `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>` to set a new location".into()
             })?,
-            None => confy::store(NAME, &(*self).clone()).suggestion(Apologize::ConfigError {
+            None => confy::store(NAME, None, (*self).clone()).suggestion(Apologize::ConfigError {
                 message: "The current config_file location does not seem to have write access. \
                     Use `export GOOSEBERRY_CONFIG=<full/path/to/config_file.toml>` to set a new location".into()
             })?,

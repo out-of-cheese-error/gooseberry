@@ -14,7 +14,7 @@ pub const SEMICOLON: u8 = 59;
 /// Makes `DateTime` from a string, can be colloquial like "last Friday 8pm"
 pub fn parse_datetime(datetime_string: &str) -> color_eyre::Result<DateTime<Utc>> {
     if datetime_string.to_ascii_lowercase() == "today" {
-        Ok(Local::now().date().and_hms(0, 0, 0).with_timezone(&Utc))
+        Ok(Utc::now())
     } else {
         Ok(parse_date_string(datetime_string, Local::now(), Dialect::Uk)?.with_timezone(&Utc))
     }
@@ -127,7 +127,5 @@ pub fn clean_uri(uri: &str) -> String {
 pub fn uri_to_filename(uri: &str) -> String {
     clean_uri(uri)
         .replace("://", "_")
-        .replace('.', "_")
-        .replace('/', "_")
-        .replace(':', "_")
+        .replace(['.', '/', ':'], "_")
 }

@@ -2,7 +2,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
-use clap::AppSettings;
 use clap::CommandFactory;
 use clap::Parser;
 use clap_complete::Shell;
@@ -14,15 +13,14 @@ use crate::NAME;
 
 #[derive(Debug, Parser)]
 #[clap(
-name = "gooseberry",
-about = "Create and manage your Hypothesis knowledge-base",
-rename_all = "kebab-case",
-global_settings = & [AppSettings::DeriveDisplayOrder, AppSettings::ColoredHelp]
+    name = "gooseberry",
+    about = "Create and manage your Hypothesis knowledge-base",
+    rename_all = "kebab-case"
 )]
 /// Create and manage your Hypothesis knowledge-base
 pub struct GooseberryCLI {
     /// Location of config file (uses default XDG location or environment variable if not given)
-    #[clap(short, long, parse(from_os_str), env = "GOOSEBERRY_CONFIG")]
+    #[clap(short, long, env = "GOOSEBERRY_CONFIG")]
     pub(crate) config: Option<PathBuf>,
     #[clap(subcommand)]
     pub(crate) cmd: GooseberrySubcommand,
@@ -49,7 +47,7 @@ pub enum GooseberrySubcommand {
         #[clap(short, long)]
         delete: bool,
         /// The tags to add to / remove from the filtered annotations (comma-separated)
-        #[clap(use_delimiter = true)]
+        #[clap(value_delimiter = ',')]
         tag: Vec<String>,
     },
     /// Delete annotations in bulk
@@ -73,7 +71,7 @@ pub enum GooseberrySubcommand {
         #[clap(flatten)]
         filters: Filters,
         /// list of comma-separated annotation IDs
-        #[clap(use_delimiter = true)]
+        #[clap(value_delimiter = ',')]
         ids: Vec<String>,
     },
     /// Create knowledge-base text files using optionally filtered annotations
@@ -98,7 +96,7 @@ pub enum GooseberrySubcommand {
     /// Generate shell completions
     Complete {
         /// type of shell
-        #[clap(arg_enum)]
+        #[clap(value_enum)]
         shell: Shell,
     },
     /// Manage configuration
@@ -136,12 +134,12 @@ pub struct Filters {
     /// Only annotations created after this date and time
     ///
     /// Can be colloquial, e.g. "last Friday 8pm"
-    #[clap(long, parse(try_from_str = utils::parse_datetime))]
+    #[clap(long, value_parser = utils::parse_datetime)]
     pub from: Option<DateTime<Utc>>,
     /// Only annotations created before this date and time
     ///
     /// Can be colloquial, e.g. "last Friday 8pm"
-    #[clap(long, parse(try_from_str = utils::parse_datetime), conflicts_with = "from")]
+    #[clap(long, value_parser = utils::parse_datetime, conflicts_with = "from")]
     pub before: Option<DateTime<Utc>>,
     /// Include annotations updated in given time range (instead of just created)
     #[clap(short, long)]
@@ -155,10 +153,10 @@ pub struct Filters {
     #[clap(default_value_t, long)]
     pub any: String,
     /// Only annotations with ANY of these tags (use --and to match ALL)
-    #[clap(long, use_delimiter = true, multiple = true)]
+    #[clap(long, value_delimiter = ',')]
     pub tags: Vec<String>,
     /// Only annotations without ANY of these tags
-    #[clap(long, use_delimiter = true, multiple = true)]
+    #[clap(long, value_delimiter = ',')]
     pub exclude_tags: Vec<String>,
     /// Only annotations that contain this text inside the text that was annotated.
     #[clap(default_value_t, long)]
@@ -226,7 +224,6 @@ pub enum ConfigCommand {
     /// environment variable
     Default {
         /// Write to (TOML-formatted) file
-        #[clap(parse(from_os_str))]
         file: Option<PathBuf>,
     },
     /// Prints current configuration
@@ -249,10 +246,7 @@ pub enum KbConfigCommand {
     /// Change everything related to the knowledge base
     All,
     /// Change knowledge base directory
-    Directory {
-        #[clap(parse(from_os_str))]
-        directory: Option<PathBuf>,
-    },
+    Directory { directory: Option<PathBuf> },
     /// Change annotation handlebars template
     Annotation,
     /// Change page handlebars template

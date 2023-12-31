@@ -140,12 +140,12 @@ impl Gooseberry {
             .order(Order::Asc)
             .search_after(self.get_sync_time()?)
             .user(&self.api.user.0)
-            .group(
-                self.config
-                    .hypothesis_group
-                    .as_deref()
-                    .ok_or_else(|| eyre!("No Hypothesis group"))?,
-            )
+            .group(vec![self
+                .config
+                .hypothesis_group
+                .as_deref()
+                .ok_or_else(|| eyre!("No Hypothesis group"))?
+                .to_owned()])
             .build()?;
         let (added, updated) =
             self.sync_annotations(self.api.search_annotations_return_all(&mut query).await?)?;
@@ -180,15 +180,12 @@ impl Gooseberry {
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = self
-            .filter_annotations_api(filters, group_id.to_owned())
+            .filter_annotations_api(filters, vec![group_id.clone()])
             .await?;
         if search || fuzzy {
             // Run a search window.
             let annotation_ids = self.search_group(&annotations, fuzzy)?;
-            annotations = annotations
-                .into_iter()
-                .filter(|a| annotation_ids.contains(&a.id))
-                .collect();
+            annotations.retain(|a| annotation_ids.contains(&a.id))
         }
         let num = annotations.len();
         // Change the group ID attached to each annotation
@@ -213,11 +210,11 @@ impl Gooseberry {
     pub async fn filter_annotations_api(
         &self,
         filters: Filters,
-        group: String,
+        group: Vec<String>,
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut query: SearchQuery = filters.clone().into();
         query.user = self.api.user.0.to_owned();
-        query.group = group.to_string();
+        query.group = group.clone();
         let mut annotations = if !filters.and && !filters.tags.is_empty() {
             let mut annotations = Vec::new();
             for tag in &filters.tags {
