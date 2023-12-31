@@ -418,6 +418,7 @@ file_extension = '{}'
             OrderBy::BaseURI,
             OrderBy::Title,
             OrderBy::ID,
+            OrderBy::GroupID,
             OrderBy::Group,
         ];
         let order = Self::get_order_bys(selections)?;
@@ -460,6 +461,7 @@ file_extension = '{}'
             OrderBy::Title,
             OrderBy::Created,
             OrderBy::Updated,
+            OrderBy::GroupID,
             OrderBy::Group,
         ];
         let order = Self::get_order_bys(selections)?;
