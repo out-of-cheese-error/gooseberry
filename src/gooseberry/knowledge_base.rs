@@ -88,6 +88,7 @@ pub(crate) fn format_date<E: AsRef<str>>(
 }
 
 handlebars_helper!(date_format: |format: str, date: Json| format_date(format, date).map_err(|e| RenderError::from_error("serde_json", e))?);
+handlebars_helper!(url_encode: |s: str| {urlencoding::encode(s).to_string()});
 
 pub(crate) struct Templates<'a> {
     pub(crate) annotation_template: &'a str,
@@ -110,6 +111,7 @@ pub(crate) fn get_handlebars(templates: Templates) -> color_eyre::Result<Handleb
     handlebars_misc_helpers::register(&mut hbs);
     hbs.register_escape_fn(handlebars::no_escape);
     hbs.register_helper("date_format", Box::new(date_format));
+    hbs.register_helper("url_encode", Box::new(url_encode));
     hbs.register_template_string("annotation", templates.annotation_template)?;
     hbs.register_template_string("page", templates.page_template)?;
     hbs.register_template_string("index_link", templates.index_link_template)?;
