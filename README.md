@@ -7,8 +7,9 @@
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/ninjani)
 
-Gooseberry provides a command-line interface for [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web) and lets you generate a
-knowledge-base wiki without you having to actually type your knowledge out.
+Gooseberry provides 
+- a command-line interface for [Hypothesis](https://web.hypothes.is/) (a tool to annotate the web) 
+- lets you generate a knowledge-base wiki without you having to actually type your knowledge out.
 
 ![Obsidian example](data/images/obsidian_example.png)
 
@@ -17,33 +18,6 @@ knowledge-base wiki without you having to actually type your knowledge out.
 > made with [asciinema](https://github.com/asciinema/asciinema), [svg-term-cli](https://github.com/marionebl/svg-term-cli), and [svgembed](https://github.com/miraclx/svgembed)
 
 This demonstrates the interactive search functionality. `Enter` adds a new tag, `Shift-Left` deletes a tag, and `Shift-Right` deletes an annotation. (TODO: embed keypresses in GIF)
-
-## Table of Contents
-
-* [Install](#install)
-    * [Installation requirements](#installation-requirements)
-    * [Binaries](#binaries)
-    * [With brew (OSX)](#with-brew-osx)
-    * [AUR](#aur)
-* [Contributing](#contributing)
-* [Motivation](#motivation)
-* [A typical workflow](#a-typical-workflow)
-* [Some advantages](#some-advantages)
-* [Filtering](#filtering)
-* [Customization](#customization)
-    * [Hypothesis](#hypothesis)
-    * [Knowledge base](#knowledge-base)
-        * [Knowledge base directory](#knowledge-base-directory)
-        * [Annotation template](#annotation-template)
-        * [Page template](#page-template)
-        * [Grouping annotations into folders and pages](#grouping-annotations-into-folders-and-pages)
-        * [Sorting annotations within a page](#sorting-annotations-within-a-page)
-        * [Tags and nesting](#tags-and-nesting)
-        * [Index link template](#index-link-template)
-        * [Index filename](#index-filename)
-        * [Ignoring tags](#ignoring-tags)
-        * [File extensions](#file-extensions)
-* [Why "Gooseberry"?](#why-gooseberry)
 
 ## Install
 
@@ -132,63 +106,30 @@ you got it from, if ever you feel like you're missing context.
   accepting plaintext files
   (like Obsidian, mdBook, org-mode, vim-wiki, etc.)
 
-## Filtering
 
-You can filter the annotations you want to modify or export using the following options in most gooseberry commands:
-
+## Usage
 ```
-    --from <FROM>
-        Only annotations created after this date and time
-        
-        Can be colloquial, e.g. "last Friday 8pm"
+Usage: gooseberry [OPTIONS] <COMMAND>
 
-    --before <BEFORE>
-        Only annotations created before this date and time
-        
-        Can be colloquial, e.g. "last Friday 8pm"
+Commands:
+  sync      Sync newly added or updated Hypothesis annotations
+  search    Opens a search buffer to filter annotations. Has keyboard shortcuts for deleting annotations, modifying tags, and creating knowledge-base files
+  tag       Tag annotations according to topic
+  delete    Delete annotations in bulk
+  view      View (optionally filtered) annotations
+  uri       Get the set of URIs from a list of (optionally filtered) annotations
+  make      Create knowledge-base text files using optionally filtered annotations
+  index     Create an index file using hierarchy and optionally filtered annotations
+  complete  Generate shell completions
+  config    Manage configuration
+  clear     Clear all gooseberry data
+  move      Move (optionally filtered) annotations from a different hypothesis group to Gooseberry's
+  help      Print this message or the help of the given subcommand(s)
 
-    --uri <URI>
-        Only annotations with this pattern in their URL
-        
-        Doesn't have to be the full URL, e.g. "wikipedia"
-
-    --any <ANY>
-        Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
-
-    --tags <TAGS>
-        Only annotations with ANY of these tags (use --and to match ALL)
-
-    --groups <GROUPS>
-        Only annotations from these groups
-
-    --exclude-tags <EXCLUDE_TAGS>
-        Only annotations without ANY of these tags
-
-    --quote <QUOTE>
-        Only annotations that contain this text inside the text that was annotated
-
-    --text <TEXT>
-        Only annotations that contain this text in their textual body
-
--i, --include-updated
-        Include annotations updated in given time range (instead of just created)
--n, --not
-        Annotations NOT matching the given filter criteria
-
-    --and
-        (Use with --tags) Annotations matching ALL of the given tags
-
--p, --page
-        Only page notes
-
--a, --annotation
-        Only annotations (i.e exclude page notes)
-
--f, --fuzzy
-        Toggle fuzzy search
+Options:
+  -c, --config <CONFIG>  Location of config file (uses default XDG location or environment variable if not given) [env: GOOSEBERRY_CONFIG=]
+  -h, --help             Print help
 ```
-
-## Customization
 
 The default config TOML file is located in
 
@@ -199,39 +140,116 @@ Change this by creating a config file with `gooseberry config default > config.t
 then use this as your configuration with `gooseberry -c path/to/config.toml <subcommand>` or by setting the environment
 variable `$GOOSEBERRY_CONFIG` to point to the file.
 
-### Hypothesis
-
 Authorize Hypothesis either by setting the `$HYPOTHESIS_NAME` and `$HYPOTHESIS_KEY` environment variables to your username and developer API token or
 by running `gooseberry config authorize`.
 
-Gooseberry takes annotations from given Hypothesis group(s) which you can create/set with `gooseberry config group`.
+Gooseberry takes annotations from given Hypothesis group(s) which you can create/set with `gooseberry config group`. This automatically syncs all existing annotations from these groups.
+
+Sync newly added annotations with `gooseberry sync`.
+
+The `search` command provides an interactive search interface to your annotations (optionally pre-filtered using the filtering options below). Each annotation is rendered using the annotation template (configured with `gooseberry config kb annotation` and described below). The interface supports the following keybindings:
+Arrow keys to scroll, Tab to toggle selection, Ctrl-A to select all, Esc to abort
+Enter to add a tag, Shift-Left to delete a tag, Shift-Right to delete an annotation
+Shift-Down to make knowledge-base files, Shift-Up to print the set of URIs.
+
+You can also accomplish these tasks without the interactive interface using the `tag`, `delete`, `view`, `uri`, `make`, and `index` commands.
+
+**NOTE: tagging and deletions are synced to Hypothesis!**
+
+### Filtering
+
+You can filter the annotations you want to modify or export using the following options in most gooseberry commands:
+
+```
+      --from <FROM>
+          Only annotations created after this date and time
+          
+          Can be colloquial, e.g. "last Friday 8pm"
+
+      --before <BEFORE>
+          Only annotations created before this date and time
+          
+          Can be colloquial, e.g. "last Friday 8pm"
+
+  -i, --include-updated
+          Include annotations updated in given time range (instead of just created)
+
+      --uri <URI>
+          Only annotations with this pattern in their URL
+          
+          Doesn't have to be the full URL, e.g. "wikipedia"
+          
+          [default: ]
+
+      --any <ANY>
+          Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
+          
+          [default: ]
+
+      --tags <TAGS>
+          Only annotations with ANY of these tags (use --and to match ALL)
+
+      --groups <GROUPS>
+          Only annotations from these groups
+
+      --exclude-tags <EXCLUDE_TAGS>
+          Only annotations without ANY of these tags
+
+      --quote <QUOTE>
+          Only annotations that contain this text inside the text that was annotated
+          
+          [default: ]
+
+      --text <TEXT>
+          Only annotations that contain this text in their textual body
+          
+          [default: ]
+
+  -n, --not
+          Annotations NOT matching the given filter criteria
+
+      --and
+          (Use with --tags) Annotations matching ALL of the given tags
+
+  -p, --page
+          Only page notes
+
+  -a, --annotation
+          Only annotations (i.e exclude page notes)
+```
 
 ### Knowledge base
 
-You can set all the below options at once by running `gooseberry config kb all` or changing the corresponding keys in
-the config file (found at `gooseberry config location`)
+The `gooseberry make` command is used to generate knowledge base files using (optionally filtered) annotations. By default, it also generates an index file (configured by the `index`
+and `link` configuration options) - this can be disabled with `--no-index`. Use `gooseberry index` to generate just the index file.
 
-Generate knowledge base files using `gooseberry make` - this command has options to filter annotations, and to clear the
-directory before generating (`-c` or `--clear`). By default, it also generates an index file (configured by the `index`
-and `link` configuration options below) using the filtered annotations - this can be disabled with `--no-index`.
-Use `gooseberry index` to generate just the index file, this command also has annotation filtering options.
+Configuration options for the knowledge base are as follows:
+```
+Usage: gooseberry config kb <COMMAND>
 
-#### Knowledge base directory
+Commands:
+  all         Change everything related to the knowledge base
+  directory   Change knowledge base directory
+  annotation  Change annotation handlebars template
+  page        Change page handlebars template
+  link        Change index link handlebars template
+  index       Change index file name
+  extension   Change knowledge base file extension
+  hierarchy   Change folder & file hierarchy
+  sort        Change sort order of annotations within a page
+  ignore      Set which tags to ignore
+  nest        Set string defining nested tags (e.g "/" => parent/child)
+  help        Print this message or the help of the given subcommand(s)
+```
 
-`gooseberry config kb directory`
+You can set all knowledge base configuration options at once by running `gooseberry config kb all` or changing the corresponding keys in the config file (found at `gooseberry config where`).
 
-The directory to save the generated knowledge base files.
-
-**IMPORTANT:** This directory is cleared at every sync so if you're storing Hypothesis annotations alongside other notes, make sure to make a separate
+**IMPORTANT:** The knowledge base directory is cleared at every sync so if you're storing Hypothesis annotations alongside other notes, make sure to make a separate
 folder.
 
 #### Annotation template
 
-`gooseberry config kb annotation`
-
-Change the template used for rendering the annotation.
-
-The following keys can be used inside the template
+The `annotation` template is used to render a single annotation. The following keys can be used inside the template:
 
 * `{{ id }}` - Annotation ID
 * `created` - Date of creation. Use with the `date_format` helper (See [here](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html) for formatting options)
@@ -318,11 +336,7 @@ TODO add org-mode example
 
 #### Page template
 
-`gooseberry config kb page`
-
-Change the template used for rendering a single page (NOT the Index page).
-
-The following keys can be used inside the template:
+The `page` template is used for rendering a single page of annotations (NOT the Index page). The following keys can be used inside the template:
 
 * `{{ name }}` - file stem
 * `{{ relative_path }}` - path relative to KB directory
@@ -342,11 +356,7 @@ The default template is:
 
 #### Grouping annotations into folders and pages
 
-`gooseberry config kb hierarchy`
-
-The hierarchy defines how the folder and file structure of the knowledge base looks and which annotations are on what pages.
-
-The available options are:
+The `hierarchy` configuration defines how the folder and file structure of the knowledge base looks and which annotations are on what pages. The available options are:
 
 * Empty - Set `hierarchy = []` to have all annotations rendered on the index page.
 * Tag - Groups annotations by tag
@@ -368,11 +378,7 @@ annotations marked with that tag.
 
 #### Sorting annotations within a page
 
-`gooseberry config kb sort`
-
-This defines how annotations are sorted within each page.
-
-The available options are:
+The `sort`configuration defines how annotations are sorted within each page. The available options are:
 
 * Tag - Sorts by tag (multiple tags are considered as "tag1,tag2,tag3" for sorting)
 * URI
@@ -387,24 +393,9 @@ The available options are:
 Multiple sort options can be combined in order of priority e.g. `sort = ["Tag", "Created"]` sorts by tags, then by the
 date of creation.
 
-#### Tags and nesting
-
-`gooseberry config kb nested`
-
-This defines the pattern to use for nesting tags. e.g. if `nested_tag = "/"` then a tag of "parent/child" combined
-with `hierarchy = ["Tag"]` would create a "parent" folder with a "child" file inside it.
-
-Commas (",") and semicolons (";") should not be used inside tags as they are used as separators by Gooseberry.
-
 #### Index link template
 
-`gooseberry config kb link`
-
-This configures the index file, which generally contains links to all other pages in the generated knowledge base
-(unless `hierarchy=[]` in which case all annotations are rendered on the index page). The template controls how each of
-these links are rendered.
-
-Available keys:
+The `link` template controls how each link in the index file is rendered. The available keys are:
 
 * `{{ name }}` - file stem
 * `{{ relative_path }}` - path relative to KB directory
@@ -442,26 +433,12 @@ to transclude files
 
 ```
 
-#### Index filename
+#### Other options
 
-`gooseberry config kb index`
-
-The name of the Index file, e.g. `mdbook` needs this to be called "SUMMARY" and in Obisidan you could use "00INDEX" to make it show up first in the
-file explorer.
-
-#### Ignoring tags
-
-`gooseberry config kb ignore`
-
-Some annotations maybe aren't meant for the knowledge base. You can exclude these by tagging them with a specific tag, and then adding this tag to the
-`ignore_tags` configuration option (manually in the config file or with the above command). Note: Annotations with ignored tags will still be included
-in the `search` and `tag` commands.
-
-#### File extensions
-
-`gooseberry config kb extension`
-
-e.g. "md", "org", "txt" etc. (**Don't include the .**)
+- `index` - sets the name of the Index file, e.g. `mdbook` needs this to be called "SUMMARY" and in Obisidan you could use "00INDEX" to make it show up first in the file explorer.
+- `ignore` - sets the list of tags to ignore when creating the knowledge base. *Note: Annotations with ignored tags will still be included in the `search` and `tag` commands*
+- `nest` -  defines the pattern to use for nesting tags. e.g. if `nested_tag = "/"` then a tag of "parent/child" combined with `hierarchy = ["Tag"]` would create a "parent" folder with a "child" file inside it. *Note: Commas (",") and semicolons (";") should not be used inside tags as they are used as separators by Gooseberry.*
+- `extension` - sets the file extension for the knowledge base files. e.g. "md", "org", "txt" etc. *Note: Don't include the . in the extension*
 
 ## Why "Gooseberry"?
 
