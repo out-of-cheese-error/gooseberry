@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::Path;
 use std::{fs, vec};
 
 use color_eyre::Help;
@@ -35,19 +36,7 @@ pub struct Gooseberry {
 /// ## CLI
 /// Functions related to handling CLI commands
 impl Gooseberry {
-    /// Initialize program with command line input.
-    /// Reads `sled` trees and metadata file from the locations specified in config.
-    /// (makes new ones the first time).
-    pub async fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
-        if let GooseberrySubcommand::Config { cmd } = &cli.cmd {
-            return ConfigCommand::run(cmd, cli.config.as_deref()).await;
-        }
-        if let GooseberrySubcommand::Complete { shell } = &cli.cmd {
-            GooseberryCLI::complete(*shell);
-            return Ok(());
-        }
-        // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
-        let config = GooseberryConfig::load(cli.config.as_deref()).await?;
+    pub async fn new(config: GooseberryConfig) -> color_eyre::Result<Self> {
         let api = Hypothesis::new(
             config
                 .hypothesis_username
@@ -62,12 +51,34 @@ impl Gooseberry {
                     message: "Hypothesis developer API key isn't stored".into(),
                 })?,
         )?;
-        let mut gooseberry = Self {
-            db: Self::get_db(&config.db_dir)?,
-            api,
-            config,
-        };
+        let db = Self::get_db(&config.db_dir)?;
+        let gooseberry = Self { db, api, config };
         gooseberry.set_merge()?;
+        Ok(gooseberry)
+    }
+
+    pub async fn reset(config_file: Option<&Path>) -> color_eyre::Result<()> {
+        let gooseberry = Self::new(GooseberryConfig::load(config_file).await?).await?;
+        gooseberry.clear(true)?;
+        let gooseberry = Self::new(GooseberryConfig::load(config_file).await?).await?;
+        gooseberry.sync().await?;
+        Ok(())
+    }
+
+    /// Initialize program with command line input.
+    /// Reads `sled` trees and metadata file from the locations specified in config.
+    /// (makes new ones the first time).
+    pub async fn start(cli: GooseberryCLI) -> color_eyre::Result<()> {
+        if let GooseberrySubcommand::Config { cmd } = &cli.cmd {
+            return ConfigCommand::run(cmd, cli.config.as_deref()).await;
+        }
+        if let GooseberrySubcommand::Complete { shell } = &cli.cmd {
+            GooseberryCLI::complete(*shell);
+            return Ok(());
+        }
+        // Reads the GOOSEBERRY_CONFIG environment variable to get config file location
+        let config = GooseberryConfig::load(cli.config.as_deref()).await?;
+        let mut gooseberry = Gooseberry::new(config).await?;
         gooseberry.run(cli).await?;
         Ok(())
     }
@@ -261,7 +272,15 @@ impl Gooseberry {
 
     pub fn filter_annotation(&self, annotation: &Annotation, filters: &Filters) -> bool {
         // Check if in groups
-        if !filters.groups.is_empty() && !filters.groups.contains(&annotation.group) {
+        if !filters.groups.is_empty()
+            && !filters.groups.contains(&annotation.group)
+            && !filters.groups.contains(
+                self.config
+                    .hypothesis_groups
+                    .get(&annotation.group)
+                    .unwrap_or(&annotation.group),
+            )
+        {
             return false;
         }
 

@@ -295,6 +295,7 @@ impl ConfigCommand {
             Self::Group { group_ids } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
                 config.set_groups(group_ids.clone()).await?;
+                crate::gooseberry::Gooseberry::reset(config_file).await?;
             }
             Self::Kb { cmd } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
