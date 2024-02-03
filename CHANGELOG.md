@@ -5,14 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - 2022-08-25
+## [0.10.0] - Unreleased
 ## Changed
 - Store annotations in local database for faster search and retrieval. (Issue [#76](https://github.com/out-of-cheese-error/gooseberry/issues/76))
 - Use --and to match ALL tags, default matches ANY tag (previously --or)
 - Use `gooseberry config group <group_id>` and `gooseberry config kb directory <directory_path>` directly instead of interactive usage
 
+## Added
+- Support for multiple groups (Issue [#9](https://github.com/out-of-cheese-error/gooseberry/issues/9))
+    - multiple groups can be selected (spacebar) using `gooseberry config group`
+    - You can now filter by group ID(s) or group name(s) (comma separated) in all filterable commands
+    - GroupID and GroupName are now available in the annotation template and as sort and hierarchy options
+    - The first part of each entry in the serach interface is the group name
+- `url_encode` helper for handlebars (Issue [#103](https://github.com/out-of-cheese-error/gooseberry/issues/103) and Discussion [#100](https://github.com/out-of-cheese-error/gooseberry/discussions/100))
+
 ## Fixed
 - Help strings in CLI
+- Auto-clear and sync when changing groups
 
 ## [0.9.3] - 2022-04-30
 ### Changed
