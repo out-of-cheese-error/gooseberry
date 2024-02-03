@@ -113,8 +113,19 @@ impl Gooseberry {
             }
             let mut highlight = format!(
                 "{}",
-                style(title.replace('\n', " ")).fg(dialoguer::console::Color::Green)
+                style(
+                    self.config
+                        .hypothesis_groups
+                        .get(&annotation.group)
+                        .unwrap_or(&annotation.group)
+                        .replace('\n', " ")
+                )
+                .fg(dialoguer::console::Color::Yellow)
             );
+            highlight.push_str(&format!(
+                "| {}",
+                style(title.replace('\n', " ")).fg(dialoguer::console::Color::Green)
+            ));
             let quote = utils::get_quotes(annotation).join(" ").replace('\n', " ");
             if !quote.is_empty() {
                 highlight.push_str(&format!("| {}", quote));
