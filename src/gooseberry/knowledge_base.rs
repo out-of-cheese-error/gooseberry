@@ -35,6 +35,7 @@ pub struct AnnotationTemplate {
     pub incontext: String,
     pub highlight: Vec<String>,
     pub display_name: Option<String>,
+    pub group_name: String,
 }
 
 pub fn replace_spaces(astring: &str) -> String {
@@ -42,7 +43,10 @@ pub fn replace_spaces(astring: &str) -> String {
 }
 
 impl AnnotationTemplate {
-    pub(crate) fn from_annotation(annotation: Annotation) -> Self {
+    pub(crate) fn from_annotation(
+        annotation: Annotation,
+        hypothesis_groups: &HashMap<String, String>,
+    ) -> Self {
         let base_uri = if let Ok(uri) = Url::parse(&annotation.uri) {
             uri[..url::Position::BeforePath].to_string()
         } else {
@@ -68,6 +72,10 @@ impl AnnotationTemplate {
                 title = document.title[0].to_owned();
             }
         }
+        let group_name = hypothesis_groups
+            .get(&annotation.group)
+            .unwrap_or(&annotation.group)
+            .to_owned();
         AnnotationTemplate {
             annotation,
             base_uri,
@@ -75,6 +83,7 @@ impl AnnotationTemplate {
             incontext,
             highlight,
             display_name,
+            group_name,
         }
     }
 }
@@ -221,6 +230,22 @@ fn group_annotations_by_order(
                     .push(annotation);
             }
         }
+        OrderBy::Group => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(annotation.annotation.group.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
+        OrderBy::GroupName => {
+            for annotation in annotations {
+                order_to_annotations
+                    .entry(annotation.group_name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(annotation);
+            }
+        }
         OrderBy::Empty => panic!("Shouldn't happen"),
         _ => panic!("{} shouldn't occur in hierarchy", order),
     }
@@ -244,6 +269,8 @@ fn sort_annotations(sort: &[OrderBy], annotations: &mut [AnnotationTemplate]) {
                     .cmp(&format!("{}", b.annotation.created.format("%+"))),
                 OrderBy::Updated => format!("{}", a.annotation.updated.format("%+"))
                     .cmp(&format!("{}", b.annotation.updated.format("%+"))),
+                OrderBy::Group => a.annotation.group.cmp(&b.annotation.group),
+                OrderBy::GroupName => a.group_name.cmp(&b.group_name),
                 OrderBy::Empty => panic!("Shouldn't happen"),
             })
         })
@@ -311,7 +338,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let mut annotations: Vec<_> = annotations
             .into_iter()
-            .map(AnnotationTemplate::from_annotation)
+            .map(|a| AnnotationTemplate::from_annotation(a, &self.config.hypothesis_groups))
             .collect();
         let extension = self
             .config

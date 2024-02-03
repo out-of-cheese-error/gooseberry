@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs;
+use std::{fs, vec};
 
 use color_eyre::Help;
 use dialoguer::Confirm;
@@ -135,17 +135,23 @@ impl Gooseberry {
         let duration = core::time::Duration::from_millis(500);
         std::thread::sleep(duration);
 
+        let groups = self
+            .config
+            .hypothesis_groups
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if groups.is_empty() {
+            spinner.finish_with_message("No groups to sync!");
+            return Ok(());
+        }
         let mut query = SearchQuery::builder()
             .limit(200)
             .order(Order::Asc)
             .search_after(self.get_sync_time()?)
             .user(&self.api.user.0)
-            .group(vec![self
-                .config
-                .hypothesis_group
-                .as_deref()
-                .ok_or_else(|| eyre!("No Hypothesis group"))?
-                .to_owned()])
+            .group(groups)
             .build()?;
         let (added, updated) =
             self.sync_annotations(self.api.search_annotations_return_all(&mut query).await?)?;
@@ -210,11 +216,11 @@ impl Gooseberry {
     pub async fn filter_annotations_api(
         &self,
         filters: Filters,
-        group: Vec<String>,
+        groups: Vec<String>,
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut query: SearchQuery = filters.clone().into();
         query.user = self.api.user.0.to_owned();
-        query.group = group.clone();
+        query.group = groups.clone();
         let mut annotations = if !filters.and && !filters.tags.is_empty() {
             let mut annotations = Vec::new();
             for tag in &filters.tags {
@@ -242,7 +248,7 @@ impl Gooseberry {
         if filters.not {
             let mut query: SearchQuery = Filters::default().into();
             query.user = self.api.user.0.to_owned();
-            query.group = group;
+            query.group = groups;
             let mut all_annotations: Vec<_> =
                 self.api.search_annotations_return_all(&mut query).await?;
             let remove_ids = annotations.iter().map(|a| &a.id).collect::<HashSet<_>>();
@@ -254,6 +260,11 @@ impl Gooseberry {
     }
 
     pub fn filter_annotation(&self, annotation: &Annotation, filters: &Filters) -> bool {
+        // Check if in groups
+        if !filters.groups.is_empty() && !filters.groups.contains(&annotation.group) {
+            return false;
+        }
+
         // Check if page note
         if filters.page && annotation.target.iter().any(|t| !t.selector.is_empty()) {
             return false;
@@ -519,7 +530,7 @@ impl Gooseberry {
                 .suggestion("Are you sure this is a valid and existing annotation ID?")?;
             let markdown = hbs.render(
                 "annotation",
-                &AnnotationTemplate::from_annotation(annotation),
+                &AnnotationTemplate::from_annotation(annotation, &self.config.hypothesis_groups),
             )?;
             bat::PrettyPrinter::new()
                 .language("markdown")
@@ -534,7 +545,10 @@ impl Gooseberry {
             .map(|annotation| {
                 hbs.render(
                     "annotation",
-                    &AnnotationTemplate::from_annotation(annotation),
+                    &AnnotationTemplate::from_annotation(
+                        annotation,
+                        &self.config.hypothesis_groups,
+                    ),
                 )
             })
             .collect::<Result<_, _>>()?;

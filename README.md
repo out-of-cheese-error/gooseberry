@@ -137,50 +137,55 @@ you got it from, if ever you feel like you're missing context.
 You can filter the annotations you want to modify or export using the following options in most gooseberry commands:
 
 ```
-FLAGS:
-    -i, --include-updated
-            Include annotations updated in given time range (instead of just created)
+    --from <FROM>
+        Only annotations created after this date and time
+        
+        Can be colloquial, e.g. "last Friday 8pm"
 
-    -n, --not
-            Annotations NOT matching the given filter criteria
+    --before <BEFORE>
+        Only annotations created before this date and time
+        
+        Can be colloquial, e.g. "last Friday 8pm"
 
-    -o, --or
-            (Use with --tags) Annotations matching ANY of the given tags
+    --uri <URI>
+        Only annotations with this pattern in their URL
+        
+        Doesn't have to be the full URL, e.g. "wikipedia"
 
-    -p, --page
-            Only page notes
+    --any <ANY>
+        Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri`
 
-    -a, --annotation
-            Only annotations (i.e exclude page notes)
+    --tags <TAGS>
+        Only annotations with ANY of these tags (use --and to match ALL)
 
+    --groups <GROUPS>
+        Only annotations from these groups
 
-OPTIONS:
-        --from <from>
-            Only annotations created after this date and time
+    --exclude-tags <EXCLUDE_TAGS>
+        Only annotations without ANY of these tags
 
-            Can be colloquial, e.g. "last Friday 8pm"
-        --before <before>
-            Only annotations created before this date and time
+    --quote <QUOTE>
+        Only annotations that contain this text inside the text that was annotated
 
-            Can be colloquial, e.g. "last Friday 8pm"
-        --uri <uri>
-            Only annotations with this pattern in their URL
+    --text <TEXT>
+        Only annotations that contain this text in their textual body
 
-            Doesn't have to be the full URL, e.g. "wikipedia" [default: ]
-        --any <any>
-            Only annotations with this pattern in their `quote`, `tags`, `text`, or `uri` [default: ]
+-i, --include-updated
+        Include annotations updated in given time range (instead of just created)
+-n, --not
+        Annotations NOT matching the given filter criteria
 
-        --tags <tags>...
-            Only annotations with ALL of these tags (use --or to match ANY)
+    --and
+        (Use with --tags) Annotations matching ALL of the given tags
 
-        --exclude-tags <exclude-tags>...
-            Only annotations without ANY of these tags
+-p, --page
+        Only page notes
 
-        --quote <quote>
-            Only annotations that contain this text inside the text that was annotated [default: ]
+-a, --annotation
+        Only annotations (i.e exclude page notes)
 
-        --text <text>
-            Only annotations that contain this text in their textual body [default: ]
+-f, --fuzzy
+        Toggle fuzzy search
 ```
 
 ## Customization
@@ -199,7 +204,7 @@ variable `$GOOSEBERRY_CONFIG` to point to the file.
 Authorize Hypothesis either by setting the `$HYPOTHESIS_NAME` and `$HYPOTHESIS_KEY` environment variables to your username and developer API token or
 by running `gooseberry config authorize`.
 
-Gooseberry takes annotations from a given Hypothesis group which you can create/set with `gooseberry config group`.
+Gooseberry takes annotations from given Hypothesis group(s) which you can create/set with `gooseberry config group`.
 
 ### Knowledge base
 
@@ -241,6 +246,7 @@ The following keys can be used inside the template
 * `{{ text }}` - The text content of the annotation body
 * `tags` - A list of tags associated with the annotation.
 * `{{ group }}` - ID of Hypothesis group,
+* `{{ group_name }}` - Name of Hypothesis group,
 * `references` - List of annotation IDs for any annotations this annotation references (e.g. is a reply to)
 * `{{ display_name }}` - Display name of annotation creator. This may not be set.
 
@@ -348,12 +354,14 @@ The available options are:
 * BaseURI - Groups annotations by their base URI
 * Title - Group annotations by the title of their webpage/article/document
 * ID - Groups annotations by annotation ID.
+* Group - Groups annotations by group ID.
+* GroupName - Groups annotations by group name.
 
 Multiple hierarchies combined make folders and sub-folders, with the last entry defining pages.
 
 e.g.
 
-`hierarchy = ["BaseURI", "Tag"]` would make a separate folder for each base_uri. Within each folder would be a page for each tag consisting of
+`hierarchy = ["Group", "Tag"]` would make a separate folder for each group. Within each folder would be a page for each tag consisting of
 annotations marked with that tag.
 
 `hierarchy = ["Tag"]` gives the structure in the `mdbook` figure above, i.e. no folders, a page for each tag.
@@ -371,6 +379,8 @@ The available options are:
 * BaseURI
 * Title
 * ID
+* Group
+* GroupName
 * Created
 * Updated
 

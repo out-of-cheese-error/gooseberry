@@ -139,7 +139,10 @@ impl Gooseberry {
                 highlight,
                 markdown: hbs.render(
                     "annotation",
-                    &AnnotationTemplate::from_annotation(annotation.clone()),
+                    &AnnotationTemplate::from_annotation(
+                        annotation.clone(),
+                        &self.config.hypothesis_groups,
+                    ),
                 )?,
                 id: annotation.id.to_owned(),
             }));
@@ -320,7 +323,10 @@ impl Gooseberry {
                 highlight,
                 markdown: hbs.render(
                     "annotation",
-                    &AnnotationTemplate::from_annotation(annotation.clone()),
+                    &AnnotationTemplate::from_annotation(
+                        annotation.clone(),
+                        &self.config.hypothesis_groups,
+                    ),
                 )?,
                 id: annotation.id.to_owned(),
             }));
