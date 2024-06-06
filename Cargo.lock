@@ -1363,9 +1363,9 @@ dependencies = [
 
 [[package]]
 name = "hypothesis"
-version = "0.11.1"
+version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9714d3b087290cabd4e66d9943f62b7da4cb74bf413a69b53de31b779429a647"
+checksum = "d35ec5ab51dd4a819db01754b95303370119e9223b131c9a673462da0def1ff0"
 dependencies = [
  "chrono",
  "derive_builder 0.12.0",
