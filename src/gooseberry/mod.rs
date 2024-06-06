@@ -429,7 +429,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().all(|tag| !a.tags.contains(tag)))
+            .filter(|a| (a.user == self.api.user) && tags.iter().all(|tag| !a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("All of the selected annotations already have all of those tags.");
@@ -465,7 +465,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().any(|tag| a.tags.contains(tag)))
+            .filter(|a| (a.user == self.api.user) && tags.iter().any(|tag| a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("None of the selected annotations have any of those tags.");
@@ -531,6 +531,10 @@ impl Gooseberry {
         annotations: Vec<Annotation>,
         force: bool,
     ) -> color_eyre::Result<()> {
+        let annotations: Vec<_> = annotations
+            .into_iter()
+            .filter(|a| a.user == self.api.user)
+            .collect();
         let num_annotations = annotations.len();
         if !annotations.is_empty()
             && (force
