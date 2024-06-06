@@ -109,6 +109,8 @@ pub struct GooseberryConfig {
     /// Define nested tag pattern
     pub(crate) nested_tag: Option<String>,
     /// Hypothesis groups with knowledge base annotations
+    /// Other Hypothesis usernames to pull public annotations from
+    pub(crate) hypothesis_users: Option<Vec<String>>,
     #[serde(default)]
     pub(crate) hypothesis_groups: HashMap<String, String>,
 }
@@ -138,6 +140,7 @@ impl Default for GooseberryConfig {
             sort: None,
             ignore_tags: None,
             nested_tag: None,
+            hypothesis_users: None,
         };
         config.make_dirs().expect("Couldn't make directories");
         config
