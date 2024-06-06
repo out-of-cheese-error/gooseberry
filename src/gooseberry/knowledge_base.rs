@@ -34,6 +34,7 @@ pub struct AnnotationTemplate {
     pub title: String,
     pub incontext: String,
     pub highlight: Vec<String>,
+    pub username: String,
     pub display_name: Option<String>,
     pub group_name: String,
 }
@@ -66,6 +67,7 @@ impl AnnotationTemplate {
         } else {
             None
         };
+        let username = annotation.user.to_username();
         let mut title = String::from("Untitled document");
         if let Some(document) = &annotation.document {
             if !document.title.is_empty() {
@@ -82,6 +84,7 @@ impl AnnotationTemplate {
             title,
             incontext,
             highlight,
+            username,
             display_name,
             group_name,
         }
