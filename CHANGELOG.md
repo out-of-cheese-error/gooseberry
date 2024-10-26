@@ -5,8 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.0] - Unreleased
-## Changed
+
+## [0.10.1] - 2024-10-26
+### Changed
+- Updated hypothesis crate to 0.12.0 to support all Hypothesis selectors (Issue [#66](https://github.com/out-of-cheese-error/gooseberry/issues/66))
+
+## [0.10.0] - 2024-03-02
+### Changed
 - Store annotations in local database for faster search and retrieval. (Issue [#76](https://github.com/out-of-cheese-error/gooseberry/issues/76))
 - Use --and to match ALL tags, default matches ANY tag (previously --or)
 - Use `gooseberry config group <group_id>` and `gooseberry config kb directory <directory_path>` directly instead of interactive usage
@@ -191,6 +196,8 @@ Main commands:
   location of the knowledge base
 * `gooseberry move` - move annotations from one group to another (**move** not copy). Useful if you have a bunch of
   annotations scattered around and want to move them into one group for gooseberry.
+
+[0.10.1]: https://github.com/out-of-cheese-error/gooseberry/compare/0.10.0...0.10.1
 
 [0.10.0]: https://github.com/out-of-cheese-error/gooseberry/compare/0.9.3...0.10.0
 

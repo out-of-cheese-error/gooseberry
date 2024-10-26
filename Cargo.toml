@@ -1,6 +1,6 @@
 [package]
 name = "gooseberry"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["Ninjani"]
 edition = "2021"
 description = "A command line utility to generate a knowledge base from Hypothesis annotations "
