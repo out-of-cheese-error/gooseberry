@@ -123,6 +123,10 @@ impl Gooseberry {
                 .fg(dialoguer::console::Color::Yellow)
             );
             highlight.push_str(&format!(
+                "|{}",
+                style(annotation.user.to_username()).fg(dialoguer::console::Color::Blue)
+            ));
+            highlight.push_str(&format!(
                 "| {}",
                 style(title.replace('\n', " ")).fg(dialoguer::console::Color::Green)
             ));
