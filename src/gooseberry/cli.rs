@@ -241,6 +241,11 @@ pub enum ConfigCommand {
         #[clap(value_delimiter = ',', required = false)]
         group_ids: Vec<String>,
     },
+    /// Change the users used for Hypothesis annotations
+    User {
+        #[clap(value_delimiter = ',', required = false)]
+        user_ids: Vec<String>,
+    },
     /// Change options related to the knowledge base
     Kb {
         #[clap(subcommand)]
@@ -295,6 +300,11 @@ impl ConfigCommand {
             Self::Group { group_ids } => {
                 let mut config = GooseberryConfig::load(config_file).await?;
                 config.set_groups(group_ids.clone()).await?;
+                crate::gooseberry::Gooseberry::reset(config_file).await?;
+            }
+            Self::User { user_ids } => {
+                let mut config = GooseberryConfig::load(config_file).await?;
+                config.set_users(user_ids.clone()).await?;
                 crate::gooseberry::Gooseberry::reset(config_file).await?;
             }
             Self::Kb { cmd } => {

@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 use std::path::Path;
+use std::str::FromStr;
 use std::{fs, vec};
 
+use chrono::Utc;
 use color_eyre::Help;
 use dialoguer::Confirm;
 use eyre::eyre;
 use hypothesis::annotations::{Annotation, Order, SearchQuery};
-use hypothesis::Hypothesis;
+use hypothesis::{Hypothesis, UserAccountID};
 
 use crate::configuration::GooseberryConfig;
 use crate::errors::Apologize;
@@ -157,16 +159,26 @@ impl Gooseberry {
             spinner.finish_with_message("No groups to sync!");
             return Ok(());
         }
-        let mut query = SearchQuery::builder()
-            .limit(200)
-            .order(Order::Asc)
-            .search_after(self.get_sync_time()?)
-            .user(&self.api.user.0)
-            .group(groups)
-            .build()?;
-        let (added, updated) =
-            self.sync_annotations(self.api.search_annotations_return_all(&mut query).await?)?;
-        self.set_sync_time(&query.search_after)?;
+        let mut user_ids = vec![self.api.user.to_user_id()];
+        if let Some(users) = &self.config.hypothesis_users {
+            for user in users {
+                user_ids.push(UserAccountID::from_str(user)?.to_user_id());
+            }
+        }
+        let mut annotations = Vec::new();
+        let sync_time = self.get_sync_time()?;
+        for user_id in user_ids {
+            let mut query = SearchQuery::builder()
+                .limit(200)
+                .order(Order::Asc)
+                .search_after(&sync_time)
+                .user(&user_id)
+                .group(groups.clone())
+                .build()?;
+            annotations.extend(self.api.search_annotations_return_all(&mut query).await?);
+        }
+        let (added, updated) = self.sync_annotations(annotations)?;
+        self.set_sync_time(&Utc::now().to_rfc3339())?;
         spinner.finish_with_message("Done!");
         if added > 0 {
             if added == 1 {
@@ -197,7 +209,7 @@ impl Gooseberry {
         fuzzy: bool,
     ) -> color_eyre::Result<()> {
         let mut annotations = self
-            .filter_annotations_api(filters, vec![group_id.clone()])
+            .filter_annotations_api(filters, vec![group_id.clone()], self.api.user.to_user_id())
             .await?;
         if search || fuzzy {
             // Run a search window.
@@ -228,9 +240,10 @@ impl Gooseberry {
         &self,
         filters: Filters,
         groups: Vec<String>,
+        user_id: String,
     ) -> color_eyre::Result<Vec<Annotation>> {
         let mut query: SearchQuery = filters.clone().into();
-        query.user = self.api.user.0.to_owned();
+        query.user = user_id.to_owned();
         query.group = groups.clone();
         let mut annotations = if !filters.and && !filters.tags.is_empty() {
             let mut annotations = Vec::new();
@@ -258,7 +271,7 @@ impl Gooseberry {
         }
         if filters.not {
             let mut query: SearchQuery = Filters::default().into();
-            query.user = self.api.user.0.to_owned();
+            query.user = user_id;
             query.group = groups;
             let mut all_annotations: Vec<_> =
                 self.api.search_annotations_return_all(&mut query).await?;
@@ -416,7 +429,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().all(|tag| !a.tags.contains(tag)))
+            .filter(|a| (a.user == self.api.user) && tags.iter().all(|tag| !a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("All of the selected annotations already have all of those tags.");
@@ -452,7 +465,7 @@ impl Gooseberry {
     ) -> color_eyre::Result<()> {
         let annotations: Vec<_> = annotations
             .into_iter()
-            .filter(|a| tags.iter().any(|tag| a.tags.contains(tag)))
+            .filter(|a| (a.user == self.api.user) && tags.iter().any(|tag| a.tags.contains(tag)))
             .collect();
         if annotations.is_empty() {
             println!("None of the selected annotations have any of those tags.");
@@ -518,6 +531,10 @@ impl Gooseberry {
         annotations: Vec<Annotation>,
         force: bool,
     ) -> color_eyre::Result<()> {
+        let annotations: Vec<_> = annotations
+            .into_iter()
+            .filter(|a| a.user == self.api.user)
+            .collect();
         let num_annotations = annotations.len();
         if !annotations.is_empty()
             && (force

@@ -13,7 +13,8 @@ include = ["src/**/*", "README.md"]
 
 [dependencies]
 # Hypothesis
-hypothesis = { version = "0.11.1", default-features = false }
+hypothesis = { version = "0.11.5", default-features = false }
+# hypothesis = { path = "../rust-hypothesis" }
 tokio = { version = "1.20.1", features = ["macros"] }
 
 # To extract the base URI
@@ -57,11 +58,11 @@ bat = { version = "0.24.0", default-features = false, features = ["regex-fancy"]
 indicatif = "0.17.7"
 
 # Templating markdown
-handlebars = "4.3.7"
+handlebars = "5.1.2"
 
 # Sanitizing filenames
 sanitize-filename = "0.5.0"
-handlebars_misc_helpers = "0.13.0"
+handlebars_misc_helpers = "0.16.3"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

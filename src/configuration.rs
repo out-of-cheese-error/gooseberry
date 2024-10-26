@@ -109,6 +109,8 @@ pub struct GooseberryConfig {
     /// Define nested tag pattern
     pub(crate) nested_tag: Option<String>,
     /// Hypothesis groups with knowledge base annotations
+    /// Other Hypothesis usernames to pull public annotations from
+    pub(crate) hypothesis_users: Option<Vec<String>>,
     #[serde(default)]
     pub(crate) hypothesis_groups: HashMap<String, String>,
 }
@@ -138,6 +140,7 @@ impl Default for GooseberryConfig {
             sort: None,
             ignore_tags: None,
             nested_tag: None,
+            hypothesis_users: None,
         };
         config.make_dirs().expect("Couldn't make directories");
         config
@@ -915,6 +918,54 @@ file_extension = '{}'
             }
         }
         self.hypothesis_group = None;
+        self.store()?;
+        Ok(())
+    }
+
+    /// This opens a command-line prompt where the user can select the users to be used for Gooseberry annotations
+    /// from the users in the selected groups
+    pub async fn get_users(&self, api: Hypothesis) -> color_eyre::Result<Vec<String>> {
+        let mut user_id_options = HashSet::new();
+        for group in self.hypothesis_groups.keys() {
+            let members = api.get_group_members(group).await?;
+            for member in members {
+                user_id_options.insert(member.username.to_owned());
+            }
+        }
+        let user_id_options: Vec<_> = user_id_options.into_iter().collect();
+        let mut selected_users = Vec::new();
+        for user_index in MultiSelect::with_theme(&theme::ColorfulTheme::default())
+            .with_prompt("Which users should gooseberry use?")
+            .items(&user_id_options[..])
+            .interact()?
+        {
+            selected_users.push(user_id_options[user_index].to_owned());
+        }
+        Ok(selected_users)
+    }
+
+    /// Sets the Hypothesis users used for Gooseberry annotations
+    /// This opens a command-line prompt where the user can select from a list of users
+    /// which have posted annotations in the selected groups
+    pub async fn set_users(&mut self, user_ids: Vec<String>) -> color_eyre::Result<()> {
+        if !user_ids.is_empty() {
+            self.hypothesis_users = Some(user_ids);
+            self.store()?;
+            return Ok(());
+        }
+        let (username, key) = (
+            self.hypothesis_username
+                .as_deref()
+                .ok_or_else(|| eyre!("No Hypothesis username"))?,
+            self.hypothesis_key
+                .as_deref()
+                .ok_or_else(|| eyre!("No Hypothesis key"))?,
+        );
+        let api = Hypothesis::new(username, key)?;
+        if self.hypothesis_groups.is_empty() {
+            self.set_groups(Vec::new()).await?;
+        }
+        self.hypothesis_users = Some(self.get_users(api).await?);
         self.store()?;
         Ok(())
     }
