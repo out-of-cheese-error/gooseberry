@@ -29,11 +29,11 @@ jobs:
     #            binary_postfix: ".exe"
 
     steps:
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-          targets: "x86_64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc"
-      - uses: actions/checkout@v2
+          targets: "x86_64-apple-darwin, x86_64-unknown-linux-gnu"
+      - uses: actions/checkout@v4
       - run: cargo build --release --target ${{ matrix.target }}
 
       - name: Packaging final binary
@@ -49,7 +49,7 @@ jobs:
             shasum -a 256 gooseberry-${{ matrix.artifact_prefix }}.tar.gz > gooseberry-${{ matrix.artifact_prefix }}.sha256
           fi
       - name: Releasing assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/${{ matrix.target }}/release/gooseberry-${{ matrix.artifact_prefix }}.tar.gz
